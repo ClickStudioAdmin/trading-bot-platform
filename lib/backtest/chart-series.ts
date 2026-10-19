@@ -26,6 +26,8 @@ import {
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import type { CandleBar } from "@/lib/market/candles";
+import type { EntryStack } from "@/lib/strategy/expr";
+import type { StoredExitAction } from "@/lib/strategy/exit-actions";
 import {
   DEFAULT_RSI_PIVOT_BARS,
   DEFAULT_RSI_SPAN,
@@ -150,13 +152,25 @@ function specKey(input: {
   slowPeriod: number | null;
   multiplier: number | null;
   timeframe: DcaIndicatorTimeframe | null;
+  divergence?: Spec["divergence"];
 }): string {
+  const divergence = input.divergence
+    ? [
+        input.divergence.when,
+        input.divergence.style,
+        input.divergence.pivotBars,
+        input.divergence.span,
+        input.divergence.minPricePct ?? "",
+        input.divergence.minRsi ?? "",
+      ].join(",")
+    : "";
   return [
     input.kind,
     input.period ?? "",
     input.slowPeriod ?? "",
     input.multiplier ?? "",
     input.timeframe ?? "",
+    divergence,
   ].join("|");
 }
 
@@ -205,6 +219,7 @@ function specFromIndicator(
       slowPeriod: start.slowPeriod,
       multiplier: start.multiplier ?? null,
       timeframe: start.timeframe,
+      divergence: start.divergence ?? null,
     }),
     kind: start.kind,
     roles: [role],
@@ -228,6 +243,7 @@ function fromFilter(spec: DcaFilterSpec | null | undefined, role: string): Spec 
       slowPeriod: spec.slowPeriod ?? null,
       multiplier: spec.multiplier,
       timeframe: spec.timeframe,
+      divergence: spec.divergence ?? null,
     }),
     kind: spec.kind,
     roles: [role],
@@ -247,6 +263,10 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
       (recipe.startKind === "indicator" || recipe.startKind === "trend") &&
       recipe.indicatorKind
     ) {
+      const divergence =
+        recipe.indicatorKind === "rsi_divergence"
+          ? (recipe.leadDivergence ?? null)
+          : null;
       addSpec(specs, {
         key: specKey({
           kind: recipe.indicatorKind,
@@ -254,6 +274,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.indicatorSlowPeriod ?? null,
           multiplier: recipe.indicatorMultiplier ?? null,
           timeframe: recipe.indicatorTimeframe,
+          divergence,
         }),
         kind: recipe.indicatorKind,
         roles: ["Entry"],
@@ -262,10 +283,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         multiplier: recipe.indicatorMultiplier ?? null,
         levels: recipe.indicatorLevel != null ? [recipe.indicatorLevel] : [],
         timeframe: recipe.indicatorTimeframe,
-        divergence:
-          recipe.indicatorKind === "rsi_divergence"
-            ? (recipe.leadDivergence ?? null)
-            : null,
+        divergence,
       });
     }
     const shortStartKind = recipe.shortStartKind ?? recipe.startKind;
@@ -273,6 +291,10 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
       recipe.shortIndicatorKind &&
       (shortStartKind === "indicator" || shortStartKind === "trend")
     ) {
+      const divergence =
+        recipe.shortIndicatorKind === "rsi_divergence"
+          ? (recipe.shortLeadDivergence ?? null)
+          : null;
       addSpec(specs, {
         key: specKey({
           kind: recipe.shortIndicatorKind,
@@ -280,6 +302,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
           slowPeriod: recipe.shortIndicatorSlowPeriod ?? null,
           multiplier: recipe.shortIndicatorMultiplier ?? null,
           timeframe: recipe.shortIndicatorTimeframe ?? null,
+          divergence,
         }),
         kind: recipe.shortIndicatorKind,
         roles: ["Short entry"],
@@ -289,6 +312,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
         levels:
           recipe.shortIndicatorLevel != null ? [recipe.shortIndicatorLevel] : [],
         timeframe: recipe.shortIndicatorTimeframe ?? null,
+        divergence,
       });
     }
     addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
@@ -313,6 +337,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     }
     addSpec(specs, fromFilter(recipe.exitIf, "Hard exit"));
     addSpec(specs, fromFilter(recipe.shortExitIf, "Short hard exit"));
+    addConditionSpecs(specs, recipe);
     return specs;
   }
   const start = recipe.indicator;
@@ -320,22 +345,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     (recipe.entrySource === "indicator" || recipe.entrySource === "trend") &&
     start
   ) {
-    addSpec(specs, {
-      key: specKey({
-        kind: start.kind,
-        period: start.period,
-        slowPeriod: start.slowPeriod,
-        multiplier: start.multiplier ?? null,
-        timeframe: start.timeframe,
-      }),
-      kind: start.kind,
-      roles: ["Entry"],
-      period: start.period,
-      slowPeriod: start.slowPeriod,
-      multiplier: start.multiplier ?? null,
-      levels: start.level != null ? [start.level] : [],
-      timeframe: start.timeframe,
-    });
+    addSpec(specs, specFromIndicator(start, "Entry"));
   }
   const short = recipe.direction === "both" ? recipe.shortEntry : null;
   if (
@@ -343,23 +353,7 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     (short.entrySource === "indicator" || short.entrySource === "trend") &&
     short.indicator
   ) {
-    const startShort = short.indicator;
-    addSpec(specs, {
-      key: specKey({
-        kind: startShort.kind,
-        period: startShort.period,
-        slowPeriod: startShort.slowPeriod,
-        multiplier: startShort.multiplier ?? null,
-        timeframe: startShort.timeframe,
-      }),
-      kind: startShort.kind,
-      roles: ["Short entry"],
-      period: startShort.period,
-      slowPeriod: startShort.slowPeriod,
-      multiplier: startShort.multiplier ?? null,
-      levels: startShort.level != null ? [startShort.level] : [],
-      timeframe: startShort.timeframe,
-    });
+    addSpec(specs, specFromIndicator(short.indicator, "Short entry"));
   }
   addSpec(specs, fromFilter(recipe.confirm, "Secondary entry"));
   if (recipe.entryStack) {
@@ -381,7 +375,68 @@ function specsFromRecipe(recipe: BacktestRecipe): Spec[] {
     }
   }
   addSpec(specs, fromFilter(recipe.exitIf, "Hard exit"));
+  addSpec(specs, fromFilter(short?.exitIf, "Short hard exit"));
+  addConditionSpecs(specs, recipe);
   return specs;
+}
+
+function addStackSpecs(
+  specs: Spec[],
+  stack: EntryStack | null | undefined,
+  role: string,
+) {
+  if (!stack) {
+    return;
+  }
+  for (const leaf of stack.leaves) {
+    if (leaf.kind === "filter") {
+      addSpec(specs, fromFilter(leaf.spec, role));
+    } else if (leaf.kind === "indicator" || leaf.kind === "trend") {
+      addSpec(specs, specFromIndicator(leaf.start, role));
+    }
+  }
+}
+
+function addExitActionSpecs(
+  specs: Spec[],
+  actions: readonly StoredExitAction[] | null | undefined,
+  role: string,
+) {
+  if (!actions) {
+    return;
+  }
+  for (const action of actions) {
+    for (const group of action.groups) {
+      for (const draft of [group.anchor, ...group.rows]) {
+        if (
+          (draft.trigger === "indicator" || draft.trigger === "trend") &&
+          draft.spec
+        ) {
+          addSpec(specs, fromFilter(draft.spec, role));
+        }
+      }
+    }
+  }
+}
+
+/** Exit actions, exit stacks, and additional-order conditions. */
+function addConditionSpecs(specs: Spec[], recipe: BacktestRecipe) {
+  if (recipe.kind === "dca") {
+    addStackSpecs(specs, recipe.exitStack, "Long exit");
+    addStackSpecs(specs, recipe.shortExitStack, "Short exit");
+    addExitActionSpecs(specs, recipe.exitActions, "Long exit");
+    addExitActionSpecs(specs, recipe.shortExitActions, "Short exit");
+    addStackSpecs(specs, recipe.addStack, "Long additional order");
+    addStackSpecs(specs, recipe.shortAddStack, "Short additional order");
+    return;
+  }
+  addStackSpecs(specs, recipe.exitStack, "Long exit");
+  addExitActionSpecs(specs, recipe.exitActions, "Long exit");
+  addStackSpecs(specs, recipe.addStack, "Long additional order");
+  const short = recipe.direction === "both" ? recipe.shortEntry : null;
+  addStackSpecs(specs, short?.exitStack, "Short exit");
+  addExitActionSpecs(specs, short?.actions, "Short exit");
+  addStackSpecs(specs, short?.addStack, "Short additional order");
 }
 
 function layerTitle(spec: Spec): string {

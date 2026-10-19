@@ -488,4 +488,94 @@ const bounds = visiblePriceBounds(
 assert.deepEqual(bounds, { minValue: 9, maxValue: 12 });
 assert.equal(visiblePriceBounds([], [], 0, 1), null);
 
+const bullish = blankRsiDivergenceSettings("long");
+const bearish = { ...bullish, when: "bearish" as const };
+const closeRecipe = {
+  kind: "dca",
+  startKind: "price",
+  exitActions: [
+    {
+      id: "close",
+      kind: "close",
+      scope: { kind: "all" },
+      groups: [
+        {
+          anchor: {
+            trigger: "indicator",
+            spec: {
+              kind: "rsi_divergence",
+              timeframe: "240",
+              compare: "lte",
+              level: null,
+              period: 14,
+              multiplier: null,
+              divergence: bullish,
+            },
+          },
+          rows: [],
+        },
+        {
+          anchor: {
+            trigger: "indicator",
+            spec: {
+              kind: "rsi_divergence",
+              timeframe: "240",
+              compare: "lte",
+              level: null,
+              period: 14,
+              multiplier: null,
+              divergence: bearish,
+            },
+          },
+          rows: [],
+        },
+      ],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+  ],
+  addStack: {
+    leaves: [
+      {
+        kind: "indicator",
+        start: {
+          kind: "ema",
+          timeframe: "60",
+          compare: "lte",
+          level: null,
+          period: 21,
+          slowPeriod: null,
+        },
+      },
+    ],
+    joins: [],
+  },
+} as BacktestRecipe;
+const closeLayers = replayChartSeries(closeRecipe, bars).layers;
+const divergenceLayers = closeLayers.filter((row) =>
+  row.title.includes("RSI divergence"),
+);
+assert.equal(divergenceLayers.length, 2);
+assert.equal(divergenceLayers[0]?.pane, "oscillator");
+assert.equal(divergenceLayers[0]?.divergence?.settings.when, "bullish");
+assert.equal(divergenceLayers[1]?.divergence?.settings.when, "bearish");
+assert.equal(divergenceLayers.every((row) => row.roles.includes("Long exit")), true);
+assert.equal(
+  closeLayers.some((row) => row.roles.includes("Long additional order")),
+  true,
+);
+assert.equal(
+  replayIndicatorCatalog(closeRecipe).find((row) => row.id === "rsi_divergence")
+    ?.locked,
+  true,
+);
+assert.equal(
+  replayIndicatorCatalog(closeRecipe).find((row) => row.id === "ema")?.locked,
+  true,
+);
+
 console.log("chart-series.check: ok");
