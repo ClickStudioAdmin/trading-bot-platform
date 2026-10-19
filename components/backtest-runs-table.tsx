@@ -617,6 +617,29 @@ export function BacktestRunsTable({
                 className={TABLE_FILTER_FIELD_CLASS}
               />
             </TableFilterField>
+            <TableFilterField label="Desk Type">
+              <AppSelect
+                value={typeFilter}
+                onChange={(event) => {
+                  const next = event.target.value as "all" | BacktestDeskType;
+                  setTypeFilter(next);
+                  if (next !== "all" && deskId !== "all" && desks) {
+                    const desk = desks.find((row) => row.id === deskId);
+                    if (!desk || desk.deskType !== next) {
+                      setDeskId("all");
+                    }
+                  }
+                  table.setPage(1);
+                }}
+                className={TABLE_FILTER_FIELD_CLASS}
+              >
+                {typeChoices.map((value) => (
+                  <option key={value} value={value}>
+                    {deskTypeFilterLabel(value)}
+                  </option>
+                ))}
+              </AppSelect>
+            </TableFilterField>
             {desks ? (
               <TableFilterField label="Desk">
                 <AppSelect
@@ -643,29 +666,6 @@ export function BacktestRunsTable({
                 </AppSelect>
               </TableFilterField>
             ) : null}
-            <TableFilterField label="Desk Type">
-              <AppSelect
-                value={typeFilter}
-                onChange={(event) => {
-                  const next = event.target.value as "all" | BacktestDeskType;
-                  setTypeFilter(next);
-                  if (next !== "all" && deskId !== "all" && desks) {
-                    const desk = desks.find((row) => row.id === deskId);
-                    if (!desk || desk.deskType !== next) {
-                      setDeskId("all");
-                    }
-                  }
-                  table.setPage(1);
-                }}
-                className={TABLE_FILTER_FIELD_CLASS}
-              >
-                {typeChoices.map((value) => (
-                  <option key={value} value={value}>
-                    {deskTypeFilterLabel(value)}
-                  </option>
-                ))}
-              </AppSelect>
-            </TableFilterField>
             <TableFilterField label="Status">
               <AppSelect
                 value={status}
