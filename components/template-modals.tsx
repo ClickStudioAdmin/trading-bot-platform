@@ -13,6 +13,7 @@ import { ModalHost, useModalPortalHost } from "@/components/portal-host";
 
 export { ModalHost, useModalPortalHost };
 import { createPortal } from "react-dom";
+import { nextModalDragOffset } from "@/lib/ui/modal-drag";
 import { AppMultiSelect } from "@/components/app-select";
 import { AppCheck, AppRadio } from "@/components/app-check";
 import {
@@ -119,6 +120,7 @@ export function Modal({
   size,
   sticky,
   elevated = false,
+  draggable = false,
 }: {
   title: string;
   onClose: () => void;
@@ -127,9 +129,19 @@ export function Modal({
   size?: "md" | "lg" | "xl";
   sticky?: React.ReactNode;
   elevated?: boolean;
+  draggable?: boolean;
 }) {
   const previewClass = useThemePreviewPortalClass();
   const portalHost = useModalPortalHost();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
     const id = ++nextModalId;
     modalStack.push(id);
@@ -147,6 +159,60 @@ export function Modal({
       }
     };
   }, [onClose]);
+
+  function endDrag(event: React.PointerEvent<HTMLElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function onDragPointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (!draggable || event.button !== 0) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Element && target.closest("button, a, input, label, select, textarea")) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: dragOffset.x,
+      originY: dragOffset.y,
+    };
+  }
+
+  function onDragPointerMove(event: React.PointerEvent<HTMLElement>) {
+    const drag = dragRef.current;
+    const dialog = dialogRef.current;
+    if (!drag || !dialog || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const rect = dialog.getBoundingClientRect();
+    setDragOffset(
+      nextModalDragOffset({
+        originX: drag.originX,
+        originY: drag.originY,
+        startX: drag.startX,
+        startY: drag.startY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        dialogWidth: rect.width,
+        dialogHeight: rect.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      }),
+    );
+  }
+
   if (typeof document === "undefined" || !portalHost) {
     return null;
   }
@@ -159,6 +225,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -171,11 +238,25 @@ export function Modal({
               ? "max-w-2xl"
               : "max-w-lg"
         }`}
+        style={
+          draggable
+            ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+            : undefined
+        }
         onClick={(event) => event.stopPropagation()}
       >
         {sticky ? (
           <>
-            <div className="shrink-0 border-b border-line px-5 pt-5 pb-4">
+            <div
+              className={`shrink-0 border-b border-line px-5 pt-5 pb-4 ${
+                draggable ? "cursor-grab touch-none select-none active:cursor-grabbing" : ""
+              }`}
+              title={draggable ? "Drag to move" : undefined}
+              onPointerDown={draggable ? onDragPointerDown : undefined}
+              onPointerMove={draggable ? onDragPointerMove : undefined}
+              onPointerUp={draggable ? endDrag : undefined}
+              onPointerCancel={draggable ? endDrag : undefined}
+            >
               <PanelCloseButton onClick={onClose} />
               <h2 className="min-w-0 text-lg font-semibold text-ink">
                 <PanelCloseReserve size="modal" />
@@ -186,6 +267,24 @@ export function Modal({
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 [overflow-anchor:none]">
               {children}
             </div>
+          </>
+        ) : draggable ? (
+          <>
+            <div
+              className="-mx-5 -mt-5 cursor-grab touch-none px-5 pt-5 select-none active:cursor-grabbing"
+              title="Drag to move"
+              onPointerDown={onDragPointerDown}
+              onPointerMove={onDragPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+            >
+              <h2 className="min-w-0 text-lg font-semibold text-ink">
+                <PanelCloseReserve size="modal" />
+                {title}
+              </h2>
+            </div>
+            <PanelCloseButton onClick={onClose} />
+            {children}
           </>
         ) : (
           <>

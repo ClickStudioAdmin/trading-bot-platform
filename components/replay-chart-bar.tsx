@@ -199,7 +199,7 @@ export function ReplayChartBar({
         </Panel>
       ) : null}
       {indicatorsOpen ? (
-        <Modal title="Indicators" onClose={() => setIndicatorsOpen(false)} elevated>
+        <Modal title="Indicators" onClose={() => setIndicatorsOpen(false)} elevated draggable>
           <p className="mt-2 text-sm text-ink-muted">{indicatorsIntro}</p>
           {indicatorNotice ? <div className="mt-3">{indicatorNotice}</div> : null}
           <ul className="mt-4 space-y-2">
