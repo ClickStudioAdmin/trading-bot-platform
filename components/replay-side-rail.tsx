@@ -225,13 +225,6 @@ export function ReplayRailNav({
   return (
     <nav aria-label="Replay panels" className={className}>
       <RailButton
-        label="Comparables and variations"
-        pressed={panel === "related"}
-        onClick={() => selectReplayRail("related", panel)}
-        badge={runningCount}
-        icon={<IconCornerDownRight className="size-5" />}
-      />
-      <RailButton
         label="Parameters"
         pressed={panel === "parameters"}
         onClick={() => selectReplayRail("parameters", panel)}
@@ -248,6 +241,13 @@ export function ReplayRailNav({
         pressed={panel === "statistics"}
         onClick={() => selectReplayRail("statistics", panel)}
         icon={<IconPerformance className="size-5" />}
+      />
+      <RailButton
+        label="Comparables and variations"
+        pressed={panel === "related"}
+        onClick={() => selectReplayRail("related", panel)}
+        badge={runningCount}
+        icon={<IconCornerDownRight className="size-5" />}
       />
     </nav>
   );
