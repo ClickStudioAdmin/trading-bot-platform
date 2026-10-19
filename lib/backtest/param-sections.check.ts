@@ -666,4 +666,78 @@ assert.equal(paramSideShows("long", "short"), false);
 assert.equal(paramSideShows("short", "long"), false);
 assert.equal(paramSideShows("short", "short"), true);
 
+const divergence = {
+  when: "bullish" as const,
+  style: "regular" as const,
+  pivotBars: 5,
+  span: 50,
+  minPricePct: null,
+  minRsi: null,
+};
+const divergenceExit = recipeParamSections({
+  ...dca,
+  exitActions: [
+    {
+      id: "close",
+      kind: "close",
+      scope: { kind: "all" },
+      groups: [
+        {
+          anchor: {
+            trigger: "indicator",
+            spec: {
+              kind: "rsi_divergence",
+              timeframe: "240",
+              compare: "lte",
+              level: null,
+              period: 14,
+              multiplier: null,
+              divergence,
+            },
+          },
+          rows: [],
+        },
+      ],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+  ],
+});
+const exitRows =
+  divergenceExit
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.stacks?.flatMap((stack) => stack.groups.flat().flatMap((condition) => condition.rows)) ??
+  [];
+assert.equal(exitRows.find((row) => row.label === "When")?.value, "Bullish");
+assert.equal(exitRows.find((row) => row.label === "Style")?.value, "Regular");
+assert.equal(exitRows.find((row) => row.label === "Pivot bars")?.value, "5");
+assert.equal(exitRows.find((row) => row.label === "Span")?.value, "50");
+assert.equal(
+  exitRows.some((row) => row.value === "Price is below"),
+  false,
+);
+const divergenceEntry = recipeParamSections({
+  ...dca,
+  startKind: "indicator",
+  indicatorKind: "rsi_divergence",
+  indicatorCompare: "cross_lte",
+  indicatorTimeframe: "240",
+  indicatorPeriod: 14,
+  leadDivergence: { ...divergence, when: "bearish", style: "hidden" },
+});
+const entryRows =
+  divergenceEntry
+    .find((section) => section.title === "Long Entry Conditions")
+    ?.groups.flatMap((group) => group.rows) ?? [];
+assert.equal(entryRows.find((row) => row.label === "When")?.value, "Bearish");
+assert.equal(entryRows.find((row) => row.label === "Style")?.value, "Hidden");
+assert.equal(
+  entryRows.some((row) => row.value === "cross_lte" || row.value === "Price is below"),
+  false,
+);
+
 console.log("backtest param section checks passed");
