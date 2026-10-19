@@ -13,14 +13,9 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
-import {
-  TABLE_ACTIONS_TD_CLASS,
-  TABLE_ACTIONS_TH_CLASS,
-  TABLE_THEAD_CLASS,
-  TableCard,
-  TableIconAction,
-} from "@/components/table-chrome";
+import { TableCard, TableIconAction } from "@/components/table-chrome";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
+import { TokenIcon } from "@/components/token-icon";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { ClickGateNotice, useClickGate } from "@/components/click-gate-notice";
 import { useResearchGateAccess } from "@/components/research-gate-access";
@@ -483,45 +478,139 @@ function RelatedBody({
   const waiting = optimistic.filter(
     (row) => row.runId == null || !known.has(row.runId),
   );
-  const tableRows = [...list.comparables, ...list.variations];
-  const empty = tableRows.length === 0 && waiting.length === 0;
+  const showComparables = list.comparables.length > 0;
+  const showVariations = list.variations.length > 0 || waiting.length > 0;
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-auto pr-3">
-      <h2 className="mb-3 text-lg font-semibold">Comparables and variations</h2>
-      {empty ? (
-        <p className="text-sm text-ink-muted">No comparables or variations yet.</p>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden pr-3">
+      <h2 className="mb-3 shrink-0 text-lg font-semibold">
+        Comparables and variations
+      </h2>
+      {showComparables || showVariations ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+          {showComparables ? (
+            <RelatedSection title="Comparables">
+              <RelatedTable
+                rows={list.comparables}
+                byId={byId}
+                viewingId={run.id}
+                onPlay={onPlay}
+              />
+            </RelatedSection>
+          ) : null}
+          {showVariations ? (
+            <RelatedSection title="Variations">
+              <RelatedTable
+                rows={list.variations}
+                pending={waiting}
+                byId={byId}
+                viewingId={run.id}
+                onPlay={onPlay}
+              />
+            </RelatedSection>
+          ) : null}
+        </div>
       ) : (
-        <TableCard className="mt-0">
-          <table className="w-full table-fixed text-left text-sm">
-            <thead className={TABLE_THEAD_CLASS}>
-              <tr>
-                <th className="w-[32%] px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Contract</th>
-                <th className="px-3 py-2 font-medium">Win rate</th>
-                <th className="px-3 py-2 font-medium">ROE</th>
-                <th className={TABLE_ACTIONS_TH_CLASS}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {waiting.map((row) => (
-                <RelatedPendingRow key={row.token} />
-              ))}
-              {tableRows.map((entry) => (
-                <RelatedRunRow
-                  key={entry.id}
-                  entry={entry}
-                  source={byId.get(entry.id) ?? null}
-                  viewing={entry.id === run.id}
-                  onPlay={onPlay}
-                />
-              ))}
-            </tbody>
-          </table>
-        </TableCard>
+        <p className="text-sm text-ink-muted">No comparables or variations yet.</p>
       )}
     </div>
+  );
+}
+
+function RelatedSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex min-h-0 flex-1 flex-col">
+      <h3 className="mb-2 shrink-0 text-sm font-semibold">{title}</h3>
+      <TableCard
+        className="mt-0 flex min-h-0 flex-1 flex-col"
+        bodyClassName="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto"
+      >
+        {children}
+      </TableCard>
+    </section>
+  );
+}
+
+function RelatedTable({
+  rows,
+  pending = [],
+  byId,
+  viewingId,
+  onPlay,
+}: {
+  rows: ReplayRelatedEntry[];
+  pending?: OptimisticVariant[];
+  byId: Map<string, BacktestRun>;
+  viewingId: string;
+  onPlay?: () => void;
+}) {
+  return (
+    <table className="w-full table-fixed text-left text-sm">
+      <thead className="sticky top-0 z-10 border-b border-line bg-surface-raised text-xs uppercase tracking-[0.08em] text-ink-faint">
+        <tr>
+          <th className="w-[24%] bg-surface-raised px-4 py-3 font-medium">
+            Contract
+          </th>
+          <th className="bg-surface-raised px-4 py-3 font-medium">Name</th>
+          <th className="w-[18%] bg-surface-raised px-4 py-3 font-medium">
+            Win rate
+          </th>
+          <th className="w-[16%] bg-surface-raised px-4 py-3 font-medium">
+            ROE
+          </th>
+          <th className="w-[20%] bg-surface-raised px-4 py-3 text-right font-medium">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {pending.map((row) => (
+          <RelatedPendingRow key={row.token} />
+        ))}
+        {rows.map((entry) => (
+          <RelatedRunRow
+            key={entry.id}
+            entry={entry}
+            source={byId.get(entry.id) ?? null}
+            viewing={entry.id === viewingId}
+            onPlay={onPlay}
+          />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function relatedBaseCoin(symbol: string): string {
+  const upper = symbol.trim().toUpperCase();
+  if (upper.endsWith("USDT") || upper.endsWith("USDC")) {
+    return upper.slice(0, -4) || upper;
+  }
+  return upper;
+}
+
+function RelatedContractCell({ symbol }: { symbol: string }) {
+  const pair = symbol.trim();
+  if (!pair) {
+    return <span className="text-ink-faint">—</span>;
+  }
+  const baseCoin = relatedBaseCoin(pair);
+  return (
+    <span className="flex items-start gap-2">
+      <TokenIcon symbol={baseCoin} />
+      <span className="min-w-0">
+        <span className="block truncate font-medium text-ink">{baseCoin}</span>
+        <span className="mt-0.5 block truncate text-hint text-ink-muted">
+          {pair}
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -537,12 +626,11 @@ function PendingMark() {
 function RelatedPendingRow() {
   return (
     <tr className="border-b border-line last:border-b-0">
-      <td className="px-3 py-2 text-ink">New backtest</td>
-      <td className="px-3 py-2 text-ink-muted">Variation</td>
-      <td className="px-3 py-2 text-ink-faint">—</td>
-      <td className="px-3 py-2 text-ink-faint">—</td>
-      <td className="px-3 py-2 text-ink-faint">—</td>
-      <td className={TABLE_ACTIONS_TD_CLASS}>
+      <td className="px-2 py-2 text-ink-faint">—</td>
+      <td className="px-2 py-2 text-ink">New backtest</td>
+      <td className="px-2 py-2 text-ink-faint">—</td>
+      <td className="px-2 py-2 text-ink-faint">—</td>
+      <td className="px-2 py-2 text-right">
         <PendingMark />
       </td>
     </tr>
@@ -571,7 +659,10 @@ function RelatedRunRow({
         viewing ? "bg-surface-raised" : ""
       }`}
     >
-      <td className="px-3 py-2">
+      <td className="overflow-hidden px-2 py-2 align-top">
+        <RelatedContractCell symbol={entry.symbol} />
+      </td>
+      <td className="overflow-hidden px-2 py-2 align-top">
         <span className="flex min-w-0 items-center gap-1">
           <span className="min-w-0 flex-1 truncate text-ink" title={entry.name}>
             {entry.name}
@@ -581,20 +672,21 @@ function RelatedRunRow({
           ) : null}
         </span>
         {entry.status === "failed" && entry.error ? (
-          <span className="mt-1 block text-xs text-danger">{entry.error}</span>
+          <span className="mt-1 block truncate text-xs text-danger" title={entry.error}>
+            {entry.error}
+          </span>
         ) : null}
       </td>
-      <td className="px-3 py-2 text-ink-muted">
-        {entry.role === "comparable" ? "Comparable" : "Variation"}
+      <td className="overflow-hidden px-2 py-2 tabular-nums" title={winRate}>
+        {winRate}
       </td>
-      <td className="px-3 py-2 font-medium tabular-nums">
-        {entry.symbol || "—"}
+      <td
+        className={`overflow-hidden px-2 py-2 tabular-nums ${signedTone(entry.roePct)}`}
+        title={formatBacktestReturnPct(entry.roePct)}
+      >
+        <span className="block truncate">{formatBacktestReturnPct(entry.roePct)}</span>
       </td>
-      <td className="px-3 py-2 tabular-nums">{winRate}</td>
-      <td className={`px-3 py-2 tabular-nums ${signedTone(entry.roePct)}`}>
-        {formatBacktestReturnPct(entry.roePct)}
-      </td>
-      <td className={TABLE_ACTIONS_TD_CLASS}>
+      <td className="px-2 py-2 text-right align-top">
         {done ? (
           <TableIconAction
             label={`Play ${entry.name}`}
