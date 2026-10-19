@@ -7,6 +7,7 @@ import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/ap
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { BotFormStep, botFieldInvalidClass } from "@/components/bot-form-chrome";
 import { BotRecipeEditor } from "@/components/bot-recipe-editor";
+import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { ClickGateNotice, formSubmitAnchor, useClickGate } from "@/components/click-gate-notice";
@@ -47,6 +48,7 @@ import {
 import {
   canQueueUserBacktest,
   findMatchingBacktestTemplate,
+  formatBacktestDeskMatch,
   groupBacktestLibrary,
   userBacktestFieldIssues,
   type BacktestDeskBot,
@@ -322,6 +324,14 @@ export function BacktestQueueForm({
         : null,
     [recipe, sourceTemplateId, templates],
   );
+  const matchingDeskBot = useMemo(() => {
+    if (!recipe || !pickedDeskBot) {
+      return null;
+    }
+    return recipesMatchReplayFields(recipe, pickedDeskBot.recipe)
+      ? pickedDeskBot
+      : null;
+  }, [pickedDeskBot, recipe]);
   const templateGroups = useMemo(
     () => groupBacktestLibrary(templates, folders),
     [folders, templates],
@@ -370,6 +380,12 @@ export function BacktestQueueForm({
     templateOptions.find(
       (option) => templateIdFromOption(option.value) === templateId,
     )?.value ?? "";
+  const editedAway = Boolean(
+    recipe &&
+      (sourceTemplateId || templateId || loadedFromRun) &&
+      !matchingTemplate &&
+      !matchingDeskBot,
+  );
   const pairs = withSymbol(
     venue === "hyperliquid" ? hyperliquidPairs : bybitPairs,
     symbol,
@@ -844,6 +860,11 @@ export function BacktestQueueForm({
           <input type="hidden" name="draftId" value={activeDraftId} />
         ) : null}
         <input type="hidden" name="sourceTemplateId" value={sourceTemplateId} />
+        <input
+          type="hidden"
+          name="templateId"
+          value={libraryTemplateSelected ? templateId : ""}
+        />
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
@@ -859,63 +880,6 @@ export function BacktestQueueForm({
             aria-invalid={nameMissing || undefined}
           />
         </label>
-        {variant ? null : (
-        <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
-          <label className="block text-sm text-ink">
-            Bot
-            <span className="mt-1 block">
-              <AppSelect
-                aria-label="Bot"
-                value={deskBotSelected ? templateId : ""}
-                options={deskBotOptions}
-                disabled={libraryTemplateSelected}
-                searchable
-                onChange={(event) => pickDeskBot(event.target.value)}
-                className={sourceSelectClass(sourceMissing)}
-              />
-            </span>
-          </label>
-          <label className="block text-sm text-ink">
-            Template
-            <input
-              type="hidden"
-              name="templateId"
-              value={libraryTemplateSelected ? templateId : ""}
-            />
-            <span className="mt-1 flex items-center gap-2">
-              <span className="min-w-0 flex-1">
-                <AppSelect
-                  aria-label="Template"
-                  value={templateSelectValue}
-                  options={templateOptions}
-                  disabled={deskBotSelected}
-                  searchable
-                  onChange={(event) => pickTemplate(event.target.value)}
-                  className={sourceSelectClass(sourceMissing)}
-                />
-              </span>
-              {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
-                <TemplateParametersButton
-                  name={pickedTemplate.name}
-                  description={pickedTemplate.description}
-                  recipe={pickedTemplate.recipe}
-                  templateId={pickedTemplate.id}
-                />
-              ) : null}
-            </span>
-          </label>
-          {botPending ? (
-            <p className="text-sm text-ink-muted @min-[22rem]:col-span-2">
-              Loading bot
-            </p>
-          ) : null}
-          {botLoadError ? (
-            <p className="text-sm text-danger @min-[22rem]:col-span-2">
-              {botLoadError}
-            </p>
-          ) : null}
-        </div>
-        )}
         <div>
           <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
             <DatePicker
@@ -1118,8 +1082,83 @@ export function BacktestQueueForm({
         </p>
       ) : null}
       </VariantShell>
-      {recipe ? (
-        <aside className="min-w-0">
+      {variant && !recipe ? null : (
+        <aside className="min-w-0 space-y-5">
+          {variant ? null : (
+            <BotFormStep title="Bot or Template">
+              <div>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-sm text-ink-muted">
+                  Select a bot or a template.
+                </p>
+                <BacktestOriginBadges
+                  templateName={matchingTemplate?.name ?? null}
+                  templateDescription={matchingTemplate?.description ?? null}
+                  templateRecipe={matchingTemplate?.recipe ?? null}
+                  templateId={matchingTemplate?.id ?? null}
+                  deskLabel={
+                    matchingDeskBot
+                      ? formatBacktestDeskMatch(matchingDeskBot)
+                      : null
+                  }
+                  edited={editedAway}
+                />
+              </div>
+              <div className="mt-3 grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
+                <label className="block text-sm text-ink">
+                  Bot
+                  <span className="mt-1 block">
+                    <AppSelect
+                      aria-label="Bot"
+                      value={deskBotSelected ? templateId : ""}
+                      options={deskBotOptions}
+                      disabled={libraryTemplateSelected}
+                      searchable
+                      onChange={(event) => pickDeskBot(event.target.value)}
+                      className={sourceSelectClass(sourceMissing)}
+                    />
+                  </span>
+                </label>
+                <label className="block text-sm text-ink">
+                  Template
+                  <span className="mt-1 flex items-center gap-2">
+                    <span className="min-w-0 flex-1">
+                      <AppSelect
+                        aria-label="Template"
+                        value={templateSelectValue}
+                        options={templateOptions}
+                        disabled={deskBotSelected}
+                        searchable
+                        onChange={(event) => pickTemplate(event.target.value)}
+                        className={sourceSelectClass(sourceMissing)}
+                      />
+                    </span>
+                    {pickedTemplate && matchingTemplate?.id !== pickedTemplate.id ? (
+                      <TemplateParametersButton
+                        name={pickedTemplate.name}
+                        description={pickedTemplate.description}
+                        recipe={pickedTemplate.recipe}
+                        templateId={pickedTemplate.id}
+                      />
+                    ) : null}
+                  </span>
+                </label>
+                {botPending ? (
+                  <p className="text-sm text-ink-muted @min-[22rem]:col-span-2">
+                    Loading bot
+                  </p>
+                ) : null}
+                {botLoadError ? (
+                  <p className="text-sm text-danger @min-[22rem]:col-span-2">
+                    {botLoadError}
+                  </p>
+                ) : null}
+              </div>
+              </div>
+            </BotFormStep>
+          )}
+          {recipe ? (
+          <div>
           {variant || !pairChanged ? null : (
             <p className="mb-2 text-xs text-warning">
               Contract is {symbol}. The bot was saved on {recipe.symbol}.
@@ -1197,11 +1236,9 @@ export function BacktestQueueForm({
                 }
               }}
           />
+          </div>
+          ) : null}
         </aside>
-      ) : variant ? null : (
-        <p className="text-sm text-ink-muted">
-          Pick a Bot or Bot Template from the left column.
-        </p>
       )}
       </div>
     </section>
