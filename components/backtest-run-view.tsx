@@ -169,7 +169,7 @@ function backtestChartWindow(
 ) {
   return {
     interval,
-    bounds: backtestChartFetchBounds(run, interval),
+    bounds: backtestChartFetchBounds(run),
   };
 }
 
