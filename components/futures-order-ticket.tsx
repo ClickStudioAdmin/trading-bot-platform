@@ -228,10 +228,10 @@ export function FuturesOrderTicket({
         ) : null}
       </div>
       {includeStops ? (
-        <>
+        <div className="mt-3 -mx-5 border-t border-line">
           <FuturesTpslFields />
           <FuturesTrailingFields stacked={stacked} />
-        </>
+        </div>
       ) : null}
     </div>
   );

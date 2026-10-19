@@ -171,7 +171,7 @@ export function FuturesWebhookTest({
   if (!standalone) {
     return (
       <>
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="-mx-5 border-t border-line px-5 py-3">
           <button
             type="button"
             onClick={() => setOpen(true)}
