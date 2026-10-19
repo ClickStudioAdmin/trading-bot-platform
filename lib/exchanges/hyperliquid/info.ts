@@ -5,6 +5,7 @@ export type HyperliquidAsset = {
   coin: string;
   index: number;
   szDecimals: number;
+  maxLeverage: number | null;
 };
 
 export type HyperliquidTicker = {
@@ -69,7 +70,11 @@ export async function loadHyperliquidMeta(
     return cached.assets;
   }
   const raw = (await postInfo(environmentId, { type: "meta" })) as {
-    universe?: Array<{ name?: string; szDecimals?: number }>;
+    universe?: Array<{
+      name?: string;
+      szDecimals?: number;
+      maxLeverage?: number;
+    }>;
   };
   const assets = (raw.universe ?? [])
     .map((row, index) => {
@@ -77,6 +82,7 @@ export async function loadHyperliquidMeta(
       if (!coin) {
         return null;
       }
+      const maxLeverage = Number(row.maxLeverage);
       return {
         coin,
         index,
@@ -84,6 +90,7 @@ export async function loadHyperliquidMeta(
           Number.isInteger(row.szDecimals) && Number(row.szDecimals) >= 0
             ? Number(row.szDecimals)
             : 0,
+        maxLeverage: maxLeverage > 0 ? maxLeverage : null,
       };
     })
     .filter((row): row is HyperliquidAsset => row !== null);
