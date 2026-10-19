@@ -568,7 +568,7 @@ export function userBacktestFieldIssues(
     if (recipe.startKind === "webhook") {
       issues.push({
         field: "startKind",
-        message: "Webhook start cannot be replayed. Pick Price, Indicator, or Trend.",
+        message: "Webhook triggers can't be backtested.",
       });
     } else if (recipe.startKind === "immediate") {
       issues.push({

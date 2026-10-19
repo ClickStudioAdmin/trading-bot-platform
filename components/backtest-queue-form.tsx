@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AppMultiSelect, AppSelect, type AppSelectOption } from "@/components/app-select";
@@ -37,6 +37,7 @@ import {
   estimateBacktestBars,
   matchingBacktestWindowDays,
   parseBacktestDates,
+  readBacktestName,
 } from "@/lib/backtest/model";
 import {
   backtestYearsHint,
@@ -228,12 +229,8 @@ export function BacktestQueueForm({
   const [symbol, setSymbol] = useState(
     seed?.symbol ?? initialTemplate?.recipe.symbol ?? "",
   );
-  const [backtestName, setBacktestName] = useState(
-    seed?.name?.trim() ||
-      initialTemplate?.name?.trim() ||
-      seed?.recipe.name?.trim() ||
-      "",
-  );
+  const [backtestName, setBacktestName] = useState(seed?.name?.trim() || "");
+  const backtestNameId = useId();
   const [comparables, setComparables] = useState<string[]>(
     seed?.comparables ?? [],
   );
@@ -380,6 +377,14 @@ export function BacktestQueueForm({
   const pickedTemplate = libraryTemplateSelected
     ? (templates.find((row) => row.id === templateId) ?? null)
     : null;
+  const generatedSourceName = readBacktestName(
+    libraryTemplateSelected
+      ? pickedTemplate?.name
+      : deskBotSelected
+        ? (pickedDeskBot?.name ??
+          deskBots.find((row) => row.id === templateId)?.name)
+        : "",
+  );
   const templateSelectValue =
     templateOptions.find(
       (option) => templateIdFromOption(option.value) === templateId,
@@ -625,21 +630,6 @@ export function BacktestQueueForm({
       </div>
     ) : null;
 
-  function keepTypedName(nextName: string) {
-    setBacktestName((current) => {
-      const previous = (
-        templates.find((row) => row.id === templateId)?.name ??
-        recipe?.name ??
-        ""
-      ).trim();
-      const typed = current.trim();
-      if (!typed || typed === previous) {
-        return nextName;
-      }
-      return current;
-    });
-  }
-
   function clearSourcePick() {
     botRequest.current += 1;
     setBotPending(false);
@@ -673,7 +663,6 @@ export function BacktestQueueForm({
       const match = findBacktestableTemplate(result.bot.recipe, templates);
       setPickedDeskBot(result.bot);
       setRecipe(result.bot.recipe);
-      keepTypedName(result.bot.recipe.name);
       setSourceTemplateId(match?.id ?? "");
       setSymbol(result.bot.recipe.symbol);
       setVenue(result.bot.venue === "hyperliquid" ? "hyperliquid" : "bybit");
@@ -700,7 +689,6 @@ export function BacktestQueueForm({
     setPickedDeskBot(null);
     setTemplateId(next.id);
     setRecipe(next.recipe);
-    keepTypedName(next.name);
     setSourceTemplateId(next.id);
     setSymbol(next.recipe.symbol);
     setComparables((rows) => rows.filter((row) => row !== next.recipe.symbol));
@@ -873,9 +861,28 @@ export function BacktestQueueForm({
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
         <input type="hidden" name="symbol" value={symbol} />
-        <label className="block text-sm text-ink">
-          Name
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor={backtestNameId} className="text-sm text-ink">
+              Name
+            </label>
+            {variant ? null : (
+              <button
+                type="button"
+                disabled={!generatedSourceName}
+                onClick={() => {
+                  if (generatedSourceName) {
+                    setBacktestName(generatedSourceName);
+                  }
+                }}
+                className="rounded-control border border-line px-2 py-0.5 text-xs text-ink-muted hover:border-line-strong hover:text-ink disabled:opacity-40"
+              >
+                Generate Name
+              </button>
+            )}
+          </div>
           <input
+            id={backtestNameId}
             name="backtestName"
             value={backtestName}
             maxLength={BACKTEST_NAME_MAX}
@@ -883,7 +890,7 @@ export function BacktestQueueForm({
             className={nameMissing ? botFieldInvalidClass : BILLING_FIELD_CLASS}
             aria-invalid={nameMissing || undefined}
           />
-        </label>
+        </div>
         <div>
           <div className="grid min-w-0 gap-3 @min-[22rem]:grid-cols-2 [&>*]:min-w-0">
             <DatePicker

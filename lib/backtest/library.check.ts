@@ -368,6 +368,10 @@ assert.equal(
 );
 assert.equal(canQueueUserBacktest({ ...dca, startKind: "webhook" }).ok, false);
 assert.equal(
+  userBacktestFieldIssues({ ...dca, startKind: "webhook" })[0]?.message,
+  "Webhook triggers can't be backtested.",
+);
+assert.equal(
   canQueueUserBacktest({
     ...dca,
     startKind: "price",
