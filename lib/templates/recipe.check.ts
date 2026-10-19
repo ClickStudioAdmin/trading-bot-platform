@@ -448,7 +448,8 @@ if (paperLayer.ok) {
   assert.equal(paperLayer.layer.mode, "disabled");
   assert.equal(paperLayer.layer.id, null);
   assert.equal(paperLayer.layer.minNetApr, 0.1);
-  assert.equal(paperLayer.layer.stopLossPct, -0.02);
+  assert.equal(paperLayer.layer.stopLossPct, null);
+  assert.equal(paper.stopLossPct, null);
   assert.equal(paperLayer.layer.sortOrder, 2);
 }
 

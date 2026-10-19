@@ -1483,12 +1483,6 @@ function paperSections(recipe: PaperTemplateRecipe): ParamSection[] {
             },
           ],
         },
-        optionalGroup("Take profit", recipe.takeProfitPct != null, [
-          { label: "Take profit %", value: paperPercent(recipe.takeProfitPct) },
-        ]),
-        optionalGroup("Stop loss", recipe.stopLossPct != null, [
-          { label: "Stop loss %", value: paperPercent(recipe.stopLossPct) },
-        ]),
       ],
     },
   ];

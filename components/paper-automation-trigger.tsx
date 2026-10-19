@@ -139,18 +139,6 @@ export function PaperAutomationTrigger({
                     defaultValue={form.closeMinApr}
                     allowDecimal
                   />
-                  <ExitField
-                    name="takeProfit"
-                    label="Take profit %"
-                    defaultValue={form.takeProfit}
-                    allowDecimal
-                  />
-                  <ExitField
-                    name="stopLoss"
-                    label="Stop loss %"
-                    defaultValue={form.stopLoss}
-                    allowDecimal
-                  />
                   <PendingSubmitButton
                     pendingLabel="Saving…"
                     successKey={`exits-${carryId}`}

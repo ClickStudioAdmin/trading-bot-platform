@@ -710,8 +710,6 @@ export function paperBotConfig(layer: PaperLayerFormValues): BotConfigSection[] 
           ? "Fixed (entire position)"
           : "Dynamic (scale out)",
       ),
-      setting("Take profit", paperFilled(layer.takeProfit, "%")),
-      setting("Stop loss", paperFilled(layer.stopLoss, "%")),
     ]),
   ]);
 }

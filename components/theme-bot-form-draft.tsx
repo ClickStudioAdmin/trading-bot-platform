@@ -741,10 +741,6 @@ export function ThemeBotFormDraft() {
   const [exitSizeType, setExitSizeType] = useState<"dynamic" | "fixed">(
     "dynamic",
   );
-  const [carryTpOn, setCarryTpOn] = useState(false);
-  const [carrySlOn, setCarrySlOn] = useState(false);
-  const [carryTp, setCarryTp] = useState("");
-  const [carrySl, setCarrySl] = useState("");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
   const [longAddGroups, setLongAddGroups] = useState(() =>
@@ -1009,10 +1005,6 @@ export function ThemeBotFormDraft() {
     closeMaxDte,
     closeMinApr,
     exitSizeType,
-    carryTpOn,
-    carrySlOn,
-    carryTp,
-    carrySl,
     status,
   };
   const draftKey = JSON.stringify(draftValue);
@@ -1049,8 +1041,6 @@ export function ThemeBotFormDraft() {
     desk !== "cnc" && !closing && exitClauses.some((clause) => clause.kind === "breakeven");
   const requireShortBreakeven =
     themeBothExits && shortClauses.some((clause) => clause.kind === "breakeven");
-  const requireCarryTp = desk === "cnc" && carryTpOn;
-  const requireCarrySl = desk === "cnc" && carrySlOn;
   const requireConfirm = desk !== "cnc" && !closing && confirmOn;
   const requireShortConfirm = bothSides && !closing && shortConfirmOn;
   const requireExitIf =
@@ -1197,8 +1187,6 @@ export function ThemeBotFormDraft() {
     shortTrailTrigger: requireShortTrailTrigger && !filled(shortClassic.trailTrigger),
     shortBreakevenAt: requireShortBreakeven && !filled(shortClassic.breakevenAt),
     shortAtrPeriod: requireShortAtrPeriod,
-    carryTp: requireCarryTp && !filled(carryTp),
-    carrySl: requireCarrySl && !filled(carrySl),
     maxOpenCount: requireMaxPairs,
     orderSizeUsdt: requireCarrySize,
     confirm: requireConfirm && !dcaFilterComplete(confirm),
@@ -3368,40 +3356,6 @@ export function ThemeBotFormDraft() {
                 </Field>
               </div>
             </Group>
-
-            <OptionalSection
-              title="Take profit"
-              enabled={carryTpOn}
-              onEnabled={setCarryTpOn}
-            >
-              <div className={rowClass}>
-                <Field label="Take profit %" required>
-                  <OffNumber
-                    value={carryTp}
-                    onChange={setCarryTp}
-                    required
-                    invalid={showFieldErrors && missing.carryTp}
-                  />
-                </Field>
-              </div>
-            </OptionalSection>
-
-            <OptionalSection
-              title="Stop loss"
-              enabled={carrySlOn}
-              onEnabled={setCarrySlOn}
-            >
-              <div className={rowClass}>
-                <Field label="Stop loss %" required>
-                  <OffNumber
-                    value={carrySl}
-                    onChange={setCarrySl}
-                    required
-                    invalid={showFieldErrors && missing.carrySl}
-                  />
-                </Field>
-              </div>
-            </OptionalSection>
             </BotFormStep>
           </>
         )}

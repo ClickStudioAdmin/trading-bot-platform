@@ -51,8 +51,8 @@ export function automationFromLayer(
     entryMaxOpenNotionalUsdt: layer.maxOpenNotionalUsdt,
     closeMaxDte: layer.closeMaxDte,
     closeMinNetApr: layer.closeMinNetApr,
-    takeProfitPct: layer.takeProfitPct,
-    stopLossPct: layer.stopLossPct,
+    takeProfitPct: null,
+    stopLossPct: null,
   };
 }
 
@@ -130,32 +130,16 @@ export function formatExitTriggers(automation: PaperCarryAutomation): string[] {
   if (closeApr) {
     lines.push(`APR below ${closeApr}`);
   }
-  const takeProfit = formatPctPoints(automation.takeProfitPct);
-  if (takeProfit) {
-    lines.push(`Take profit ${takeProfit}`);
-  }
-  const stopLoss = formatPctPoints(
-    automation.stopLossPct === null ? null : Math.abs(automation.stopLossPct),
-  );
-  if (stopLoss) {
-    lines.push(`Stop loss ${stopLoss}`);
-  }
   return lines;
 }
 
 export function exitFormValues(automation: PaperCarryAutomation): {
   closeMaxDte: string;
   closeMinApr: string;
-  takeProfit: string;
-  stopLoss: string;
 } {
   return {
     closeMaxDte: boundToInput(automation.closeMaxDte),
     closeMinApr: decimalToPercentInput(automation.closeMinNetApr),
-    takeProfit: decimalToPercentInput(automation.takeProfitPct),
-    stopLoss: decimalToPercentInput(
-      automation.stopLossPct === null ? null : Math.abs(automation.stopLossPct),
-    ),
   };
 }
 
@@ -164,17 +148,12 @@ export function parseCarryExitForm(form: FormData): {
   closeMinNetApr: number | null;
   takeProfitPct: number | null;
   stopLossPct: number | null;
-} | { error: string } {
-  const takeProfitPct = parsePercent(form.get("takeProfit"));
-  if (takeProfitPct !== null && takeProfitPct <= 0) {
-    return { error: "Take profit % must be positive." };
-  }
-  const stopLossRaw = parsePercent(form.get("stopLoss"));
+} {
   return {
     closeMaxDte: parseBound(form.get("closeMaxDte")),
     closeMinNetApr: parsePercent(form.get("closeMinApr")),
-    takeProfitPct,
-    stopLossPct: stopLossRaw === null ? null : -Math.abs(stopLossRaw),
+    takeProfitPct: null,
+    stopLossPct: null,
   };
 }
 
