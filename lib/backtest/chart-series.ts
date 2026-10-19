@@ -67,10 +67,12 @@ export type IndicatorLayer = {
   inputsLocked: boolean;
   /** Shown on the Inputs tab. References follow the chart candles. */
   timeframeLabel: string;
-  /** Confirmed swings. The player draws the latest pair through the playhead. */
+  /** Confirmed pairs. Drawn on price and on the RSI pane. */
   divergence?: {
     period: number;
     settings: import("@/lib/strategy/rsi-divergence").RsiDivergenceSettings;
+    /** Reference studies draw every shape. A condition draws its When and Style. */
+    everyShape: boolean;
   } | null;
 };
 
@@ -786,6 +788,7 @@ export function replayChartSeries(
         divergence = {
           period: spec.period ?? DEFAULT_DCA_RSI_PERIOD,
           settings: spec.divergence,
+          everyShape: spec.reference === true,
         };
       }
     } else if (spec.kind === "macd") {

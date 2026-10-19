@@ -57,8 +57,8 @@ C&C / basis charts stay parked.
 
 Click asked for a Bybit-style manual Positions page. This is the live chart on **manual desks only**. Flex, DCA, TradingView Strategy, and copy desks stay stacked, with no chart.
 
-- Chart on the left. Place an order in the right column. Current Positions and Open Orders stay full width under both.
-- The chart is the replay chart: same candle route, interval control, bar and canvas styles, and indicator catalog (RSI, RSI divergence, MACD, SMA, EMA, Bollinger Bands, Supertrend, ATR Band). The user turns any of them on. Inputs and colours work the same way. RSI divergence draws the latest confirmed swing on price and on the RSI pane.
+- Chart on the left. Place an order in the right column. Current Positions and Open Orders stay full width under both. Under the order form, Symbol Details lists bid/ask, spread in ticks, min and max lot, max leverage, and the lot step for the selected contract.
+- The chart is the replay chart: same candle route, interval control, bar and canvas styles, and indicator catalog (RSI, RSI divergence, MACD, SMA, EMA, Bollinger Bands, Supertrend, ATR Band). The user turns any of them on. Inputs and colours work the same way. RSI divergence draws each confirmed pair in the span on price and on the RSI pane, with a triangle at each RSI swing. The desk study draws bullish and bearish, regular and hidden.
 - Candles still come from `/api/market/candles`. The browser does not call the venue.
 - Orders still come from the ticket. Buy and Sell stay on the page, on the selected contract. The chart does not place or amend.
 - Interval, indicators, inputs, and colours stay in the browser under `tbp.desk.chart`.

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { SymbolDetails } from "@/components/symbol-details";
 import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
@@ -22,6 +23,7 @@ import {
   baseCoinForPerpSymbol,
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
+import { symbolQuotesFromTickers } from "@/lib/exchanges/symbol-details";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
 import {
@@ -207,6 +209,7 @@ export default async function FuturesPositionsPage({
     pairs,
     "BTCUSDT",
   );
+  const symbolQuotes = symbolQuotesFromTickers(tickers);
   const hintRows = desk.fillsLoaded
     ? open
     : open.map((row) => ({ ...row, orders: undefined }));
@@ -388,6 +391,11 @@ export default async function FuturesPositionsPage({
                   venue orders.
                 </p>
               ) : null}
+              <SymbolDetails
+                options={pairs}
+                quotes={symbolQuotes}
+                environment={session?.account.venueEnvironment ?? null}
+              />
             </div>
           </section>
           </ManualTradeWorkspace>

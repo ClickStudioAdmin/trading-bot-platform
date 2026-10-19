@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
+import { SymbolDetails } from "@/components/symbol-details";
 import { ManualTradeWorkspace } from "@/components/manual-trade-workspace";
 import {
   DeskBlotterFilters,
@@ -68,6 +69,7 @@ import {
   loadHyperliquidTickerMap,
 } from "@/lib/venues/hyperliquid/market";
 import { baseCoinForPerpSymbol } from "@/lib/exchanges/bybit/perp";
+import { symbolQuotesFromTickers } from "@/lib/exchanges/symbol-details";
 import { withMarketCapRank } from "@/lib/pairs/page";
 
 const NEXT_PATH = FUTURES_PATHS.positions;
@@ -196,6 +198,7 @@ export async function HyperliquidFuturesPositions({
     pairs,
     "BTC",
   );
+  const symbolQuotes = symbolQuotesFromTickers(tickers);
   const hintRows = desk.fillsLoaded
     ? open
     : open.map((row) => ({ ...row, orders: undefined }));
@@ -344,6 +347,11 @@ export async function HyperliquidFuturesPositions({
                   buttons place venue orders.
                 </p>
               ) : null}
+              <SymbolDetails
+                options={pairs}
+                quotes={symbolQuotes}
+                environment={env}
+              />
             </div>
           </section>
           </ManualTradeWorkspace>

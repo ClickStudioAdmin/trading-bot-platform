@@ -38,6 +38,11 @@ export type BybitInstrument = {
     minPrice?: string;
     maxPrice?: string;
   };
+  leverageFilter?: {
+    minLeverage?: string;
+    maxLeverage?: string;
+    leverageStep?: string;
+  };
   symbolType?: string;
 };
 
