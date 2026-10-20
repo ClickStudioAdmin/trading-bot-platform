@@ -540,15 +540,15 @@ export function PreviousBacktestLink({
   name: string;
 }) {
   return (
-    <div className="pt-1">
+    <div className="w-full min-w-0 pt-1">
       <Link
         href={href}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex min-w-0 items-center gap-1.5 text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
+        className="flex w-full min-w-0 items-start gap-1.5 text-sm text-accent underline underline-offset-2 hover:text-accent-strong"
       >
-        <span className="truncate">{name}</span>
-        <IconOpen size={14} className="size-3.5 shrink-0" />
+        <span className="min-w-0 flex-1 break-words">{name}</span>
+        <IconOpen size={14} className="mt-0.5 size-3.5 shrink-0" />
       </Link>
     </div>
   );
