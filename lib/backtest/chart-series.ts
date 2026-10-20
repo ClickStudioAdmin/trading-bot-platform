@@ -998,6 +998,11 @@ function legendNumber(value: number): string {
   });
 }
 
+/** Supertrend is drawn as two plots. Only the side for this bar is a reading. */
+export function isTrendSidePlot(id: string): boolean {
+  return id.endsWith("-up") || id.endsWith("-down");
+}
+
 function valueAt(values: (number | null)[], index: number): number | null {
   if (values.length === 0) {
     return null;
@@ -1010,6 +1015,14 @@ function valueAt(values: (number | null)[], index: number): number | null {
     }
   }
   return null;
+}
+
+function valueOnBar(values: (number | null)[], index: number): number | null {
+  if (index < 0 || index >= values.length) {
+    return null;
+  }
+  const value = values[index];
+  return value != null && Number.isFinite(value) ? value : null;
 }
 
 export type IndicatorStyleTarget = {
@@ -1128,7 +1141,9 @@ export function replayIndicatorLegend(
   for (const layer of layers) {
     const values: ReplayIndicatorLegendValue[] = [];
     for (const plot of layer.price) {
-      const value = valueAt(plot.values, index);
+      const value = isTrendSidePlot(plot.id)
+        ? valueOnBar(plot.values, index)
+        : valueAt(plot.values, index);
       if (value == null) {
         continue;
       }
