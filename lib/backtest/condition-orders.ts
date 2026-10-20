@@ -584,10 +584,14 @@ function push(
   levels.push({
     id: `${side}:${role}:${title}:${price}`,
     price,
-    title,
+    title: conditionLevelTitle(side, title),
     side,
     role,
   });
+}
+
+export function conditionLevelTitle(side: FuturesSide, title: string): string {
+  return `${side === "short" ? "Short" : "Long"} ${title}`;
 }
 
 function dedupe(levels: ConditionOrderLevel[]): ConditionOrderLevel[] {

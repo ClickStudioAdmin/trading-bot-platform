@@ -221,9 +221,9 @@ const levels = conditionOrderLevels({
   candles: [bar(0, 90), bar(1, 80), bar(2, 82)],
   tape: "5",
 });
-assert.equal(levels.some((row) => row.role === "exit" && row.title === "TP" && row.price === 120), true);
+assert.equal(levels.some((row) => row.role === "exit" && row.title === "Long TP" && row.price === 120), true);
 assert.equal(
-  levels.some((row) => row.role === "add" && row.title === "Add" && row.price === 80 * 1.01),
+  levels.some((row) => row.role === "add" && row.title === "Long Add" && row.price === 80 * 1.01),
   true,
 );
 
