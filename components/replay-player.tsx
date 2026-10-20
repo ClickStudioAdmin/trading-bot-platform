@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
+import { ConditionOrderMarks } from "@/lib/charts/condition-order-marks";
 import {
   DivergenceLinesPrimitive,
   releaseDivergenceLines,
@@ -1476,6 +1477,8 @@ export function ReplayPlayer({
       mountIndicators();
       let initialRange: { from: number; to: number } | null = null;
       const conditionLines: { remove: () => void }[] = [];
+      const conditionMarks = new ConditionOrderMarks();
+      candleSeries.attachPrimitive(conditionMarks);
       function resetPriceScales() {
         for (const pane of chart.panes()) {
           pane.priceScale("right").setAutoScale(true);
@@ -1679,9 +1682,14 @@ export function ReplayPlayer({
         conditionLines.length = 0;
         const levelSeries = lineMode ? closeSeries : candleSeries;
         const levelColor = colorWithOpacity(
-          cssVar(node, "--color-ink-faint", "#6B7382"),
-          48,
+          cssVar(node, "--color-ink-muted", "#9AA3B2"),
+          72,
         );
+        conditionMarks.setStyle({
+          badge: cssVar(node, "--color-ink-muted", "#9AA3B2"),
+          text: cssVar(node, "--color-canvas", "#0B0E14"),
+        });
+        const shownLevels: Array<{ price: number; title: string }> = [];
         for (const level of conditionLevelsRef.current) {
           if (!(level.price > 0) || !Number.isFinite(level.price)) {
             continue;
@@ -1691,13 +1699,15 @@ export function ReplayPlayer({
             color: levelColor,
             lineWidth: 1,
             lineStyle: charts.LineStyle.SparseDotted,
-            axisLabelVisible: true,
-            title: level.title,
+            axisLabelVisible: false,
+            title: "",
           });
           conditionLines.push({
             remove: () => levelSeries.removePriceLine(line),
           });
+          shownLevels.push({ price: level.price, title: level.title });
         }
+        conditionMarks.setMarks(shownLevels);
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
