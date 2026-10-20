@@ -202,6 +202,36 @@ export function findMatchingSavedBacktest(
   );
 }
 
+/**
+ * Newest matching draft for this user.
+ * Callers pass drafts newest first. A finished run and another user's draft do not match.
+ * Name is ignored, the same as other replay matches.
+ */
+export function findMatchingDraftBacktest<
+  T extends {
+    id: string;
+    status: string;
+    userId: string | null;
+    recipe: BacktestRecipe;
+  },
+>(
+  recipe: BacktestRecipe | null | undefined,
+  userId: string,
+  drafts: readonly T[],
+): T | null {
+  if (!recipe || !userId) {
+    return null;
+  }
+  return (
+    drafts.find(
+      (row) =>
+        row.status === "draft" &&
+        row.userId === userId &&
+        recipesMatchReplayFields(recipe, row.recipe),
+    ) ?? null
+  );
+}
+
 export function findMatchingBacktestDeskBot(
   recipe: BacktestRecipe,
   deskBots: BacktestDeskBot[],
