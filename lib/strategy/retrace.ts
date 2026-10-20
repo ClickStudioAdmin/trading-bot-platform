@@ -84,6 +84,29 @@ export function parseRetraceSpec(raw: unknown): RetraceSpec | null {
   return { source, from, pct, lookback, timeframe };
 }
 
+/** Price the retrace test compares against. Null until the lookback window is full. */
+export function retraceLevelPrice(input: {
+  spec: RetraceSpec;
+  bars: readonly RetraceBar[];
+}): number | null {
+  const window = input.bars.slice(-input.spec.lookback);
+  if (window.length < input.spec.lookback) {
+    return null;
+  }
+  if (input.spec.from === "high") {
+    const high = Math.max(...window.map((bar) => bar.high));
+    if (!(high > 0)) {
+      return null;
+    }
+    return high * (1 - input.spec.pct / 100);
+  }
+  const low = Math.min(...window.map((bar) => bar.low));
+  if (!(low > 0)) {
+    return null;
+  }
+  return low * (1 + input.spec.pct / 100);
+}
+
 /** Last is at least `pct` back from the high, or up from the low, of the window. */
 export function retraceMet(input: {
   spec: RetraceSpec;
@@ -94,22 +117,11 @@ export function retraceMet(input: {
   if (!(price != null && price > 0)) {
     return false;
   }
-  const window = input.bars.slice(-input.spec.lookback);
-  if (window.length < input.spec.lookback) {
+  const level = retraceLevelPrice({ spec: input.spec, bars: input.bars });
+  if (level == null) {
     return false;
   }
-  if (input.spec.from === "high") {
-    const high = Math.max(...window.map((bar) => bar.high));
-    if (!(high > 0)) {
-      return false;
-    }
-    return ((high - price) / high) * 100 >= input.spec.pct;
-  }
-  const low = Math.min(...window.map((bar) => bar.low));
-  if (!(low > 0)) {
-    return false;
-  }
-  return ((price - low) / low) * 100 >= input.spec.pct;
+  return input.spec.from === "high" ? price <= level : price >= level;
 }
 
 export function retraceClaim(input: {

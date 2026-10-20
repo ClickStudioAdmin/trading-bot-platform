@@ -200,6 +200,7 @@ export function dcaSideGates(input: {
   } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  protection?: { openQty: number | null; provenPct: number | null } | null;
 }): { retraceMet: boolean; addMet: boolean } {
   const shortLeg = input.playbook.direction === "both" && input.side === "short";
   const spec = shortLeg ? input.playbook.shortRetrace : input.playbook.retrace;
@@ -225,6 +226,7 @@ export function dcaSideGates(input: {
       prices: input.prices,
       barsByTimeframe: input.barsByTimeframe,
       firedWebhookId: input.firedWebhookId,
+      protection: input.protection,
     }),
   );
   return {

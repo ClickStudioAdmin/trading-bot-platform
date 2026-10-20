@@ -17,6 +17,7 @@ export function fillSentence(input: {
   price: number;
   clipIndex?: number;
   because?: string;
+  fillAt?: "close" | "limit";
 }): string {
   const side = input.side === "short" ? "short" : "long";
   const price = formatPrice(input.price);
@@ -26,6 +27,11 @@ export function fillSentence(input: {
   }
   if (input.reason === "clip") {
     const index = input.clipIndex ?? 2;
+    if (because) {
+      const where =
+        input.fillAt === "limit" ? "Filled at the limit." : "Filled at the bar close.";
+      return `Add ${index} ${side} at ${price}.${because}. ${where}`;
+    }
     return `Add ${index} ${side} at ${price}. The adverse wick reached the resting limit.`;
   }
   if (input.reason === "take_profit") {
@@ -52,6 +58,14 @@ export function skippedEntrySentence(
 ): string {
   const detail = because?.trim() ? `${because.trim()} ` : "";
   return `Skipped entry ${side}. ${detail}Margin plus fee was more than cash left.`;
+}
+
+export function skippedAddSentence(
+  side: FuturesSide,
+  because?: string,
+): string {
+  const detail = because?.trim() ? `${because.trim()} ` : "";
+  return `Skipped add ${side}. ${detail}Margin plus fee was more than cash left.`;
 }
 
 export function eventsFromOrders(orders: SimulatedOrder[]): ReplayEvent[] {
