@@ -41,12 +41,30 @@ export function mergeHotAccountIds(
   return [...ids].sort();
 }
 
+export function hotEngineAccountIds(input: {
+  futures: readonly (string | null | undefined)[];
+  dca: readonly (string | null | undefined)[];
+  flex: readonly (string | null | undefined)[];
+  cashAndCarry: readonly (string | null | undefined)[];
+}): string[] {
+  return mergeHotAccountIds(
+    input.futures,
+    input.dca,
+    input.flex,
+    input.cashAndCarry,
+  );
+}
+
+function accountIds(rows: { account_id?: string }[] | null): string[] {
+  return (rows ?? []).map((row) => String(row.account_id ?? ""));
+}
+
 export async function listHotEngineAccountIds(): Promise<string[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const [open, armed, automations] = await Promise.all([
+  const [open, armed, automations, carries] = await Promise.all([
     supabase
       .from("futures_positions")
       .select("account_id")
@@ -61,18 +79,20 @@ export async function listHotEngineAccountIds(): Promise<string[]> {
       .from("futures_automation_rules")
       .select("account_id")
       .eq("mode", "active"),
+    supabase
+      .from("paper_rules")
+      .select("account_id")
+      .eq("mode", "active"),
   ]);
-  return mergeHotAccountIds(
-    (open.data ?? []).map((row) =>
-      String((row as { account_id?: string }).account_id ?? ""),
-    ),
-    (armed.data ?? []).map((row) =>
-      String((row as { account_id?: string }).account_id ?? ""),
-    ),
-    (automations.data ?? []).map((row) =>
-      String((row as { account_id?: string }).account_id ?? ""),
-    ),
-  );
+  if (carries.error) {
+    console.error("engine hot cash-and-carry", carries.error.message);
+  }
+  return hotEngineAccountIds({
+    futures: accountIds(open.data),
+    dca: accountIds(armed.data),
+    flex: accountIds(automations.data),
+    cashAndCarry: accountIds(carries.data),
+  });
 }
 
 export async function hasArmedIndicatorStarts(): Promise<boolean> {
