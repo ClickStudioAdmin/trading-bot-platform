@@ -320,19 +320,27 @@ const reloadedDraft = parseTemplateRecipe(
   "bybit",
 );
 assert.equal(reloadedDraft.ok, true);
-if (reloadedDraft.ok) {
-  assert.equal(
-    findMatchingDraftBacktest(storedDraft, "user-1", [
-      {
-        id: "draft-reloaded",
-        status: "draft",
-        userId: "user-1",
-        recipe: reloadedDraft.recipe,
-      },
-    ])?.id,
-    "draft-reloaded",
-  );
+if (!reloadedDraft.ok) {
+  throw new Error("reloaded draft");
 }
+assert.equal(
+  reloadedDraft.recipe.kind === "flex" || reloadedDraft.recipe.kind === "dca",
+  true,
+);
+if (reloadedDraft.recipe.kind !== "flex" && reloadedDraft.recipe.kind !== "dca") {
+  throw new Error("reloaded draft kind");
+}
+assert.equal(
+  findMatchingDraftBacktest(storedDraft, "user-1", [
+    {
+      id: "draft-reloaded",
+      status: "draft",
+      userId: "user-1",
+      recipe: reloadedDraft.recipe,
+    },
+  ])?.id,
+  "draft-reloaded",
+);
 assert.equal(findMatchingDraftBacktest(null, "user-1", []), null);
 assert.equal(
   findMatchingDraftBacktest(perps, "", [
