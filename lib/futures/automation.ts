@@ -728,6 +728,9 @@ export function parseFuturesAutomationFields(input: {
     return sizeUnit;
   }
   const unit = sizeUnit.unit === "usdt" ? "usdt" : "qty";
+  if (typeof input.entrySource === "string" && input.entrySource.trim() === "") {
+    return { ok: false, error: "Select a condition type." };
+  }
   const requiredSize = actionParsed.action !== "flatten";
   const size = parseOptionalSize(input.size, unit, requiredSize);
   if (!size.ok) {
@@ -740,9 +743,6 @@ export function parseFuturesAutomationFields(input: {
       return parsed;
     }
     limitPrice = parsed.price;
-  }
-  if (typeof input.entrySource === "string" && input.entrySource.trim() === "") {
-    return { ok: false, error: "Choose a trigger." };
   }
   let entrySource = parseAutomationEntry(input.entrySource);
   if (
@@ -772,7 +772,7 @@ export function parseFuturesAutomationFields(input: {
     ? parseFuturesLimitPrice(input.triggerPrice)
     : { ok: true as const, price: 1 };
   if (!triggerPrice.ok) {
-    return { ok: false, error: "Enter a trigger price." };
+    return { ok: false, error: "Enter a When price." };
   }
   const idRaw = String(input.id ?? "").trim();
   const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -865,7 +865,7 @@ function applyPerpsDirection(
     const shortPrefix = `${prefix}short_`;
     const shortEntryRaw = form.get(`${shortPrefix}entrySource`);
     if (typeof shortEntryRaw === "string" && shortEntryRaw.trim() === "") {
-      return { ok: false, error: "Choose a trigger." };
+      return { ok: false, error: "Select a Short condition type." };
     }
     const entrySource = parseAutomationEntry(shortEntryRaw);
     const webhookId = String(form.get(`${shortPrefix}webhookId`) ?? "").trim() || null;
@@ -887,7 +887,7 @@ function applyPerpsDirection(
       ? parseFuturesLimitPrice(form.get(`${shortPrefix}triggerPrice`))
       : { ok: true as const, price: 1 };
     if (!triggerPrice.ok) {
-      return { ok: false, error: "Enter a short trigger price." };
+      return { ok: false, error: "Enter a Short When price." };
     }
     const conditions = parseFuturesConditionForm(form, shortPrefix, {
       entrySource,

@@ -118,7 +118,7 @@ function assertEntry(label: string, bars: CandleBar[], input: ReplayEntryInput):
     const price = bars[index]?.close ?? 0;
     const expected = futuresEntryConditionMet({
       rule: {
-        entrySource: input.entrySource,
+        entrySource: input.entrySource === "" ? "price" : input.entrySource,
         indicator: input.indicator,
         confirm: input.confirm,
         entryStack: input.entryStack,

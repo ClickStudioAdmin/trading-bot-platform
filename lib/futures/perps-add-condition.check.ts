@@ -9,6 +9,7 @@ import {
   perpsAddConditionDraftForType,
   groupShowsPositionSizing,
   perpsAddGroupsExpr,
+  perpsAddGroupsFieldIssue,
   perpsAddGroupsFromStack,
   perpsAddGroupsSizingMissing,
   perpsAddOrderSettingRows,
@@ -138,6 +139,19 @@ assert.equal(
 
 const hiddenAdd = blankPerpsAddOrderGroups("long");
 assert.equal(perpsAddGroupsSizingMissing(hiddenAdd), false);
+assert.equal(perpsAddGroupsFieldIssue(hiddenAdd), null);
+const retraceAdd = hiddenAdd.map((group) => ({
+  ...group,
+  lead: {
+    ...group.lead,
+    type: "retrace" as const,
+    draft: { ...group.lead.draft, retracePct: "" },
+  },
+}));
+assert.equal(
+  perpsAddGroupsFieldIssue(retraceAdd),
+  "Enter an additional-order retrace %.",
+);
 const openAdd = hiddenAdd.map((group) => ({
   ...group,
   lead: { ...group.lead, type: "price" as const },

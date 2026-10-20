@@ -649,11 +649,32 @@ if (!oneWay.ok) {
 }
 
 const blankTrigger = parseFuturesAutomationForm(
-  perpsForm({ r0_action: "buy", r0_entrySource: "" }),
+  perpsForm({ r0_action: "buy", r0_entrySource: "", r0_size: "" }),
 );
 assert.equal(blankTrigger.ok, false);
 if (!blankTrigger.ok) {
-  assert.match(blankTrigger.error, /Choose a trigger/);
+  assert.match(blankTrigger.error, /Select a condition type/);
+  assert.doesNotMatch(blankTrigger.error, /size|When price|trigger/);
+}
+const blankPrice = parseFuturesAutomationForm(
+  perpsForm({ r0_action: "buy", r0_entrySource: "price", r0_triggerPrice: "" }),
+);
+assert.equal(blankPrice.ok, false);
+if (!blankPrice.ok) {
+  assert.match(blankPrice.error, /Enter a When price/);
+}
+const blankShort = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_direction: "both",
+    r0_entrySource: "price",
+    r0_triggerPrice: "100",
+    r0_short_entrySource: "",
+  }),
+);
+assert.equal(blankShort.ok, false);
+if (!blankShort.ok) {
+  assert.match(blankShort.error, /Select a Short condition type/);
 }
 
 console.log("futures automation checks passed");

@@ -3562,4 +3562,28 @@ if (row) {
   assert.equal(lockedFilters.stopLossPct, 9);
 }
 
+const blankStart = new FormData();
+blankStart.set("name", "Blank");
+blankStart.set("symbol", "BTCUSDT");
+blankStart.set("direction", "long");
+blankStart.set("startKind", "");
+blankStart.set("clipSize", "");
+const blankStartParsed = parseDcaPlaybookForm(blankStart);
+assert.equal(blankStartParsed.ok, false);
+if (!blankStartParsed.ok) {
+  assert.match(blankStartParsed.error, /Select a condition type/);
+  assert.doesNotMatch(blankStartParsed.error, /clip|start price/);
+}
+const blankShortStart = new FormData();
+blankShortStart.set("name", "Blank short");
+blankShortStart.set("symbol", "BTCUSDT");
+blankShortStart.set("direction", "both");
+blankShortStart.set("startKind", "price");
+blankShortStart.set("shortStartKind", "");
+const blankShortStartParsed = parseDcaPlaybookForm(blankShortStart);
+assert.equal(blankShortStartParsed.ok, false);
+if (!blankShortStartParsed.ok) {
+  assert.match(blankShortStartParsed.error, /Select a Short condition type/);
+}
+
 console.log("dca playbook checks passed");

@@ -128,7 +128,14 @@ export type PerpsShortClassic = {
 };
 
 export function perpsLegHasOwnExit(
-  leg: PerpsEntryLeg | null | undefined,
+  leg:
+    | {
+        exitIf?: DcaFilterSpec | null;
+        exitHard?: HardExitSignal | null;
+        exitStack?: EntryStack | null;
+      }
+    | null
+    | undefined,
 ): boolean {
   if (!leg) {
     return false;
@@ -146,7 +153,13 @@ export function perpsExitForSide(
     exitIf?: DcaFilterSpec | null;
     exitHard?: HardExitSignal | null;
     exitStack?: EntryStack | null;
-    shortEntry?: PerpsEntryLeg | null;
+    shortEntry?:
+      | {
+          exitIf?: DcaFilterSpec | null;
+          exitHard?: HardExitSignal | null;
+          exitStack?: EntryStack | null;
+        }
+      | null;
   },
   side: FuturesSide,
 ): {

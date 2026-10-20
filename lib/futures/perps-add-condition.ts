@@ -139,6 +139,60 @@ export function perpsOrderValuesMissing(order: PerpsAddOrderValues): boolean {
   return order.orderType === "limit" && !positiveSizingText(order.limitPrice);
 }
 
+function addConditionFieldIssue(condition: PerpsAddCondition): string | null {
+  if (condition.type === "" || leafFromAddCondition(condition)) {
+    return null;
+  }
+  if (condition.type === "retrace") {
+    return "Enter an additional-order retrace %.";
+  }
+  if (condition.type === "price") {
+    return "Enter an additional-order price.";
+  }
+  if (condition.type === "webhook") {
+    return "Pick an additional-order webhook.";
+  }
+  if (condition.type === "protection") {
+    return "Enter how much of the position must be protected.";
+  }
+  return "Choose additional-order Indicator or Trend settings.";
+}
+
+/**
+ * The first additional-order problem for a field that is on screen.
+ * Select Condition Type stays optional. A chosen type must be complete, and
+ * that group's size is required only when its size fields are showing.
+ */
+export function perpsAddGroupsFieldIssue(
+  groups: readonly PerpsAddOrderGroup[],
+): string | null {
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index];
+    if (!group) {
+      continue;
+    }
+    for (const condition of [group.lead, ...group.conditions]) {
+      const issue = addConditionFieldIssue(condition);
+      if (issue) {
+        return issue;
+      }
+    }
+    if (group.lead.type === "" || sharesGroupLeadSizing(index, group.sameAsGroup1)) {
+      continue;
+    }
+    if (!positiveSizingText(group.order.size)) {
+      return "Enter an additional-order size.";
+    }
+    if (
+      group.order.orderType === "limit" &&
+      !positiveSizingText(group.order.limitPrice)
+    ) {
+      return "Enter an additional-order limit price.";
+    }
+  }
+  return null;
+}
+
 /** A group's own size is required only while that group's fields are on screen. */
 export function perpsAddGroupsSizingMissing(
   groups: readonly PerpsAddOrderGroup[],

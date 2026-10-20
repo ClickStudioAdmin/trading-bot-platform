@@ -76,6 +76,16 @@ assert.equal(
   false,
 );
 assert.equal(canBacktestPerpsRecipe({ ...base, size: "" }).ok, false);
+const blankCondition = canBacktestPerpsRecipe({
+  ...base,
+  entrySource: "",
+  size: "",
+  triggerPrice: "",
+});
+assert.equal(blankCondition.ok, false);
+if (!blankCondition.ok) {
+  assert.equal(blankCondition.error, "Select a condition type.");
+}
 assert.deepEqual(recipeAction({ ...base, formAction: "close_short" }), {
   action: "flatten",
   closeSide: "short",
