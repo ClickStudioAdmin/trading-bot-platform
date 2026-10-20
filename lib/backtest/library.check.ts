@@ -12,6 +12,7 @@ import {
   groupBacktestLibrary,
   attachedTemplateHref,
   attachedTemplateName,
+  backtestOptionDesk,
   backtestDeskFilterChoices,
   backtestDeskFilterLabel,
   backtestDeskTypeFilterChoices,
@@ -142,6 +143,24 @@ assert.equal(adminView.canAttach, false);
 assert.equal(adminView.canSaveAs, false);
 assert.equal(adminView.canSaveAsPlatform, true);
 assert.equal(adminView.matchingDeskLabel, "Paper · Live dip");
+assert.deepEqual(
+  backtestOptionDesk({
+    id: "flex:bot",
+    name: "Adv - Scale In BTD when Protected + Trailing Stop",
+    symbol: "SOLUSDT",
+    kind: "flex",
+    deskId: "desk-1",
+    deskName: "ByBit - Starter Pack",
+    venue: "bybit",
+    venueEnvironment: "demo",
+  }),
+  {
+    id: "desk-1",
+    name: "ByBit - Starter Pack",
+    venue: "bybit",
+    venueEnvironment: "demo",
+  },
+);
 
 const alreadyPlatform = decideBacktestTemplateActions({
   status: "done",

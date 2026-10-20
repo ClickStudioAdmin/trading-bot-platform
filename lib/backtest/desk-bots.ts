@@ -7,6 +7,7 @@ import { listTradingAccounts } from "@/lib/accounts/store";
 import {
   backtestLinksForBotRecipes,
   canQueueUserBacktest,
+  backtestOptionDesk,
   deskBacktestBotCandidates,
   findMatchingBacktestDeskBot,
   indexBacktestRunsByDesk,
@@ -333,7 +334,7 @@ async function loadCandidateRecipes(
     if (!playbook || !option) {
       continue;
     }
-    const bot = botFromPlaybook(playbook, option);
+    const bot = botFromPlaybook(playbook, backtestOptionDesk(option));
     if (canQueueUserBacktest(bot.recipe).ok) {
       bots.push(bot);
     }
@@ -341,7 +342,10 @@ async function loadCandidateRecipes(
   for (const row of rules) {
     const option = desks.get(String(row.account_id ?? ""));
     const bot = option
-      ? botFromRule(parseFuturesAutomationRow(row, option.venue), option)
+      ? botFromRule(
+          parseFuturesAutomationRow(row, option.venue),
+          backtestOptionDesk(option),
+        )
       : null;
     if (bot && canQueueUserBacktest(bot.recipe).ok) {
       bots.push(bot);
