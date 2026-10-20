@@ -204,7 +204,13 @@ const perps = snapshotPerpsRecipe({
 const perpsSections = recipeParamSections(perps);
 assert.deepEqual(
   perpsSections.map((section) => section.title),
-  ["General", "Long Entry Conditions", "Position Sizing", "Long Additional Orders", "Long Exit Conditions"],
+  ["General", "Long Entry Conditions", "Long Additional Orders", "Long Exit Conditions"],
+);
+assert.deepEqual(
+  perpsSections
+    .find((section) => section.title === "Long Entry Conditions")
+    ?.sizing?.map((row) => `${row.label}: ${row.value}`),
+  ["Size: 2", "Unit: ETH", "Order: Market"],
 );
 assert.deepEqual(
   perpsSections
@@ -255,13 +261,13 @@ assert.deepEqual(
     "Condition Type: Position protection",
     "Is: Protected",
     "Amount: Entire position",
-    "Size: 500 USDT",
-    "Unit: USDT",
-    "Order: Market",
   ],
 );
-assert.equal(sizedAdd?.stack?.groups[0]?.at(-1)?.join, "none");
-assert.equal(sizedAdd?.stack?.groups[0]?.at(-1)?.title, "Position Sizing");
+assert.equal(sizedAdd?.stack?.groups[0]?.length, 2);
+assert.deepEqual(
+  sizedAdd?.stack?.sizing?.[0]?.map((row) => `${row.label}: ${row.value}`),
+  ["Size: 500 USDT", "Unit: USDT", "Order: Market"],
+);
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
   ["Name", "Contract", "Direction"],
@@ -467,7 +473,6 @@ assert.deepEqual(
     "General",
     "Long Entry Conditions",
     "Short Entry Conditions",
-    "Position Sizing",
     "Long Additional Orders",
     "Short Additional Orders",
     "Long Exit Conditions",
@@ -511,6 +516,35 @@ assert.match(
 const bothLong = bothRows.find((section) => section.title === "Long Entry Conditions");
 assert.equal(bothLong?.stack?.groups.length, 1);
 assert.equal(bothLong?.stack?.groups[0]?.length, 2);
+assert.equal(bothLong?.stack?.sizing?.[0]?.find((row) => row.label === "Size")?.value, "2");
+assert.equal(bothLong?.stack?.sizing?.[1] ?? null, null);
+assert.equal(bothShort?.stack?.sizing?.[0]?.find((row) => row.label === "Size")?.value, "2");
+assert.equal(bothShort?.stack?.sizing?.[1] ?? null, null);
+const shortSized = recipeParamSections({
+  ...perps,
+  direction: "both",
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
+    entryStack: { leaves: [], joins: [] },
+    size: 4,
+    sizeUnit: "usdt",
+    orderType: "limit",
+    limitPrice: 80,
+  },
+});
+assert.deepEqual(
+  shortSized
+    .find((section) => section.title === "Short Entry Conditions")
+    ?.sizing?.map((row) => `${row.label}: ${row.value}`),
+  ["Size: 4", "Unit: USDT", "Order: Limit", "Limit price: 80"],
+);
 const longTpsl = {
   takeProfit: 10,
   stopLoss: null,
@@ -691,7 +725,6 @@ assert.deepEqual(
   [
     "General",
     "Long Entry Conditions",
-    "Position Sizing",
     "Long Additional Orders",
     "Long Exit Conditions",
   ],
@@ -701,7 +734,6 @@ assert.deepEqual(
   [
     "General",
     "Short Entry Conditions",
-    "Position Sizing",
     "Short Additional Orders",
     "Short Exit Conditions",
   ],

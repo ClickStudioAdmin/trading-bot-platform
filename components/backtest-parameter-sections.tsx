@@ -45,6 +45,18 @@ function ParamRows({
   );
 }
 
+function GroupSizing({ rows }: { rows: ParamRow[] }) {
+  if (rows.length === 0) {
+    return null;
+  }
+  return (
+    <div className="border-t border-line pt-4">
+      <p className="text-sm font-semibold text-ink">Position Sizing</p>
+      <ParamRows rows={rows} inset={false} />
+    </div>
+  );
+}
+
 function ConditionStackView({ stack }: { stack: ParamStack }) {
   return (
     <div className="space-y-3 rounded-card border border-line bg-surface p-4">
@@ -54,32 +66,36 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
       {stack.rows && stack.rows.length > 0 ? (
         <ParamRows rows={stack.rows} inset={false} />
       ) : null}
-      {stack.groups.map((conditions, groupIndex) => (
-        <div key={`group-${groupIndex}`} className="space-y-3">
-          {groupIndex > 0 ? <JoinWord label="Or" /> : null}
-          <section className="space-y-3 rounded-card border border-line bg-canvas px-4 py-4">
-            <h4 className="text-sm font-semibold text-ink">
-              Group {groupIndex + 1}
-              <span className="ml-2 text-hint font-normal text-ink-muted">
-                - {CONDITION_GROUP_HELPER}
-              </span>
-            </h4>
-            {conditions.map((condition, conditionIndex) => (
-              <div key={`condition-${conditionIndex}`} className="space-y-3">
-                {condition.join === "none" || conditionIndex === 0 ? null : (
-                  <JoinWord label="And" />
-                )}
-                {condition.title ? (
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                    {condition.title}
-                  </p>
-                ) : null}
-                <ParamRows rows={condition.rows} inset={false} />
-              </div>
-            ))}
-          </section>
-        </div>
-      ))}
+      {stack.groups.map((conditions, groupIndex) => {
+        const sizing = stack.sizing?.[groupIndex] ?? [];
+        return (
+          <div key={`group-${groupIndex}`} className="space-y-3">
+            {groupIndex > 0 ? <JoinWord label="Or" /> : null}
+            <section className="space-y-3 rounded-card border border-line bg-canvas px-4 py-4">
+              <h4 className="text-sm font-semibold text-ink">
+                Group {groupIndex + 1}
+                <span className="ml-2 text-hint font-normal text-ink-muted">
+                  - {CONDITION_GROUP_HELPER}
+                </span>
+              </h4>
+              {conditions.map((condition, conditionIndex) => (
+                <div key={`condition-${conditionIndex}`} className="space-y-3">
+                  {condition.join === "none" || conditionIndex === 0 ? null : (
+                    <JoinWord label="And" />
+                  )}
+                  {condition.title ? (
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                      {condition.title}
+                    </p>
+                  ) : null}
+                  <ParamRows rows={condition.rows} inset={false} />
+                </div>
+              ))}
+              <GroupSizing rows={sizing} />
+            </section>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -141,6 +157,12 @@ export function BacktestParameterSections({
                         <ParamRows rows={group.rows} inset />
                       </div>
                     ))}
+                    {section.sizing && section.sizing.length > 0 ? (
+                      <div className="border-t border-line px-5 py-4">
+                        <p className="text-sm font-semibold text-ink">Position Sizing</p>
+                        <ParamRows rows={section.sizing} inset={false} />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 {section.stack ? <ConditionStackView stack={section.stack} /> : null}
