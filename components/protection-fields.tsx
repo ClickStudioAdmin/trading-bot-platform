@@ -6,9 +6,10 @@ import {
   botFieldInvalidClass,
 } from "@/components/bot-form-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { protectionIsLabel } from "@/lib/strategy/protection";
 
 export type ProtectionDraft = {
-  is: "protected" | "unprotected";
+  is: "protected" | "no_loss";
   amount: "entire" | "at_least";
   pct: string;
 };
@@ -51,13 +52,13 @@ export function ProtectionFields({
           onChange={(event) =>
             onChange({
               ...draft,
-              is: event.target.value === "unprotected" ? "unprotected" : "protected",
+              is: event.target.value === "no_loss" ? "no_loss" : "protected",
             })
           }
           className={fieldClass}
         >
-          <option value="protected">Protected</option>
-          <option value="unprotected">Not protected</option>
+          <option value="protected">{protectionIsLabel("protected")}</option>
+          <option value="no_loss">{protectionIsLabel("no_loss")}</option>
         </AppSelect>
       </label>
       <label className={labelClass}>

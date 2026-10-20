@@ -41,7 +41,7 @@ export type PerpsAddConditionDraft = {
   retraceFrom: "high" | "low";
   retracePct: string;
   retraceLookback: string;
-  protectionIs: "protected" | "unprotected";
+  protectionIs: "protected" | "no_loss";
   protectionAmount: "entire" | "at_least";
   protectionPct: string;
   divergenceWhen: string;

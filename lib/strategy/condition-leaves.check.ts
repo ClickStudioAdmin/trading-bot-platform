@@ -287,9 +287,10 @@ assert.equal(
 );
 assert.equal(
   protectionMet({
-    spec: { is: "unprotected", amount: "entire", pct: null },
+    spec: { is: "no_loss", amount: "entire", pct: null },
     openQty: null,
-    provenPct: 0,
+    provenPct: 100,
+    noLossProvenPct: 100,
   }),
   false,
 );
@@ -311,11 +312,12 @@ assert.equal(
 );
 assert.equal(
   protectionMet({
-    spec: { is: "unprotected", amount: "at_least", pct: 40 },
+    spec: { is: "no_loss", amount: "at_least", pct: 40 },
     openQty: 2,
-    provenPct: 39,
+    provenPct: 100,
+    noLossProvenPct: 39,
   }),
-  true,
+  false,
 );
 
 const leaf: StrategyLeaf = { kind: "retrace", ...retrace };

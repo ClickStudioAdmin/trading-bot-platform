@@ -33,6 +33,7 @@ import {
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
 import { perpsAddOrderSettingRows } from "@/lib/futures/perps-add-condition";
+import { protectionIsLabel } from "@/lib/strategy/protection";
 import type { RsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import { trailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
@@ -383,7 +384,7 @@ function leafConditionRows(
       { label: "Condition Type", value: "Position protection" },
       {
         label: "Is",
-        value: leaf.is === "unprotected" ? "Not protected" : "Protected",
+        value: protectionIsLabel(leaf.is),
       },
       {
         label: "Amount",

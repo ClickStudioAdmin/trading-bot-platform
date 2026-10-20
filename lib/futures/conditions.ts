@@ -15,7 +15,11 @@ import {
   exitActionsToJson,
   parseExitActionsField,
 } from "@/lib/strategy/exit-actions";
-import { parseProtectionSpec, protectionMet } from "@/lib/strategy/protection";
+import {
+  parseProtectionSpec,
+  protectionMet,
+  type ProtectionReading,
+} from "@/lib/strategy/protection";
 import { parseRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import {
   parseRetraceFrom,
@@ -1140,8 +1144,8 @@ export function entryLeafMet(input: {
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
-  /** Open size and the largest protective stop. Flat stays unmet. */
-  protection?: { openQty: number | null; provenPct: number | null } | null;
+  /** Open size and protective coverage. Flat stays unmet. */
+  protection?: ProtectionReading | null;
 }): boolean {
   const leaf = input.leaf;
   if (leaf.kind === "filter") {
@@ -1171,6 +1175,7 @@ export function entryLeafMet(input: {
       spec: leaf,
       openQty: input.protection?.openQty ?? null,
       provenPct: input.protection?.provenPct ?? null,
+      noLossProvenPct: input.protection?.noLossProvenPct ?? null,
     });
   }
   const bars = barsForTimeframe(input.barsByTimeframe, leaf.start.timeframe);

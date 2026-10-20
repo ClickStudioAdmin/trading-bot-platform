@@ -24,6 +24,7 @@ import {
   type ExitRuntime,
 } from "@/lib/strategy/exit-actions";
 import { formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { protectionReading } from "@/lib/strategy/protection";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import { ReplayBook } from "./replay-mask";
@@ -766,12 +767,12 @@ export async function replayPerpsPriceCross(input: {
         stack,
         detail:
           open && stack && stack.leaves.length > 0
-            ? series.addDetail(stack, open.side, barIndex - 1, {
-                openQty: open.qty,
-                provenPct:
-                  bookForOpen(open, bar.timeMs, price)?.protective.provenPct ??
-                  null,
-              })
+            ? series.addDetail(
+                stack,
+                open.side,
+                barIndex - 1,
+                protectionReading(open.qty, bookForOpen(open, bar.timeMs, price)),
+              )
             : { met: false, group: null, because: "" },
         latch: addLatch,
         open: Boolean(open),
@@ -1430,12 +1431,15 @@ async function replayPerpsBoth(input: {
         stack,
         detail:
           positioned && stack && stack.leaves.length > 0
-            ? series.addDetail(stack, side, barIndex - 1, {
-                openQty: positioned.qty,
-                provenPct:
-                  bookForSide(positioned, bar.timeMs, price)?.protective
-                    .provenPct ?? null,
-              })
+            ? series.addDetail(
+                stack,
+                side,
+                barIndex - 1,
+                protectionReading(
+                  positioned.qty,
+                  bookForSide(positioned, bar.timeMs, price),
+                ),
+              )
             : { met: false, group: null, because: "" },
         latch,
         open: Boolean(positioned),
