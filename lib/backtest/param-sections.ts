@@ -68,11 +68,15 @@ export type ParamStack = {
   title?: string;
   rows?: ParamRow[];
   groups: ParamCondition[][];
+  /** Order size for each condition group. Same index as `groups`. */
+  sizing?: Array<ParamRow[] | null>;
 };
 
 export type ParamSection = {
   title: string;
   groups: ParamGroup[];
+  /** Order size for a flat entry, kept in that condition card. */
+  sizing?: ParamRow[];
   stack?: ParamStack;
   stacks?: ParamStack[];
 };
@@ -1328,18 +1332,13 @@ function perpsAddSections(
     side,
     "flex",
     quote,
-  ).map((conditions, index) => {
+  );
+  const sizing = groups.map((_, index) => {
     const order = orderForAddGroup(stack?.orders, index);
     const rows = order ? addOrderSizeRows(order, quote) : [];
-    if (rows.length === 0) {
-      return conditions;
-    }
-    return [
-      ...conditions,
-      { title: "Position Sizing", join: "none" as const, rows },
-    ];
+    return rows.length > 0 ? rows : null;
   });
-  return { groups: [], stack: { groups } };
+  return { groups: [], stack: { groups, sizing } };
 }
 
 function perpsEntry(
@@ -1404,6 +1403,81 @@ function perpsEntry(
   return { groups };
 }
 
+function flexSizeRows(
+  size: number | string | null | undefined,
+  sizeUnit: "qty" | "usdt" | null | undefined,
+  orderType: string | null | undefined,
+  limitPrice: number | string | null | undefined,
+  symbol: string,
+  closing: boolean,
+): ParamRow[] {
+  const rows: ParamRow[] = [
+    {
+      label: closing ? "Qty to close" : "Size",
+      value: closing && String(size ?? "").trim() === "" ? "All" : num(size),
+    },
+  ];
+  if (!closing) {
+    rows.push({
+      label: "Unit",
+      value: sizeUnit === "qty" ? baseCoin(symbol) : quoteLabel(symbol),
+    });
+  }
+  rows.push({
+    label: "Order",
+    value: orderLabel(orderType === "limit"),
+  });
+  if (orderType === "limit") {
+    rows.push({ label: "Limit price", value: num(limitPrice) });
+  }
+  return rows;
+}
+
+/** Lead size on group 1. Later groups show a size only when they keep their own. */
+function entryGroupSizing(
+  groupCount: number,
+  lead: ParamRow[],
+  orders: EntryStack["orders"] | null | undefined,
+  symbol: string,
+): Array<ParamRow[] | null> {
+  return Array.from({ length: groupCount }, (_, index) => {
+    if (index === 0) {
+      return lead;
+    }
+    const order = orders?.[index];
+    if (!order || order.sameAsGroup1 !== false) {
+      return null;
+    }
+    const rows = flexSizeRows(
+      order.size,
+      order.sizeUnit,
+      order.orderType,
+      order.limitPrice,
+      symbol,
+      false,
+    );
+    return rows.some((row) => row.label === "Size" && row.value !== "—") ? rows : null;
+  });
+}
+
+function withEntrySizing(
+  entry: { groups: ParamGroup[]; stack?: ParamStack },
+  sizeRows: ParamRow[],
+  orders: EntryStack["orders"] | null | undefined,
+  symbol: string,
+): { groups: ParamGroup[]; stack?: ParamStack; sizing?: ParamRow[] } {
+  if (entry.stack) {
+    return {
+      groups: entry.groups,
+      stack: {
+        ...entry.stack,
+        sizing: entryGroupSizing(entry.stack.groups.length, sizeRows, orders, symbol),
+      },
+    };
+  }
+  return { groups: entry.groups, sizing: sizeRows };
+}
+
 function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
   const closing =
     recipe.formAction === "close_long" || recipe.formAction === "close_short";
@@ -1415,25 +1489,29 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
         ? "short"
         : "long";
   const entry = perpsEntry(recipe, side, closing);
-  const sizeRows: ParamRow[] = [
-    {
-      label: closing ? "Qty to close" : "Size",
-      value: closing && String(recipe.size).trim() === "" ? "All" : num(recipe.size),
-    },
-  ];
-  if (!closing) {
-    sizeRows.push({
-      label: "Unit",
-      value: recipe.sizeUnit === "qty" ? baseCoin(recipe.symbol) : quote,
-    });
-  }
-  sizeRows.push({
-    label: "Order",
-    value: orderLabel(recipe.orderType === "limit"),
-  });
-  if (recipe.orderType === "limit") {
-    sizeRows.push({ label: "Limit price", value: num(recipe.limitPrice) });
-  }
+  const sizeRows = flexSizeRows(
+    recipe.size,
+    recipe.sizeUnit,
+    recipe.orderType,
+    recipe.limitPrice,
+    recipe.symbol,
+    closing,
+  );
+  const short = recipe.shortEntry;
+  const shortSize =
+    short?.size != null && Number(short.size) > 0
+      ? flexSizeRows(
+          short.size,
+          short.sizeUnit ?? recipe.sizeUnit,
+          short.orderType ?? recipe.orderType,
+          short.orderType === "limit" ? short.limitPrice : null,
+          recipe.symbol,
+          false,
+        )
+      : sizeRows;
+  const entryBody = closing
+    ? { groups: entry.groups, stack: entry.stack }
+    : withEntrySizing(entry, sizeRows, recipe.entryStack?.orders, recipe.symbol);
   const sections: ParamSection[] = [
     {
       title: "General",
@@ -1452,37 +1530,45 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
         recipe.direction === "both" || side === "long"
           ? "Long Entry Conditions"
           : "Short Entry Conditions",
-      groups: entry.groups,
-      stack: entry.stack,
+      ...entryBody,
     },
-    ...(recipe.direction === "both" && recipe.shortEntry
+    ...(recipe.direction === "both" && short
       ? [
           {
             title: "Short Entry Conditions",
-            ...perpsEntry(
-              {
-                ...recipe,
-                formAction: "sell" as const,
-                entrySource: recipe.shortEntry.entrySource,
-                triggerBy: recipe.shortEntry.triggerBy,
-                triggerCompare: recipe.shortEntry.triggerCompare,
-                triggerPrice: String(recipe.shortEntry.triggerPrice),
-                skipIfOpen: recipe.shortEntry.skipIfOpen,
-                indicator: recipe.shortEntry.indicator,
-                retrace: recipe.shortEntry.retrace ?? null,
-                confirm: recipe.shortEntry.confirm,
-                entryStack: recipe.shortEntry.entryStack,
-              },
-              "short",
-              false,
+            ...withEntrySizing(
+              perpsEntry(
+                {
+                  ...recipe,
+                  formAction: "sell" as const,
+                  entrySource: short.entrySource,
+                  triggerBy: short.triggerBy,
+                  triggerCompare: short.triggerCompare,
+                  triggerPrice: String(short.triggerPrice),
+                  skipIfOpen: short.skipIfOpen,
+                  indicator: short.indicator,
+                  retrace: short.retrace ?? null,
+                  confirm: short.confirm,
+                  entryStack: short.entryStack,
+                },
+                "short",
+                false,
+              ),
+              shortSize,
+              short.entryStack?.orders,
+              recipe.symbol,
             ),
           },
         ]
       : []),
-    {
-      title: "Position Sizing",
-      groups: [{ title: closing ? undefined : "Order Size", rows: sizeRows }],
-    },
+    ...(closing
+      ? [
+          {
+            title: "Position Sizing",
+            groups: [{ rows: sizeRows }],
+          },
+        ]
+      : []),
   ];
   if (!closing) {
     const addSides: Array<"long" | "short"> =
@@ -1795,6 +1881,11 @@ function sectionRowScopes(
       scope: group.title ?? section.title,
     })),
   );
+  const fromSectionSizing = (section.sizing ?? []).map((row) => ({
+    label: row.label,
+    value: row.value,
+    scope: section.title,
+  }));
   const stacks = [
     ...(section.stack ? [section.stack] : []),
     ...(section.stacks ?? []),
@@ -1814,9 +1905,18 @@ function sectionRowScopes(
         })),
       ),
     );
-    return [...head, ...groups];
+    const sizing = (stack.sizing ?? []).flatMap((rows, index) =>
+      (rows ?? []).map((row) => ({
+        label: row.label,
+        value: row.value,
+        scope: stack.title
+          ? `${stack.title} · Group ${index + 1}`
+          : `Group ${index + 1}`,
+      })),
+    );
+    return [...head, ...groups, ...sizing];
   });
-  return [...fromGroups, ...fromStack];
+  return [...fromGroups, ...fromSectionSizing, ...fromStack];
 }
 
 export function recipeParamRows(
