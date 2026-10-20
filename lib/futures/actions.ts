@@ -15,7 +15,9 @@ import {
 import {
   bulkActionBlockReason,
   bulkModeFor,
+  botSavedNotice,
   flattenOwnedRuleIds,
+  saveClosesOwnedRows,
   parseBotBulkAction,
   parseBulkBotIds,
 } from "@/lib/bots/status";
@@ -526,9 +528,9 @@ export async function saveFuturesAutomations(
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
+  const stored = await loadFuturesAutomationRules(account.id);
   if (accountCanHoldConnections(account.mode) && account.venue === "bybit") {
     const bound = await loadFuturesSettings(account.id);
-    const stored = await loadFuturesAutomationRules(account.id);
     const previousSymbol = new Map(
       stored.flatMap((rule) => (rule.id ? [[rule.id, rule.symbol] as const] : [])),
     );
@@ -588,30 +590,54 @@ export async function saveFuturesAutomations(
     strategy: FUTURES_STRATEGY_ID,
     data: { count: parsed.rules.length },
   });
-  const closing =
-    one && flattenOwnedRuleIds(parsed.rules).length > 0;
-  if (closing) {
-    const ownedPositions = (
-      await Promise.all(
-        flattenOwnedRuleIds(parsed.rules).map((rule) =>
-          loadOpenFuturesByRuleId(String(rule.id), {
-            accountId: account.id,
-            userId: user.id,
-          }),
-        ),
+  const previousMode = new Map(
+    stored.flatMap((rule) => (rule.id ? [[rule.id, rule.mode] as const] : [])),
+  );
+  const turningOff = one
+    ? flattenOwnedRuleIds(parsed.rules).filter(
+        (rule) => previousMode.get(String(rule.id)) !== "disabled",
       )
-    )
-      .flat()
-      .filter((row) => row.status === "open");
-    const working = (await loadLiveFuturesWorking({
-      accountId: account.id,
-      userId: user.id,
-    })).filter((row) => row.status === "open");
+    : [];
+  const ownedPositions =
+    turningOff.length === 0
+      ? []
+      : (
+          await Promise.all(
+            turningOff.map((rule) =>
+              loadOpenFuturesByRuleId(String(rule.id), {
+                accountId: account.id,
+                userId: user.id,
+              }),
+            ),
+          )
+        )
+          .flat()
+          .filter((row) => row.status === "open");
+  const working =
+    turningOff.length === 0
+      ? []
+      : (await loadLiveFuturesWorking({
+          accountId: account.id,
+          userId: user.id,
+        })).filter((row) => row.status === "open");
+  const positionIds = selectIds(ownedPositions);
+  const workingIds = selectIds(
+    workingOwnedByPerpsDisable(working, ownedPositions),
+  );
+  const ownedCount = positionIds.length + workingIds.length;
+  const closing = turningOff.some((rule) =>
+    saveClosesOwnedRows({
+      previousMode: previousMode.get(String(rule.id)),
+      nextMode: rule.mode,
+      ownedCount,
+    }),
+  );
+  if (closing) {
     const marked = await markFuturesPendingClose({
       accountId: account.id,
       userId: user.id,
-      positionIds: selectIds(ownedPositions),
-      workingIds: selectIds(workingOwnedByPerpsDisable(working, ownedPositions)),
+      positionIds,
+      workingIds,
     });
     if (!marked.ok) {
       return deskActionError(marked.error);
@@ -621,7 +647,7 @@ export async function saveFuturesAutomations(
         userId: user.id,
         accountId: account.id,
         mode: account.mode,
-        rules: parsed.rules,
+        rules: turningOff,
       });
       if (flattenErrors) {
         await writeEventLog({
@@ -641,11 +667,7 @@ export async function saveFuturesAutomations(
   const rules = await loadFuturesAutomationRules(account.id);
   return {
     ok: true,
-    notice: closing
-      ? "Bot saved. Closing positions…"
-      : one
-        ? "Bot saved."
-        : "Bots saved.",
+    notice: botSavedNotice({ many: !one, closing }),
     forms: rules.map(futuresRuleToForm),
   };
 }
@@ -715,31 +737,54 @@ export async function setFuturesBotModesAction(
   if (!saved.ok) {
     return deskActionError(saved.error);
   }
-  const closing = flattenOwnedRuleIds(updated).length > 0;
-  if (closing) {
-    const ownedPositions = (
-      await Promise.all(
-        flattenOwnedRuleIds(updated).map((rule) =>
-          loadOpenFuturesByRuleId(String(rule.id), {
+  const previousMode = new Map(
+    selected.flatMap((rule) => (rule.id ? [[rule.id, rule.mode] as const] : [])),
+  );
+  const turningOff = flattenOwnedRuleIds(updated).filter(
+    (rule) => previousMode.get(String(rule.id)) !== "disabled",
+  );
+  const ownedPositions =
+    turningOff.length === 0
+      ? []
+      : (
+          await Promise.all(
+            turningOff.map((rule) =>
+              loadOpenFuturesByRuleId(String(rule.id), {
+                accountId: account.id,
+                userId: user.id,
+              }),
+            ),
+          )
+        )
+          .flat()
+          .filter((row) => row.status === "open");
+  const working =
+    turningOff.length === 0
+      ? []
+      : (
+          await loadLiveFuturesWorking({
             accountId: account.id,
             userId: user.id,
-          }),
-        ),
-      )
-    )
-      .flat()
-      .filter((row) => row.status === "open");
-    const working = (
-      await loadLiveFuturesWorking({
-        accountId: account.id,
-        userId: user.id,
-      })
-    ).filter((row) => row.status === "open");
+          })
+        ).filter((row) => row.status === "open");
+  const positionIds = selectIds(ownedPositions);
+  const workingIds = selectIds(
+    workingOwnedByPerpsDisable(working, ownedPositions),
+  );
+  const ownedCount = positionIds.length + workingIds.length;
+  const closing = turningOff.some((rule) =>
+    saveClosesOwnedRows({
+      previousMode: previousMode.get(String(rule.id)),
+      nextMode: rule.mode,
+      ownedCount,
+    }),
+  );
+  if (closing) {
     const marked = await markFuturesPendingClose({
       accountId: account.id,
       userId: user.id,
-      positionIds: selectIds(ownedPositions),
-      workingIds: selectIds(workingOwnedByPerpsDisable(working, ownedPositions)),
+      positionIds,
+      workingIds,
     });
     if (!marked.ok) {
       return deskActionError(marked.error);
@@ -749,7 +794,7 @@ export async function setFuturesBotModesAction(
         userId: user.id,
         accountId: account.id,
         mode: account.mode,
-        rules: updated,
+        rules: turningOff,
       });
       if (flattenErrors) {
         await writeEventLog({
@@ -779,7 +824,7 @@ export async function setFuturesBotModesAction(
   const rules = await loadFuturesAutomationRules(account.id);
   return {
     ok: true,
-    notice: closing ? "Bot saved. Closing positions…" : "Bot saved.",
+    notice: botSavedNotice({ closing }),
     forms: rules.map(futuresRuleToForm),
   };
 }

@@ -39,6 +39,7 @@ import {
 } from "@/lib/engine/rules";
 import {
   botDeleteAllowed,
+  botFormHasChanges,
   disableConfirmMessage,
   disableConfirmTitle,
   disableNeedsConfirm,
@@ -475,10 +476,16 @@ function RuleRow({
   }[];
 }) {
   const prefix = "r0_";
-  const [dirty, setDirty] = useState(false);
+  const [edited, setEdited] = useState(false);
   const [sizeType, setSizeType] = useState(layer.sizeType);
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   const [mode, setMode] = useState(layer.mode);
+  const [savedMode, setSavedMode] = useState(mode);
+  const dirty = botFormHasChanges({
+    edited,
+    status: mode,
+    savedStatus: savedMode,
+  });
   const [maxOpenCount, setMaxOpenCount] = useState(layer.maxOpenCount || "1");
   const [orderSizeUsdt, setOrderSizeUsdt] = useState(String(layer.notionalUsdt));
   const missingCount = !maxOpenCount.trim();
@@ -494,10 +501,11 @@ function RuleRow({
       onResult={(result) => {
         onSaved(result);
         if (result.ok) {
-          setDirty(false);
+          setEdited(false);
+          setSavedMode(mode);
         }
       }}
-      onChange={() => setDirty(true)}
+      onChange={() => setEdited(true)}
       guard={async () => {
         if (missing) {
           return false;
@@ -653,7 +661,6 @@ function RuleRow({
             applied={layer.mode}
             onChange={(next) => {
               setMode(parseAutomationMode(next));
-              setDirty(true);
             }}
             inUse={inUse}
             accountReduceOnly={accountReduceOnly}

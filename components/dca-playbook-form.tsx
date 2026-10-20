@@ -3787,8 +3787,6 @@ export function DcaPlaybookForm({
             applied={currentStatus}
             onChange={(next) => {
               setStatus(next as DcaBotStatus);
-              setTouched(true);
-              setFormTick((tick) => tick + 1);
             }}
             inUse={hasOpenPosition}
             accountReduceOnly={reduceOnly}

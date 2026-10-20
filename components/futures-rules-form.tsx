@@ -84,6 +84,7 @@ import {
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   botDeleteAllowed,
+  botFormHasChanges,
   disableConfirmMessage,
   disableConfirmTitle,
   disableNeedsConfirm,
@@ -708,12 +709,18 @@ function RuleCard({
   const fieldRow = embedded ? botCompactRowClass : botRowClass;
   const fieldRow5 = embedded ? botCompactRowClass : botRowClass5;
   const nameSpan = embedded ? "col-span-full" : "col-span-2";
-  const [dirty, setDirty] = useState(false);
+  const [edited, setEdited] = useState(false);
   const [mode, setMode] = useState(
     !inUse && symbolNeedsBybitAgreement(agreementGate.symbols, layer.symbol)
       ? "disabled"
       : layer.mode,
   );
+  const [savedMode, setSavedMode] = useState(mode);
+  const dirty = botFormHasChanges({
+    edited,
+    status: mode,
+    savedStatus: savedMode,
+  });
   const allowBoth = venueAllowsPerpsBoth(venueId);
   const [direction, setDirection] = useState<PerpsFormDirection>(() =>
     initialPerpsFormDirection(layer, allowBoth),
@@ -901,7 +908,7 @@ function RuleCard({
       setExitIf(custom.anchor);
       setExitRows(custom.rows);
     }
-    setDirty(true);
+    setEdited(true);
     setFormTick((tick) => tick + 1);
   }
   const closing = direction === "close_long" || direction === "close_short";
@@ -1428,7 +1435,7 @@ function RuleCard({
 
   function updateEntryDraft(side: "long" | "short", next: PerpsEntryDraft) {
     setEntryDrafts((current) => ({ ...current, [side]: next }));
-    setDirty(true);
+    setEdited(true);
     setFormTick((tick) => tick + 1);
   }
   function currentPrimaryClassic(): PerpsClassicDraft {
@@ -1522,7 +1529,7 @@ function RuleCard({
       setExitRows(moved.rows);
     }
     setDirection(next);
-    setDirty(true);
+    setEdited(true);
     setFormTick((tick) => tick + 1);
   }
 
@@ -1996,11 +2003,12 @@ function RuleCard({
       onResult={(result) => {
         onSaved(result);
         if (result.ok) {
-          setDirty(false);
+          setEdited(false);
+          setSavedMode(mode);
         }
       }}
       onChange={() => {
-        setDirty(true);
+        setEdited(true);
         setFormTick((tick) => tick + 1);
       }}
       guard={async () => {
@@ -2399,7 +2407,6 @@ function RuleCard({
             applied={layer.mode}
             onChange={(next) => {
               setMode(parseAutomationMode(next));
-              setDirty(true);
             }}
             inUse={inUse}
             accountReduceOnly={accountReduceOnly}
