@@ -1130,7 +1130,11 @@ export function BacktestQueueForm({
                     Select a bot or a template.
                   </p>
                 )}
-                <div className="ml-auto">
+                <div
+                  className={
+                    matchingTemplate || matchingDeskBot ? "w-full" : "ml-auto"
+                  }
+                >
                 <BacktestOriginBadges
                   templateName={matchingTemplate?.name ?? null}
                   templateDescription={matchingTemplate?.description ?? null}
