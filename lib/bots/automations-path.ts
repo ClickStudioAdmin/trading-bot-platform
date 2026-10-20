@@ -8,6 +8,9 @@ export const AUTOMATIONS_FROM_QUERY = "from";
 export const AUTOMATIONS_FROM_BOTS = "bots";
 export const AUTOMATIONS_FOCUS_QUERY = "focus";
 
+/** Desk bot names. The Name field stays the same width; extra characters scroll inside it. */
+export const BOT_NAME_MAX = 80;
+
 export const CASH_AND_CARRY_AUTOMATIONS_PATH =
   "/strategies/cash-and-carry/automations";
 export const CASH_AND_CARRY_POSITIONS_PATH =

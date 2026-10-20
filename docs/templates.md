@@ -43,7 +43,7 @@ Stored as versioned JSON (`recipe` + `recipe_version`) plus metadata. Live table
 
 **Snapshot includes:** contract/symbol if present, sizing, start, averaging, exits, Flex action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, C&C bot filters — the fields a user would type on Automations, except the bot name.
 
-**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, shortened to 40 characters. Flex and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook tokens, `webhook_id` (desk-specific door), runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
+**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, up to 80 characters. Flex and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook tokens, `webhook_id` (desk-specific door), runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
 
 After apply:
 

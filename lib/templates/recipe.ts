@@ -1,4 +1,5 @@
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
+import { BOT_NAME_MAX } from "@/lib/bots/automations-path";
 import {
   parseDcaFilterSpec,
   writeDcaFilterFormFields,
@@ -73,7 +74,7 @@ import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
 export const TEMPLATE_NAME_MAX = 80;
-export const RECIPE_NAME_MAX = 40;
+export const RECIPE_NAME_MAX = BOT_NAME_MAX;
 
 export const TEMPLATE_DESK_TYPES = ["dca", "flex", "cash_and_carry"] as const;
 export type TemplateDeskType = (typeof TEMPLATE_DESK_TYPES)[number];

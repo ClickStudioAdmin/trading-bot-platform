@@ -58,6 +58,7 @@ import {
   resolveDcaSaveConfig,
   dcaCloneIdleDraft,
   dcaCopyName,
+  parseDcaPlaybookName,
   dcaPnlPct,
   dcaSeriesStartEval,
   dcaPriceExitReason,
@@ -836,8 +837,11 @@ assert.equal(
 );
 assert.equal(dcaCopyName("DCA Test"), "DCA Test (copy)");
 assert.equal(dcaCopyName("DCA Test (copy)"), "DCA Test (copy)");
-assert.equal(dcaCopyName("A".repeat(40)).length, 40);
-assert.equal(dcaCopyName("A".repeat(40)).endsWith(" (copy)"), true);
+assert.equal(dcaCopyName("A".repeat(80)).length, 80);
+assert.equal(dcaCopyName("A".repeat(80)).endsWith(" (copy)"), true);
+assert.equal(dcaCopyName("A".repeat(40)), `${"A".repeat(40)} (copy)`);
+assert.equal(parseDcaPlaybookName("A".repeat(80)).ok, true);
+assert.equal(parseDcaPlaybookName("A".repeat(81)).ok, false);
 
 assert.equal(
   dcaDipMet({ side: "long", lastPrice: 98, lastClipPrice: 100, dipPct: 2 }),

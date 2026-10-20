@@ -8,6 +8,7 @@ import {
   paperLayerToRow,
   parsePaperRulesForm,
   parsePaperRulesRow,
+  parseRuleName,
 } from "./rules";
 
 const empty = new FormData();
@@ -138,8 +139,11 @@ assert.equal(defaultPaperConfig().layers[0]?.mode, "disabled");
 
 assert.equal(copyPaperSetName("Core carry"), "Core carry (copy)");
 assert.equal(copyPaperSetName("Core carry (copy)"), "Core carry (copy)");
-assert.equal(copyPaperSetName("A".repeat(40)).length, 40);
-assert.equal(copyPaperSetName("A".repeat(40)).endsWith(" (copy)"), true);
+assert.equal(copyPaperSetName("A".repeat(80)).length, 80);
+assert.equal(copyPaperSetName("A".repeat(80)).endsWith(" (copy)"), true);
+assert.equal(copyPaperSetName("A".repeat(40)), `${"A".repeat(40)} (copy)`);
+assert.equal(parseRuleName("A".repeat(80), 0).length, 80);
+assert.equal(parseRuleName("A".repeat(90), 0).length, 80);
 const cloneSource = paperConfigToFormValues({
   enabled: true,
   layers: [

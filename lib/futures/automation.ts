@@ -29,6 +29,7 @@ import {
   trailingHasStop,
   type FuturesTrailing,
 } from "./trailing";
+import { BOT_NAME_MAX } from "@/lib/bots/automations-path";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import type { DcaFilterSpec } from "@/lib/dca/filters";
 import {
@@ -174,12 +175,12 @@ const COPY_SUFFIX = " (copy)";
 export function copyFuturesRuleName(name: string): string {
   const trimmed = name.trim() || "Rule";
   if (trimmed.endsWith(COPY_SUFFIX)) {
-    return trimmed.slice(0, 40);
+    return trimmed.slice(0, BOT_NAME_MAX);
   }
-  if (trimmed.length + COPY_SUFFIX.length <= 40) {
+  if (trimmed.length + COPY_SUFFIX.length <= BOT_NAME_MAX) {
     return `${trimmed}${COPY_SUFFIX}`;
   }
-  return `${trimmed.slice(0, 40 - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
+  return `${trimmed.slice(0, BOT_NAME_MAX - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
 }
 
 export function cloneFuturesAutomationForm(
@@ -701,8 +702,11 @@ export function parseFuturesAutomationFields(input: {
   lastFiredAt?: unknown;
 }): { ok: true; rule: FuturesAutomationRule } | { ok: false; error: string } {
   const name = String(input.name ?? "").trim() || `Rule ${(input.sortOrder ?? 0) + 1}`;
-  if (name.length > 40) {
-    return { ok: false, error: "Rule names must be 40 characters or fewer." };
+  if (name.length > BOT_NAME_MAX) {
+    return {
+      ok: false,
+      error: `Rule names must be ${BOT_NAME_MAX} characters or fewer.`,
+    };
   }
   const symbol = parseDeskFuturesSymbol(input.venue ?? "bybit", input.symbol);
   if (!symbol.ok) {

@@ -155,6 +155,7 @@ import { withRemovedIds } from "@/lib/table-chrome";
 import { perpsBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
+  BOT_NAME_MAX,
   automationsEditHref,
   automationsNewHref,
 } from "@/lib/bots/automations-path";
@@ -1983,7 +1984,7 @@ function RuleCard({
               id={`${prefix}name`}
               name={`${prefix}name`}
               defaultValue={layer.name}
-              maxLength={40}
+              maxLength={BOT_NAME_MAX}
               className={dirty && nameMissing ? botFieldInvalidClass : botFieldClass}
             />
           </BotField>
