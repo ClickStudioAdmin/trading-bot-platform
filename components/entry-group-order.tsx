@@ -119,7 +119,7 @@ export function GroupPositionSizing({
     return null;
   }
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 border-t border-line pt-4">
       <h3 className={botSectionTitleClass}>Position Sizing</h3>
       {groupIndex > 0 ? (
         <label className="flex items-center gap-2 text-sm text-ink">
