@@ -133,6 +133,7 @@ import { withRemovedIds } from "@/lib/table-chrome";
 import { dcaBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
+  BOT_NAME_MAX,
   automationsEditHref,
   automationsNewHref,
 } from "@/lib/bots/automations-path";
@@ -3169,7 +3170,7 @@ export function DcaPlaybookForm({
             <input
               name="name"
               defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-              maxLength={40}
+              maxLength={BOT_NAME_MAX}
               onChange={() => {
                 setTouched(true);
                 setFormTick((tick) => tick + 1);

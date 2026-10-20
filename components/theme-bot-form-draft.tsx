@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { BOT_NAME_MAX } from "@/lib/bots/automations-path";
 import {
   BotFormCard,
   BotFormColumns,
@@ -2129,7 +2130,7 @@ export function ThemeBotFormDraft() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              maxLength={40}
+              maxLength={BOT_NAME_MAX}
               className={
                 showFieldErrors && !filled(name) ? fieldInvalidClass : fieldClass
               }

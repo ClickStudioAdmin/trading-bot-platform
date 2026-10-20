@@ -75,6 +75,7 @@ import { withRemovedIds } from "@/lib/table-chrome";
 import { paperBotConfig } from "@/lib/bots/bot-config";
 import {
   AUTOMATIONS_NEW,
+  BOT_NAME_MAX,
   CASH_AND_CARRY_ACTIVITY_PATH,
   CASH_AND_CARRY_PERFORMANCE_PATH,
   CASH_AND_CARRY_POSITIONS_PATH,
@@ -525,7 +526,7 @@ function RuleRow({
             id={`${prefix}name`}
             name={`${prefix}name`}
             defaultValue={layer.name}
-            maxLength={40}
+            maxLength={BOT_NAME_MAX}
             className={botFieldClass}
           />
         </BotField>

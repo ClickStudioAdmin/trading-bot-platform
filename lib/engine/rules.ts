@@ -5,6 +5,7 @@ import {
   type PaperEngineLayer,
   type PaperSizeType,
 } from "@/lib/engine/decide";
+import { BOT_NAME_MAX } from "@/lib/bots/automations-path";
 import { DEFAULT_PAPER_NOTIONAL_USDT, parseNotionalUsdt } from "@/lib/paper/open";
 import { asNullableNumber, asNumber } from "@/lib/paper/rows";
 
@@ -108,12 +109,12 @@ const COPY_SUFFIX = " (copy)";
 export function copyPaperSetName(name: string): string {
   const trimmed = name.trim() || "Bot";
   if (trimmed.endsWith(COPY_SUFFIX)) {
-    return trimmed.slice(0, 40);
+    return trimmed.slice(0, BOT_NAME_MAX);
   }
-  if (trimmed.length + COPY_SUFFIX.length <= 40) {
+  if (trimmed.length + COPY_SUFFIX.length <= BOT_NAME_MAX) {
     return `${trimmed}${COPY_SUFFIX}`;
   }
-  return `${trimmed.slice(0, 40 - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
+  return `${trimmed.slice(0, BOT_NAME_MAX - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
 }
 
 export function clonePaperLayerForm(
@@ -287,7 +288,7 @@ export function parseRuleName(raw: unknown, index: number): string {
   const text = String(raw ?? "")
     .trim()
     .replace(/\s+/g, " ")
-    .slice(0, 40);
+    .slice(0, BOT_NAME_MAX);
   return text === "" ? `Bot ${index + 1}` : text;
 }
 

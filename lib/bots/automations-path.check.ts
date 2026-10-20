@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   AUTOMATIONS_NEW,
+  BOT_NAME_MAX,
   automationsEditHref,
   automationsEditingExisting,
   automationsEditTitle,
@@ -11,6 +12,8 @@ import {
   parseAutomationsEdit,
   parseBotHashId,
 } from "./automations-path";
+
+assert.equal(BOT_NAME_MAX, 80);
 
 assert.equal(parseAutomationsEdit(undefined), null);
 assert.equal(parseAutomationsEdit("  "), null);

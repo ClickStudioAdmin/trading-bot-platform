@@ -27,6 +27,7 @@ import {
   type FuturesSide,
   type FuturesTrigger,
 } from "@/lib/futures/model";
+import { BOT_NAME_MAX } from "@/lib/bots/automations-path";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import {
   parseFuturesTriggerCompare,
@@ -1697,12 +1698,12 @@ export function dcaPlaybookConflict(
 export function dcaCopyName(name: string): string {
   const trimmed = name.trim() || DEFAULT_DCA_NAME;
   if (trimmed.endsWith(DCA_COPY_SUFFIX)) {
-    return trimmed.slice(0, 40);
+    return trimmed.slice(0, BOT_NAME_MAX);
   }
-  if (trimmed.length + DCA_COPY_SUFFIX.length <= 40) {
+  if (trimmed.length + DCA_COPY_SUFFIX.length <= BOT_NAME_MAX) {
     return `${trimmed}${DCA_COPY_SUFFIX}`;
   }
-  return `${trimmed.slice(0, 40 - DCA_COPY_SUFFIX.length).trimEnd()}${DCA_COPY_SUFFIX}`;
+  return `${trimmed.slice(0, BOT_NAME_MAX - DCA_COPY_SUFFIX.length).trimEnd()}${DCA_COPY_SUFFIX}`;
 }
 
 export function dcaCloneIdleDraft(source: DcaPlaybook): DcaPlaybook {
@@ -1724,8 +1725,11 @@ export function parseDcaPlaybookName(
   raw: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {
   const name = String(raw ?? "").trim() || DEFAULT_DCA_NAME;
-  if (name.length > 40) {
-    return { ok: false, error: "Name must be 40 characters or fewer." };
+  if (name.length > BOT_NAME_MAX) {
+    return {
+      ok: false,
+      error: `Name must be ${BOT_NAME_MAX} characters or fewer.`,
+    };
   }
   return { ok: true, name };
 }

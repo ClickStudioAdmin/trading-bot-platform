@@ -158,6 +158,24 @@ if (buyParsed.ok) {
   assert.equal(buyParsed.rules[0]?.skipIfOpen, true);
   assert.equal(buyParsed.rules[0]?.tpsl, null);
 }
+const longName = new FormData();
+for (const [key, value] of buy.entries()) {
+  longName.set(key, key === "r0_name" ? "N".repeat(80) : value);
+}
+const longNameParsed = parseFuturesAutomationForm(longName);
+assert.equal(longNameParsed.ok, true);
+if (longNameParsed.ok) {
+  assert.equal(longNameParsed.rules[0]?.name.length, 80);
+}
+const tooLongName = new FormData();
+for (const [key, value] of buy.entries()) {
+  tooLongName.set(key, key === "r0_name" ? "N".repeat(81) : value);
+}
+const tooLongParsed = parseFuturesAutomationForm(tooLongName);
+assert.equal(tooLongParsed.ok, false);
+if (!tooLongParsed.ok) {
+  assert.equal(tooLongParsed.error, "Rule names must be 80 characters or fewer.");
+}
 
 const exits = new FormData();
 exits.set("ruleCount", "1");
@@ -402,8 +420,9 @@ assert.equal(
 
 assert.equal(copyFuturesRuleName("ETH bounce"), "ETH bounce (copy)");
 assert.equal(copyFuturesRuleName("ETH bounce (copy)"), "ETH bounce (copy)");
-assert.equal(copyFuturesRuleName("A".repeat(40)).length, 40);
-assert.equal(copyFuturesRuleName("A".repeat(40)).endsWith(" (copy)"), true);
+assert.equal(copyFuturesRuleName("A".repeat(80)).length, 80);
+assert.equal(copyFuturesRuleName("A".repeat(80)).endsWith(" (copy)"), true);
+assert.equal(copyFuturesRuleName("A".repeat(40)), `${"A".repeat(40)} (copy)`);
 const cloneSource = {
   ...defaultFuturesAutomationForm(0, "ETHUSDT"),
   id: "rule-1",
