@@ -424,6 +424,21 @@ export type BacktestDeskBotOption = {
   venueEnvironment: string | null;
 };
 
+/** Desk fields on a candidate row. `name` on that row is the bot, not the desk. */
+export function backtestOptionDesk(option: BacktestDeskBotOption): {
+  id: string;
+  name: string;
+  venue: string;
+  venueEnvironment: string | null;
+} {
+  return {
+    id: option.deskId,
+    name: option.deskName,
+    venue: option.venue,
+    venueEnvironment: option.venueEnvironment,
+  };
+}
+
 /** Same symbol and kind. The full recipe is loaded only for these rows. */
 export function deskBacktestBotCandidates<
   T extends { kind: "dca" | "flex"; symbol: string },
