@@ -4,7 +4,7 @@ import {
   DeskBlotterScopeSelect,
 } from "@/components/desk-blotter-filters";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
-import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
+import { OpenPaperTrades } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
@@ -27,7 +27,7 @@ import {
 import { tableFiltersSuggestOpen } from "@/lib/table-chrome";
 
 export const metadata: Metadata = {
-  title: "Positions Snapshot",
+  title: "Positions",
   description: "Open paper cash-and-carry positions.",
 };
 
@@ -97,10 +97,10 @@ export default async function CashAndCarryPositionsPage({
         />
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Positions Snapshot")}
+          title="Positions"
           backHref={botReturn.backHref}
           className="mb-3"
-          meta={<PaperOpenStats signedIn={openBook.signedIn} open={visibleOpen} />}
+          showTitle={false}
           actions={
             <DeskBlotterScopeSelect
               values={filters}

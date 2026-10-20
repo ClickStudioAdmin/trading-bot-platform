@@ -14,7 +14,6 @@ import {
   useClientTable,
 } from "@/components/table-chrome";
 import { LocalTime } from "@/components/local-time";
-import { OpenStats } from "@/components/open-stats";
 import { PnlUsd } from "@/components/pnl-usd";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
@@ -68,7 +67,6 @@ import {
   maxRealizedLossUsdt,
   peakConcurrentCapitalUsdt,
   futuresDaysHeld,
-  futuresOpenExposure,
   positionMarginUsdt,
   roePct,
 } from "@/lib/futures/stats";
@@ -88,28 +86,6 @@ import {
   compareTableText,
   type TableSortDir,
 } from "@/lib/table-chrome";
-
-export function FuturesOpenStats({
-  signedIn,
-  open,
-}: {
-  signedIn: boolean;
-  open: MarkedFutures[];
-}) {
-  const rows = useLiveMarkedOpen(open);
-  const notional = rows.reduce((sum, row) => sum + row.notionalUsdt, 0);
-  const unrealized = rows.every((row) => row.unrealizedUsdt === null)
-    ? null
-    : rows.reduce((sum, row) => sum + (row.unrealizedUsdt ?? 0), 0);
-  return (
-    <OpenStats
-      signedIn={signedIn}
-      notional={notional}
-      unrealized={unrealized}
-      exposure={futuresOpenExposure(rows)}
-    />
-  );
-}
 
 function compareNullableNum(
   left: number | null,
