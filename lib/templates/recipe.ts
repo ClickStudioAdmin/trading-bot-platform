@@ -1338,6 +1338,42 @@ export function dcaRecipeToConfig(
   return { ok: true, config: parsed.config, notes };
 }
 
+/**
+ * A Flex percent trail stores Activation % on the exit action. The classic
+ * trailing columns only keep the distance, so rebuilding the form without
+ * the percent reads it as a price trail and asks for an activation price.
+ */
+function writeFlexPercentTrailForm(
+  form: FormData,
+  prefix: string,
+  actions:
+    | readonly {
+        kind: string;
+        trailingTriggerPct?: number | null;
+        trailingActivation?: number | null;
+        trailingPct?: number | null;
+        trailingDistance?: number | null;
+      }[]
+    | null
+    | undefined,
+): void {
+  const first = actions?.find((action) => action.kind === "trailing_stop");
+  if (
+    !first ||
+    first.trailingTriggerPct == null ||
+    first.trailingActivation != null
+  ) {
+    return;
+  }
+  form.set(`${prefix}trailing`, "on");
+  form.set(`${prefix}trailingActiveKind`, "percent");
+  form.set(`${prefix}trailingTriggerPct`, String(first.trailingTriggerPct));
+  const distance = first.trailingPct ?? first.trailingDistance;
+  if (distance != null && distance > 0) {
+    form.set(`${prefix}trailingStop`, String(distance));
+  }
+}
+
 export function perpsRecipeToRule(
   recipe: PerpsTemplateRecipe,
   options: {
@@ -1435,6 +1471,8 @@ export function perpsRecipeToRule(
   ) {
     writePerpsShortEntryFields(form, "r0_short_", recipe.shortEntry);
   }
+  writeFlexPercentTrailForm(form, "r0_", recipe.exitActions);
+  writeFlexPercentTrailForm(form, "r0_short_", recipe.shortEntry?.actions);
   const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
