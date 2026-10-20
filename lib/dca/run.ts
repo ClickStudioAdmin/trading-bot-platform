@@ -85,6 +85,7 @@ import {
   dcaClassicForSide,
   dcaClipForSide,
   dcaArmTriggerForSide,
+  dcaRetraceForReason,
   dcaIndicatorStartForSide,
   dcaIndicatorTimeframes,
   dcaNeedsAtrBars,
@@ -2320,6 +2321,7 @@ async function applyDcaVerbUnlocked(input: {
           confirm: dcaFilterForSide(playbook, side, "confirm"),
           entryStack: dcaEntryStackForSide(playbook, side),
           price: lastPrice,
+          retrace: dcaRetraceForReason(playbook, side),
         }),
     });
     if (!clip.ok) {

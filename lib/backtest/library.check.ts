@@ -347,6 +347,61 @@ assert.equal(
   canQueueUserBacktest({ ...perps, entrySource: "webhook" }).ok,
   false,
 );
+assert.equal(
+  canQueueUserBacktest({
+    ...perps,
+    entrySource: "indicator",
+    triggerPrice: "0",
+    indicator: {
+      kind: "rsi",
+      timeframe: "60",
+      compare: "cross_lte",
+      level: 30,
+      period: 14,
+      slowPeriod: null,
+    },
+  }).ok,
+  true,
+);
+assert.equal(
+  userBacktestFieldIssues({
+    ...perps,
+    entrySource: "indicator",
+    triggerPrice: "",
+  }).some((row) => row.message === "Enter a When price."),
+  false,
+);
+assert.equal(
+  canQueueUserBacktest({ ...perps, triggerPrice: "" }).ok,
+  false,
+);
+assert.equal(
+  userBacktestFieldIssues({ ...perps, triggerPrice: "" })[0]?.message,
+  "Enter a When price.",
+);
+assert.equal(
+  canQueueUserBacktest({
+    ...perps,
+    entrySource: "retrace",
+    triggerPrice: "0",
+    retrace: {
+      source: "last",
+      from: "high",
+      pct: 2,
+      lookback: 20,
+      timeframe: "60",
+    },
+  }).ok,
+  true,
+);
+assert.equal(
+  canQueueUserBacktest({
+    ...perps,
+    entrySource: "retrace",
+    triggerPrice: "0",
+  }).ok,
+  false,
+);
 
 const dcaForm = new FormData();
 dcaForm.set("name", "Grid");
@@ -388,6 +443,58 @@ assert.equal(
     indicatorCompare: "cross_gte",
     indicatorPeriod: 10,
     indicatorMultiplier: 3,
+  }).ok,
+  true,
+);
+assert.equal(
+  canQueueUserBacktest({
+    ...dca,
+    startKind: "indicator",
+    indicatorKind: null,
+    indicatorTimeframe: null,
+  }).ok,
+  false,
+);
+assert.equal(
+  canQueueUserBacktest({
+    ...dca,
+    direction: "both",
+    startKind: "price",
+    shortStartKind: "indicator",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 50000 },
+    shortIndicatorKind: "rsi",
+    shortIndicatorTimeframe: "60",
+    shortIndicatorCompare: "cross_gte",
+    shortIndicatorLevel: 70,
+    shortIndicatorPeriod: 14,
+  }).ok,
+  true,
+);
+assert.equal(
+  userBacktestFieldIssues({
+    ...dca,
+    direction: "both",
+    startKind: "indicator",
+    shortStartKind: "price",
+    indicatorKind: "rsi",
+    indicatorTimeframe: "60",
+    indicatorCompare: "cross_lte",
+    indicatorLevel: 30,
+    indicatorPeriod: 14,
+  }).some((row) => row.field === "shortArmPrice"),
+  true,
+);
+assert.equal(
+  canQueueUserBacktest({
+    ...dca,
+    startKind: "retrace",
+    retrace: {
+      source: "last",
+      from: "high",
+      pct: 1,
+      lookback: 20,
+      timeframe: "15",
+    },
   }).ok,
   true,
 );

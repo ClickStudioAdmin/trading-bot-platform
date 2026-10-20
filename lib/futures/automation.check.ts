@@ -532,6 +532,46 @@ const bothSameSize = parseFuturesAutomationForm(
     r0_short_orderType: "market",
   }),
 );
+const bothRetrace = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_direction: "both",
+    r0_short_entrySource: "retrace",
+    r0_short_RetraceSource: "last",
+    r0_short_RetraceFrom: "low",
+    r0_short_RetracePct: "2",
+    r0_short_RetraceLookback: "20",
+    r0_short_RetraceTimeframe: "60",
+    r0_exitActions: JSON.stringify([
+      {
+        id: "long-tp",
+        kind: "take_profit",
+        scope: { kind: "all" },
+        groups: [],
+        takeProfitPct: 6,
+      },
+    ]),
+    r0_short_exitActions: JSON.stringify([
+      {
+        id: "short-sl",
+        kind: "stop_loss",
+        scope: { kind: "all" },
+        groups: [],
+        stopLossPct: 2,
+      },
+    ]),
+  }),
+);
+assert.equal(bothRetrace.ok, true);
+if (bothRetrace.ok) {
+  const legs = perpsAutomationLegs(bothRetrace.rules[0]!);
+  assert.equal(legs[1]?.rule.entrySource, "retrace");
+  assert.equal(legs[1]?.rule.retrace?.pct, 2);
+  assert.equal(legs[1]?.rule.retrace?.from, "low");
+  assert.equal(legs[1]?.rule.exitActions?.[0]?.id, "short-sl");
+  assert.equal(legs[0]?.rule.exitActions?.[0]?.id, "long-tp");
+}
+
 assert.equal(bothSameSize.ok, true);
 if (bothSameSize.ok) {
   assert.equal(bothSameSize.rules[0]?.shortEntry?.size, undefined);

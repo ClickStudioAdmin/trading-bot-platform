@@ -1304,8 +1304,11 @@ export function perpsAutomationLegs(
     triggerPrice: short.triggerPrice,
     skipIfOpen: short.skipIfOpen,
     indicator: short.indicator,
+    retrace: short.retrace ?? null,
+    addStack: short.addStack ?? null,
     confirm: short.confirm,
     entryStack: short.entryStack,
+    exitActions: short.actions ?? null,
     ...shortLegOrder(rule, short),
     conditionTrue: rule.shortConditionTrue,
     ...(short.classic

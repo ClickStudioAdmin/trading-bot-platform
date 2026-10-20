@@ -8,7 +8,7 @@ import type { DcaIndicatorStart, DcaPriceTrigger, DcaStartKind } from "@/lib/dca
 import type { FuturesAutomationEntry, FuturesTriggerCompare } from "@/lib/futures/automation";
 import type { EntryStack, StrategyLeaf } from "@/lib/strategy/expr";
 import { formatProtectionLabel } from "@/lib/strategy/protection";
-import { formatRetraceLabel } from "@/lib/strategy/retrace";
+import { formatRetraceLabel, type RetraceSpec } from "@/lib/strategy/retrace";
 import { formatRsiDivergenceLabel } from "@/lib/strategy/rsi-divergence";
 import {
   confirmFromEntryStack,
@@ -166,6 +166,7 @@ export function formatFuturesEntryReasons(input: {
   indicator?: DcaIndicatorStart | null;
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
+  retrace?: RetraceSpec | null;
 }): string {
   const start =
     input.entrySource === "webhook"
@@ -177,11 +178,15 @@ export function formatFuturesEntryReasons(input: {
             level: input.triggerPrice,
             price: input.price,
           })
-        : input.indicator
-          ? formatIndicatorStartReason(input.indicator, input.side)
-          : input.entrySource === "trend"
-            ? "Trend"
-            : "Indicator";
+        : input.entrySource === "retrace"
+          ? input.retrace
+            ? formatRetraceLabel(input.retrace)
+            : "Retrace"
+          : input.indicator
+            ? formatIndicatorStartReason(input.indicator, input.side)
+            : input.entrySource === "trend"
+              ? "Trend"
+              : "Indicator";
   const stack = resolveEntryStack(input.entryStack, input.confirm);
   if (entryStackIsLegacy(stack)) {
     const confirm = confirmFromEntryStack(stack) ?? input.confirm;
@@ -203,6 +208,7 @@ export function formatDcaStartReasons(input: {
   confirm?: DcaFilterSpec | null;
   entryStack?: EntryStack | null;
   price?: number | null;
+  retrace?: RetraceSpec | null;
 }): string {
   const start =
     input.startKind === "webhook"
@@ -214,13 +220,17 @@ export function formatDcaStartReasons(input: {
             level: input.armTrigger.price,
             price: input.price,
           })
-        : input.startKind === "indicator" || input.startKind === "trend"
-          ? input.indicator
-            ? formatIndicatorStartReason(input.indicator, input.side)
-            : input.startKind === "trend"
-              ? "Trend"
-              : "Indicator"
-          : null;
+        : input.startKind === "retrace"
+          ? input.retrace
+            ? formatRetraceLabel(input.retrace)
+            : "Retrace"
+          : input.startKind === "indicator" || input.startKind === "trend"
+            ? input.indicator
+              ? formatIndicatorStartReason(input.indicator, input.side)
+              : input.startKind === "trend"
+                ? "Trend"
+                : "Indicator"
+            : null;
   const stack = resolveEntryStack(input.entryStack, input.confirm);
   if (entryStackIsLegacy(stack)) {
     const confirm = confirmFromEntryStack(stack) ?? input.confirm;

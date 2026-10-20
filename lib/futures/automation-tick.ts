@@ -244,6 +244,7 @@ export async function runFuturesAutomationTick(input?: {
           indicator: legRule.indicator,
           confirm: legRule.confirm,
           entryStack: legRule.entryStack,
+          retrace: legRule.retrace,
         });
         const result = await fireAutomationRule({
           rule: legRule,
@@ -601,6 +602,7 @@ export async function fireWebhookAutomationEntries(input: {
         indicator: legRule.indicator,
         confirm: legRule.confirm,
         entryStack: legRule.entryStack,
+        retrace: legRule.retrace,
       });
       const result = await fireAutomationRule({
         rule: legRule,

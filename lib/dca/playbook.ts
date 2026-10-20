@@ -979,6 +979,24 @@ export function dcaArmTriggerForSide(
   return playbook.armTrigger;
 }
 
+export function dcaRetraceForReason(
+  playbook: {
+    startKind: DcaStartKind;
+    shortStartKind?: DcaStartKind | null;
+    retrace?: RetraceSpec | null;
+    shortRetrace?: RetraceSpec | null;
+  },
+  side: FuturesSide,
+): RetraceSpec | null {
+  if (dcaStartKindForSide(playbook, side) !== "retrace") {
+    return null;
+  }
+  if (side === "short" && playbook.shortRetrace) {
+    return playbook.shortRetrace;
+  }
+  return playbook.retrace ?? null;
+}
+
 export function dcaIndicatorTimeframes(playbook: {
   startKind: DcaStartKind;
   shortStartKind?: DcaStartKind | null;

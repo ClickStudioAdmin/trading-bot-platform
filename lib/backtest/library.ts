@@ -12,6 +12,7 @@ import { templatePageHref } from "@/lib/templates/library-tab";
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
+  type PerpsTemplateRecipe,
   templateIsLibraryRow,
   TEMPLATE_RECIPE_VERSION,
   type TemplateRecipe,
@@ -565,7 +566,11 @@ export function userBacktestFieldIssues(
 ): BacktestFieldIssue[] {
   if (recipe.kind === "dca") {
     const issues: BacktestFieldIssue[] = [];
-    if (recipe.startKind === "webhook") {
+    const shortKind =
+      recipe.direction === "both"
+        ? (recipe.shortStartKind ?? recipe.startKind)
+        : null;
+    if (recipe.startKind === "webhook" || shortKind === "webhook") {
       issues.push({
         field: "startKind",
         message: "Webhook triggers can't be backtested.",
@@ -588,15 +593,58 @@ export function userBacktestFieldIssues(
             : "Enter a start price.",
       });
     }
-    if (
-      recipe.startKind === "price" &&
-      recipe.direction === "both" &&
-      !(Number(recipe.shortArmTrigger?.price) > 0)
-    ) {
+    if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
+      if (!recipe.indicatorKind || !recipe.indicatorTimeframe) {
+        issues.push({
+          field: "startKind",
+          message: "Choose Indicator or Trend settings.",
+        });
+      }
+    }
+    if (recipe.startKind === "retrace" && !(recipe.retrace && recipe.retrace.pct > 0)) {
       issues.push({
-        field: "shortArmPrice",
-        message: "Enter a Short start price.",
+        field: "startKind",
+        message: "Enter a retrace %.",
       });
+    }
+    if (recipe.direction === "both" && shortKind === "price") {
+      const price = recipe.shortStartKind
+        ? recipe.shortArmTrigger?.price
+        : (recipe.shortArmTrigger?.price ?? recipe.armTrigger?.price);
+      if (!(Number(price) > 0)) {
+        issues.push({
+          field: "shortArmPrice",
+          message: "Enter a Short start price.",
+        });
+      }
+    }
+    if (
+      recipe.direction === "both" &&
+      (shortKind === "indicator" || shortKind === "trend")
+    ) {
+      const kind = recipe.shortStartKind
+        ? recipe.shortIndicatorKind
+        : (recipe.shortIndicatorKind ?? recipe.indicatorKind);
+      const timeframe = recipe.shortStartKind
+        ? recipe.shortIndicatorTimeframe
+        : (recipe.shortIndicatorTimeframe ?? recipe.indicatorTimeframe);
+      if (!kind || !timeframe) {
+        issues.push({
+          field: "startKind",
+          message: "Choose Short Indicator or Trend settings.",
+        });
+      }
+    }
+    if (recipe.direction === "both" && shortKind === "retrace") {
+      const spec = recipe.shortStartKind
+        ? recipe.shortRetrace
+        : (recipe.shortRetrace ?? recipe.retrace);
+      if (!(spec && spec.pct > 0)) {
+        issues.push({
+          field: "startKind",
+          message: "Enter a Short retrace %.",
+        });
+      }
     }
     const hasBudget =
       recipe.maxValue != null &&
@@ -631,14 +679,81 @@ export function userBacktestFieldIssues(
       message: "Enter a size.",
     });
   }
-  const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
-  if (recipe.entrySource !== "webhook" && !(trigger > 0)) {
-    issues.push({
-      field: "triggerPrice",
-      message: "Enter a When price.",
-    });
+  issues.push(
+    ...flexEntryFieldIssues({
+      entrySource: recipe.entrySource,
+      triggerPrice: recipe.triggerPrice,
+      indicator: recipe.indicator,
+      retrace: recipe.retrace,
+      short: false,
+    }),
+  );
+  if (recipe.direction === "both" && recipe.shortEntry) {
+    const short = recipe.shortEntry;
+    issues.push(
+      ...flexEntryFieldIssues({
+        entrySource: short.entrySource,
+        triggerPrice: String(short.triggerPrice),
+        indicator: short.indicator,
+        retrace: short.retrace,
+        short: true,
+      }),
+    );
   }
   return issues;
+}
+
+function flexEntryFieldIssues(input: {
+  entrySource: PerpsTemplateRecipe["entrySource"];
+  triggerPrice: string;
+  indicator?: PerpsTemplateRecipe["indicator"];
+  retrace?: PerpsTemplateRecipe["retrace"];
+  short: boolean;
+}): BacktestFieldIssue[] {
+  if (input.entrySource === "webhook") {
+    return input.short
+      ? [
+          {
+            field: "entrySource",
+            message: "Webhook entry cannot be replayed. Use a price When.",
+          },
+        ]
+      : [];
+  }
+  if (input.entrySource === "indicator" || input.entrySource === "trend") {
+    if (!input.indicator?.kind || !input.indicator.timeframe) {
+      return [
+        {
+          field: "entrySource",
+          message: input.short
+            ? "Choose Short Indicator or Trend settings."
+            : "Choose Indicator or Trend settings.",
+        },
+      ];
+    }
+    return [];
+  }
+  if (input.entrySource === "retrace") {
+    if (!(input.retrace && input.retrace.pct > 0)) {
+      return [
+        {
+          field: "triggerPrice",
+          message: input.short ? "Enter a Short retrace %." : "Enter a retrace %.",
+        },
+      ];
+    }
+    return [];
+  }
+  const trigger = Number(String(input.triggerPrice).replace(/,/g, "").trim());
+  if (!(trigger > 0)) {
+    return [
+      {
+        field: "triggerPrice",
+        message: input.short ? "Enter a Short When price." : "Enter a When price.",
+      },
+    ];
+  }
+  return [];
 }
 
 export function canQueueUserBacktest(

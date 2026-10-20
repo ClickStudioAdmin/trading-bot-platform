@@ -1,6 +1,7 @@
 import {
   decideDcaTick,
   dcaArmTriggerForSide,
+  dcaRetraceForReason,
   dcaStartKindForSide,
   dcaAtrTimeframe,
   dcaClassicForSide,
@@ -44,6 +45,7 @@ import {
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
+import { formatRetraceLabel } from "@/lib/strategy/retrace";
 import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -1185,11 +1187,16 @@ export async function replayDcaPlaybook(input: {
         indicator: dcaIndicatorStartForSide(config, side),
         entryStack,
         price: closes[closes.length - 1] ?? null,
+        retrace: dcaRetraceForReason(config, side),
       });
     }
     const sideKind = dcaStartKindForSide(config, side);
     if (sideKind === "immediate") {
       return "Immediate start.";
+    }
+    if (sideKind === "retrace") {
+      const spec = dcaRetraceForReason(config, side);
+      return spec ? formatRetraceLabel(spec) : "Retrace";
     }
     if (sideKind === "price") {
       const last = closes[closes.length - 1] ?? 0;

@@ -40,6 +40,7 @@ assert.equal(
   canBacktestPerpsRecipe({
     ...base,
     entrySource: "indicator",
+    triggerPrice: "0",
     indicator: {
       kind: "rsi",
       timeframe: "15",
@@ -50,6 +51,29 @@ assert.equal(
     },
   }).ok,
   true,
+);
+assert.equal(
+  canBacktestPerpsRecipe({
+    ...base,
+    entrySource: "retrace",
+    triggerPrice: "0",
+    retrace: {
+      source: "last",
+      from: "high",
+      pct: 1.5,
+      lookback: 20,
+      timeframe: "15",
+    },
+  }).ok,
+  true,
+);
+assert.equal(
+  canBacktestPerpsRecipe({
+    ...base,
+    entrySource: "retrace",
+    triggerPrice: "0",
+  }).ok,
+  false,
 );
 assert.equal(canBacktestPerpsRecipe({ ...base, size: "" }).ok, false);
 assert.deepEqual(recipeAction({ ...base, formAction: "close_short" }), {
@@ -473,6 +497,39 @@ const shortExitText = shortExitSections
 assert.match(shortExitText, /120/);
 assert.match(shortExitText, /150/);
 assert.doesNotMatch(shortExitText, /90/);
+
+const sizedBoth = await replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 110, high: 110, low: 110, close: 110 },
+    { timeMs: 3_000, open: 80, high: 80, low: 80, close: 80 },
+  ],
+  recipe: {
+    ...base,
+    direction: "both",
+    triggerCompare: "gte",
+    triggerPrice: "100",
+    size: "1",
+    shortEntry: {
+      entrySource: "price",
+      webhookId: null,
+      triggerBy: "last",
+      triggerCompare: "lte",
+      triggerPrice: 90,
+      skipIfOpen: true,
+      indicator: null,
+      confirm: null,
+      entryStack: { leaves: [], joins: [] },
+      size: 3,
+      sizeUnit: "qty",
+      orderType: "market",
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(sizedBoth.orders.find((row) => row.action === "buy")?.qty, 1);
+assert.equal(sizedBoth.orders.find((row) => row.action === "sell")?.qty, 3);
 
 console.log("backtest replay checks passed");
 }
