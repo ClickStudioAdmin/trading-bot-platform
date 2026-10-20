@@ -66,7 +66,14 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
             </h4>
             {conditions.map((condition, conditionIndex) => (
               <div key={`condition-${conditionIndex}`} className="space-y-3">
-                {conditionIndex > 0 ? <JoinWord label="And" /> : null}
+                {condition.join === "none" || conditionIndex === 0 ? null : (
+                  <JoinWord label="And" />
+                )}
+                {condition.title ? (
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                    {condition.title}
+                  </p>
+                ) : null}
                 <ParamRows rows={condition.rows} inset={false} />
               </div>
             ))}

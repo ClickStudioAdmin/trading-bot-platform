@@ -6,6 +6,7 @@ import {
   snapshotPaperRecipe,
   snapshotPerpsRecipe,
 } from "@/lib/templates/recipe";
+import type { StrategyLeaf } from "@/lib/strategy/expr";
 import { adminConditionReview } from "./condition-list-samples";
 import {
   backtestListedSections,
@@ -223,19 +224,44 @@ const sizedAddSections = recipeParamSections({
         lookback: 20,
         timeframe: "15",
       },
+      {
+        kind: "protection",
+        is: "protected",
+        amount: "entire",
+        pct: null,
+      },
     ],
-    joins: ["and"],
+    joins: ["and", "and"],
     orders: [
       { size: "500", sizeUnit: "usdt", orderType: "market", limitPrice: "" },
     ],
   },
 });
-assert.deepEqual(
-  sizedAddSections
-    .find((section) => section.title === "Long Additional Orders")
-    ?.groups[0]?.rows.map((row) => `${row.label}: ${row.value}`),
-  ["Condition Type: Off", "Size: 500 USDT", "Unit: USDT", "Order: Market"],
+const sizedAdd = sizedAddSections.find(
+  (section) => section.title === "Long Additional Orders",
 );
+assert.equal(sizedAdd?.groups.length, 0);
+assert.deepEqual(
+  sizedAdd?.stack?.groups[0]?.flatMap((condition) =>
+    condition.rows.map((row) => `${row.label}: ${row.value}`),
+  ),
+  [
+    "Condition Type: Retrace",
+    "Price source: Last",
+    "From: High",
+    "Retrace %: 2",
+    "Lookback: 20",
+    "Timeframe: 15m",
+    "Condition Type: Position protection",
+    "Is: Protected",
+    "Amount: Entire position",
+    "Size: 500 USDT",
+    "Unit: USDT",
+    "Order: Market",
+  ],
+);
+assert.equal(sizedAdd?.stack?.groups[0]?.at(-1)?.join, "none");
+assert.equal(sizedAdd?.stack?.groups[0]?.at(-1)?.title, "Position Sizing");
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
   ["Name", "Contract", "Direction"],
@@ -745,6 +771,248 @@ assert.equal(
   exitRows.some((row) => row.value === "Price is below"),
   false,
 );
+
+const retraceEntry = recipeParamSections({
+  ...perps,
+  entrySource: "retrace",
+  triggerPrice: "1",
+  retrace: {
+    source: "last",
+    from: "high",
+    pct: 5,
+    lookback: 20,
+    timeframe: "60",
+  },
+  exitActions: [
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "trail" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 5,
+      trailingTriggerPct: 8,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+  ],
+});
+const retraceRows =
+  retraceEntry
+    .find((section) => section.title === "Long Entry Conditions")
+    ?.groups.flatMap((group) => group.rows) ?? [];
+assert.deepEqual(
+  retraceRows.map((row) => `${row.label}: ${row.value}`),
+  [
+    "Condition Type: Retrace",
+    "Price source: Last",
+    "From: High",
+    "Retrace %: 5",
+    "Lookback: 20",
+    "Timeframe: 1h",
+    "Secondary Entry Condition: Off",
+  ],
+);
+assert.equal(
+  retraceRows.some((row) => row.label === "Price" || row.label === "Compare"),
+  false,
+);
+const trailRows =
+  retraceEntry
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.stacks?.[0]?.groups.flat().flatMap((condition) => condition.rows) ?? [];
+assert.equal(trailRows.find((row) => row.label === "Activation %")?.value, "8%");
+assert.equal(trailRows.find((row) => row.label === "Trailing %")?.value, "5%");
+
+const shortRetrace = recipeParamSections({
+  ...perps,
+  direction: "both",
+  entrySource: "retrace",
+  retrace: {
+    source: "last",
+    from: "high",
+    pct: 5,
+    lookback: 20,
+    timeframe: "60",
+  },
+  shortEntry: {
+    entrySource: "retrace",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 1,
+    skipIfOpen: true,
+    indicator: null,
+    retrace: {
+      source: "mark",
+      from: "low",
+      pct: 3,
+      lookback: 10,
+      timeframe: "15",
+    },
+    confirm: null,
+    entryStack: { leaves: [], joins: [] },
+  },
+});
+const shortRows =
+  shortRetrace
+    .find((section) => section.title === "Short Entry Conditions")
+    ?.groups.flatMap((group) => group.rows) ?? [];
+assert.equal(shortRows.find((row) => row.label === "From")?.value, "Low");
+assert.equal(shortRows.find((row) => row.label === "Price source")?.value, "Mark");
+assert.equal(shortRows.find((row) => row.label === "Retrace %")?.value, "3");
+assert.equal(shortRows.find((row) => row.label === "Timeframe")?.value, "15m");
+
+const dcaRetrace = recipeParamSections({
+  ...dca,
+  startKind: "retrace",
+  shortStartKind: "retrace",
+  direction: "both",
+  retrace: {
+    source: "last",
+    from: "high",
+    pct: 4,
+    lookback: 12,
+    timeframe: "15",
+  },
+  shortRetrace: {
+    source: "index",
+    from: "low",
+    pct: 6,
+    lookback: 8,
+    timeframe: "60",
+  },
+});
+assert.equal(
+  dcaRetrace
+    .find((section) => section.title === "Long Entry Conditions")
+    ?.groups.flatMap((group) => group.rows)
+    .find((row) => row.label === "Retrace %")?.value,
+  "4",
+);
+assert.equal(
+  dcaRetrace
+    .find((section) => section.title === "Short Entry Conditions")
+    ?.groups.flatMap((group) => group.rows)
+    .find((row) => row.label === "From")?.value,
+  "Low",
+);
+
+function additionalRows(leaf: StrategyLeaf) {
+  return (
+    recipeParamSections({
+      ...perps,
+      addStack: { leaves: [leaf], joins: ["and"] },
+    })
+      .find((section) => section.title === "Long Additional Orders")
+      ?.stack?.groups[0]?.[0]?.rows.map((row) => `${row.label}: ${row.value}`) ?? []
+  );
+}
+assert.deepEqual(
+  additionalRows({
+    kind: "price",
+    triggerBy: "mark",
+    compare: "lte",
+    price: 80,
+  }).slice(0, 4),
+  [
+    "Condition Type: Price cross",
+    "Price source: Mark is",
+    "Compare: At or below",
+    "Price: 80",
+  ],
+);
+assert.equal(
+  additionalRows({ kind: "webhook", webhookId: "hook" })[0],
+  "Condition Type: Signal webhook",
+);
+assert.match(
+  additionalRows({
+    kind: "indicator",
+    start: {
+      kind: "rsi",
+      timeframe: "240",
+      compare: "cross_gte",
+      level: 30,
+      period: 14,
+      multiplier: null,
+      slowPeriod: null,
+    },
+  }).join(" "),
+  /Condition Type: Indicator/,
+);
+assert.match(
+  additionalRows({
+    kind: "trend",
+    start: {
+      kind: "supertrend",
+      timeframe: "240",
+      compare: "cross_gte",
+      level: null,
+      period: 10,
+      multiplier: 3,
+      slowPeriod: null,
+    },
+  }).join(" "),
+  /Condition Type: Trend/,
+);
+assert.deepEqual(
+  additionalRows({
+    kind: "protection",
+    is: "unprotected",
+    amount: "at_least",
+    pct: 25,
+  }),
+  [
+    "Condition Type: Position protection",
+    "Is: Not protected",
+    "Amount: At least 25%",
+  ],
+);
+
+const closeRetrace = recipeParamSections({
+  ...perps,
+  exitActions: [
+    {
+      id: "close",
+      kind: "close",
+      scope: { kind: "all" },
+      groups: [
+        {
+          anchor: {
+            trigger: "retrace",
+            source: "last",
+            from: "high",
+            pct: "3",
+            lookback: "20",
+            timeframe: "240",
+          },
+          rows: [],
+        },
+      ],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+  ],
+});
+const closeRows =
+  closeRetrace
+    .find((section) => section.title === "Long Exit Conditions")
+    ?.stacks?.[0]?.groups.flat().flatMap((condition) => condition.rows) ?? [];
+assert.equal(closeRows.find((row) => row.label === "Condition Type")?.value, "Retrace");
+assert.equal(closeRows.find((row) => row.label === "Retrace %")?.value, "3");
+assert.equal(closeRows.find((row) => row.label === "Timeframe")?.value, "4h");
 const divergenceEntry = recipeParamSections({
   ...dca,
   startKind: "indicator",
