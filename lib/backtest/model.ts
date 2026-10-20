@@ -648,10 +648,11 @@ export function backtestListEntryHref(
   const rerun = backtestSearchParam(params?.rerun);
   const venue = backtestSearchParam(params?.venue);
   const env = backtestSearchParam(params?.env);
+  const bot = backtestSearchParam(params?.bot);
   const tab = backtestSearchParam(params?.tab);
-  if (template || draft || rerun || tab === "new") {
+  if (template || draft || rerun || bot || tab === "new") {
     return backtestNewHref(
-      { template, draft, rerun, venue, env },
+      { template, draft, rerun, venue, env, bot },
       rerun ? "replay" : undefined,
     );
   }

@@ -212,6 +212,45 @@ export function findMatchingBacktestDeskBot(
   );
 }
 
+/** `flex:<id>` or `dca:<id>` for the New Backtest bot list. */
+export function deskBacktestBotParam(raw: string): string {
+  const value = raw.trim();
+  const sep = value.indexOf(":");
+  const kind = value.slice(0, sep);
+  const id = value.slice(sep + 1).trim();
+  if ((kind !== "dca" && kind !== "flex") || !id) {
+    return "";
+  }
+  return `${kind}:${id}`;
+}
+
+/**
+ * Which Bot or Template row opens selected.
+ * A click from a saved desk bot wins. A template link is next.
+ * A recipe that still matches a desk bot fills Bot when neither id was passed.
+ */
+export function backtestOpenedSourceId(input: {
+  deskBotId?: string | null;
+  templateId?: string | null;
+  deskBotIds: readonly string[];
+  templateIds: readonly string[];
+  matchedDeskBotId?: string | null;
+}): string {
+  const deskBotId = deskBacktestBotParam(String(input.deskBotId ?? ""));
+  if (deskBotId && input.deskBotIds.includes(deskBotId)) {
+    return deskBotId;
+  }
+  const templateId = String(input.templateId ?? "").trim();
+  if (templateId && input.templateIds.includes(templateId)) {
+    return templateId;
+  }
+  const matched = deskBacktestBotParam(String(input.matchedDeskBotId ?? ""));
+  if (matched && input.deskBotIds.includes(matched)) {
+    return matched;
+  }
+  return "";
+}
+
 export type BacktestListDesk = {
   id: string;
   name: string;

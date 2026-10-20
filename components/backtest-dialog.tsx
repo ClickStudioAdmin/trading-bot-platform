@@ -10,6 +10,7 @@ import { IconBacktest } from "@/components/icons";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
+import { deskBacktestBotParam } from "@/lib/backtest/library";
 import { backtestNewHref, type BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
 import {
@@ -51,6 +52,7 @@ export function BacktestTemplateLink({
   savedBacktests = [],
   venueId,
   venueEnvironment = null,
+  deskBotId = "",
   className,
   buttonClassName,
 }: {
@@ -62,6 +64,8 @@ export function BacktestTemplateLink({
   savedBacktests?: readonly SavedBacktestMatch[];
   venueId: string;
   venueEnvironment?: string | null;
+  /** Saved desk bot, `flex:<id>` or `dca:<id>`. Selects that row on New Backtest. */
+  deskBotId?: string | null;
   className?: string;
   buttonClassName?: string;
 }) {
@@ -114,6 +118,7 @@ export function BacktestTemplateLink({
                 draft: result.runId,
                 venue: venueId,
                 env: venueEnvironment,
+                bot: deskBacktestBotParam(String(deskBotId ?? "")),
               }),
               "_blank",
               "noreferrer",

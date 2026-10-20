@@ -4,7 +4,10 @@ import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { DeskBackLink } from "@/components/desk-back-link";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
-import { toBacktestLibraryItem } from "@/lib/backtest/library";
+import {
+  deskBacktestBotParam,
+  toBacktestLibraryItem,
+} from "@/lib/backtest/library";
 import {
   backtestQueueSeedFromRun,
   backtestSavedListHref,
@@ -18,6 +21,7 @@ import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
 import {
   listDeskBacktestBots,
+  loadDeskBacktestBot,
   matchDeskBacktestBot,
 } from "@/lib/backtest/desk-bots";
 import {
@@ -43,6 +47,9 @@ export default async function NewBacktestPage({
   }
   const params = await searchParams;
   const selectedTemplateId = firstSearchValue(params.template);
+  const requestedBotId = deskBacktestBotParam(
+    firstSearchValue(params.bot) ?? "",
+  );
   const draftId = firstSearchValue(params.draft);
   const rerunId = firstSearchValue(params.rerun);
   const defaultVenue = firstSearchValue(params.venue);
@@ -91,6 +98,19 @@ export default async function NewBacktestPage({
       matchedDeskBot = null;
     }
   }
+  let openedDeskBot: Awaited<ReturnType<typeof matchDeskBacktestBot>> = null;
+  if (requestedBotId && deskBots.some((row) => row.id === requestedBotId)) {
+    if (matchedDeskBot?.id === requestedBotId) {
+      openedDeskBot = matchedDeskBot;
+    } else {
+      try {
+        const loaded = await loadDeskBacktestBot(member.id, requestedBotId);
+        openedDeskBot = loaded.ok ? loaded.bot : null;
+      } catch {
+        openedDeskBot = null;
+      }
+    }
+  }
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
     if (!item) {
@@ -116,6 +136,8 @@ export default async function NewBacktestPage({
         folders={folders}
         deskBots={deskBots}
         matchedDeskBot={matchedDeskBot}
+        openedDeskBot={openedDeskBot}
+        selectedDeskBotId={requestedBotId}
         selectedTemplateId={
           selectedTemplateId || seed?.sourceTemplateId || ""
         }

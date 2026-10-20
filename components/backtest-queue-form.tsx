@@ -47,6 +47,7 @@ import {
   researchTrialLine,
 } from "@/lib/membership/entitlements";
 import {
+  backtestOpenedSourceId,
   canQueueUserBacktest,
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
@@ -174,6 +175,8 @@ export function BacktestQueueForm({
   folders = [],
   deskBots = [],
   matchedDeskBot = null,
+  openedDeskBot = null,
+  selectedDeskBotId = "",
   selectedTemplateId = "",
   draftId = "",
   seed = null,
@@ -191,6 +194,9 @@ export function BacktestQueueForm({
   folders?: BacktestLibraryFolder[];
   deskBots?: BacktestDeskBotOption[];
   matchedDeskBot?: BacktestDeskBot | null;
+  /** The saved bot named in the click-through, even when the open form differs. */
+  openedDeskBot?: BacktestDeskBot | null;
+  selectedDeskBotId?: string;
   selectedTemplateId?: string;
   draftId?: string;
   seed?: BacktestQueueSeed | null;
@@ -210,15 +216,21 @@ export function BacktestQueueForm({
   const botRequest = useRef(0);
   const formIssueRef = useRef<string | null>(null);
   const [pickedDeskBot, setPickedDeskBot] = useState<BacktestDeskBot | null>(
-    matchedDeskBot,
+    openedDeskBot ?? matchedDeskBot,
   );
   const [botPending, setBotPending] = useState(false);
   const [botLoadError, setBotLoadError] = useState("");
   const dates = defaultBacktestDates();
   const initialTemplate =
     templates.find((row) => row.id === selectedTemplateId) ?? null;
-  const [templateId, setTemplateId] = useState(
-    seed ? seed.sourceTemplateId : (initialTemplate?.id ?? ""),
+  const [templateId, setTemplateId] = useState(() =>
+    backtestOpenedSourceId({
+      deskBotId: selectedDeskBotId || openedDeskBot?.id,
+      templateId: seed ? seed.sourceTemplateId : initialTemplate?.id,
+      deskBotIds: deskBots.map((row) => row.id),
+      templateIds: templates.map((row) => row.id),
+      matchedDeskBotId: openedDeskBot ? "" : matchedDeskBot?.id,
+    }),
   );
   const [recipe, setRecipe] = useState<BacktestRecipe | null>(
     seed?.recipe ?? initialTemplate?.recipe ?? null,
