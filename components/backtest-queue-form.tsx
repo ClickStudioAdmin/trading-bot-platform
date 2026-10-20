@@ -48,6 +48,7 @@ import {
 } from "@/lib/membership/entitlements";
 import {
   backtestOpenedSourceId,
+  backtestQueueIssueLines,
   canQueueUserBacktest,
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
@@ -1088,10 +1089,10 @@ export function BacktestQueueForm({
           />
         ) : null}
         <input type="hidden" name="feePreset" value="vip0_taker" />
-        {recipe && !queueAllowed.ok ? (
-          <p className="text-sm text-danger">{queueAllowed.error}</p>
-        ) : null}
-        {recipeFieldIssues.map((issue) => (
+        {backtestQueueIssueLines(
+          recipeFieldIssues,
+          recipe && !queueAllowed.ok ? queueAllowed.error : null,
+        ).map((issue) => (
           <p key={issue} className="text-sm text-danger">
             {issue}
           </p>
@@ -1124,9 +1125,16 @@ export function BacktestQueueForm({
               ) : (
               <>
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm text-ink-muted">
-                  Select a bot or a template.
-                </p>
+                {deskBotSelected || libraryTemplateSelected ? null : (
+                  <p className="text-sm text-ink-muted">
+                    Select a bot or a template.
+                  </p>
+                )}
+                <div
+                  className={
+                    matchingTemplate || matchingDeskBot ? "w-full" : "ml-auto"
+                  }
+                >
                 <BacktestOriginBadges
                   templateName={matchingTemplate?.name ?? null}
                   templateDescription={matchingTemplate?.description ?? null}
@@ -1139,6 +1147,7 @@ export function BacktestQueueForm({
                   }
                   edited={editedAway}
                 />
+                </div>
               </div>
               <div
                 className={`mt-3 grid min-w-0 gap-3 [&>*]:min-w-0${
@@ -1251,9 +1260,12 @@ export function BacktestQueueForm({
               }}
               onChange={(next, fromUser) => {
                 const replayIssue = userBacktestFieldIssues(next)[0]?.message;
-                const messages = [formIssueRef.current, replayIssue].filter(
-                  (issue): issue is string => Boolean(issue),
-                );
+                const formIssue = formIssueRef.current;
+                const messages = formIssue
+                  ? [formIssue]
+                  : replayIssue
+                    ? [replayIssue]
+                    : [];
                 setRecipeFieldIssues((current) =>
                   current.length === messages.length &&
                   current.every((issue, index) => issue === messages[index])

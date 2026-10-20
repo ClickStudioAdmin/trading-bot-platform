@@ -742,7 +742,7 @@ export function userBacktestFieldIssues(
     });
   }
   const size = Number(String(recipe.size).replace(/,/g, "").trim());
-  if (!(size > 0)) {
+  if (recipe.entrySource !== "" && !(size > 0)) {
     issues.push({
       field: "size",
       message: "Enter a size.",
@@ -813,6 +813,16 @@ function flexEntryFieldIssues(input: {
     }
     return [];
   }
+  if (input.entrySource !== "price") {
+    return [
+      {
+        field: "entrySource",
+        message: input.short
+          ? "Select a Short condition type."
+          : "Select a condition type.",
+      },
+    ];
+  }
   const trigger = Number(String(input.triggerPrice).replace(/,/g, "").trim());
   if (!(trigger > 0)) {
     return [
@@ -823,6 +833,26 @@ function flexEntryFieldIssues(input: {
     ];
   }
   return [];
+}
+
+/** One line per problem. Form issues win, so a hidden field on a stale recipe stays off the list. */
+export function backtestQueueIssueLines(
+  formIssues: readonly string[],
+  queueError: string | null,
+): string[] {
+  const source =
+    formIssues.length > 0 ? formIssues : queueError ? [queueError] : [];
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const issue of source) {
+    const text = issue.trim();
+    if (!text || seen.has(text)) {
+      continue;
+    }
+    seen.add(text);
+    lines.push(text);
+  }
+  return lines;
 }
 
 export function canQueueUserBacktest(

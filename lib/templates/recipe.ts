@@ -191,7 +191,8 @@ export type PerpsTemplateRecipe = {
   sizeUnit: FuturesAutomationFormValues["sizeUnit"];
   size: string;
   limitPrice: string;
-  entrySource: FuturesAutomationFormValues["entrySource"];
+  /** Empty while Condition Type is still on Select Condition Type. */
+  entrySource: FuturesAutomationFormValues["entrySource"] | "";
   triggerBy: FuturesAutomationFormValues["triggerBy"];
   triggerCompare: FuturesAutomationFormValues["triggerCompare"];
   triggerPrice: string;
@@ -210,7 +211,11 @@ export type PerpsTemplateRecipe = {
   breakevenActivationPct?: number | null;
   breakevenOffsetPct?: number | null;
   direction: "long" | "short" | "both";
-  shortEntry?: PerpsEntryLeg | null;
+  shortEntry?:
+    | (Omit<PerpsEntryLeg, "entrySource"> & {
+        entrySource: FuturesAutomationFormValues["entrySource"] | "";
+      })
+    | null;
 };
 
 export type PaperTemplateRecipe = {
@@ -644,6 +649,9 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortExitHard: hardExitSignalFromJson(recipe.shortExitHard),
     exitStack: exitStackForEditor(recipe.exitStack),
     shortExitStack: exitStackForEditor(recipe.shortExitStack),
+    exitActions: recipe.exitActions ?? null,
+    shortExitActions:
+      recipe.direction === "both" ? (recipe.shortExitActions ?? null) : null,
     long: IDLE_DCA_LEG,
     short: IDLE_DCA_LEG,
     armConditionTrue: false,
@@ -651,6 +659,15 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     longIndicatorTrue: false,
     shortIndicatorTrue: false,
   };
+}
+
+function enginePerpsLeg(
+  leg: NonNullable<PerpsTemplateRecipe["shortEntry"]>,
+): PerpsEntryLeg | null {
+  if (leg.entrySource === "") {
+    return null;
+  }
+  return { ...leg, entrySource: leg.entrySource };
 }
 
 export function perpsRecipeFormSeed(
@@ -665,7 +682,7 @@ export function perpsRecipeFormSeed(
     sizeUnit: recipe.sizeUnit,
     size: recipe.size,
     limitPrice: recipe.limitPrice,
-    entrySource: recipe.entrySource,
+    entrySource: recipe.entrySource === "" ? "price" : recipe.entrySource,
     triggerBy: recipe.triggerBy,
     triggerCompare: recipe.triggerCompare,
     triggerPrice: recipe.triggerPrice,
@@ -682,7 +699,11 @@ export function perpsRecipeFormSeed(
     exitStack: exitStackForEditor(recipe.exitStack),
     exitDraft: hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard),
     direction: recipe.direction,
-    shortEntry: recipe.direction === "both" ? (recipe.shortEntry ?? null) : null,
+    shortEntry:
+      recipe.direction === "both" && recipe.shortEntry
+        ? enginePerpsLeg(recipe.shortEntry)
+        : null,
+    exitActions: recipe.exitActions ?? null,
     breakevenActivationPct:
       recipe.breakevenActivationPct == null
         ? ""
@@ -799,6 +820,7 @@ function parsePerpsTemplateRecipe(
     size: String(row.size ?? ""),
     limitPrice: String(row.limitPrice ?? ""),
     entrySource:
+      row.entrySource === "" ||
       row.entrySource === "webhook" ||
       row.entrySource === "indicator" ||
       row.entrySource === "trend" ||
@@ -1469,7 +1491,12 @@ export function perpsRecipeToRule(
     venueAllowsPerpsBoth(venue) &&
     recipe.shortEntry
   ) {
-    writePerpsShortEntryFields(form, "r0_short_", recipe.shortEntry);
+    const shortLeg = enginePerpsLeg(recipe.shortEntry);
+    if (!shortLeg) {
+      form.set("r0_short_entrySource", "");
+    } else {
+      writePerpsShortEntryFields(form, "r0_short_", shortLeg);
+    }
   }
   writeFlexPercentTrailForm(form, "r0_", recipe.exitActions);
   writeFlexPercentTrailForm(form, "r0_short_", recipe.shortEntry?.actions);

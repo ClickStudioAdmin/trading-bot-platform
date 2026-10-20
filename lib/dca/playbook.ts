@@ -2140,7 +2140,7 @@ export function parseDcaPlaybookForm(
     parseFuturesSide(form.get("side"));
   const startRaw = form.get("startKind");
   if (typeof startRaw === "string" && startRaw.trim() === "") {
-    return { ok: false, error: "Choose a trigger." };
+    return { ok: false, error: "Select a condition type." };
   }
   const startKind = parseDcaStartKind(startRaw);
   const directionForStart =
@@ -2152,7 +2152,7 @@ export function parseDcaPlaybookForm(
     typeof shortStartRaw === "string" &&
     shortStartRaw.trim() === ""
   ) {
-    return { ok: false, error: "Choose a trigger." };
+    return { ok: false, error: "Select a Short condition type." };
   }
   const shortStartKind =
     directionForStart === "both"

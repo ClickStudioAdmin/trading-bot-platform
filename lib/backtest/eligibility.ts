@@ -86,7 +86,7 @@ export function canBacktestPerpsRecipe(
     };
   }
   const size = Number(String(recipe.size).replace(/,/g, "").trim());
-  if (!(size > 0)) {
+  if (recipe.entrySource !== "" && !(size > 0)) {
     return { ok: false, error: "This bot needs a size before it can replay." };
   }
   const longEntry = perpsEntryBacktestError(recipe, false);
@@ -138,6 +138,9 @@ function perpsEntryBacktestError(
         : "This bot needs a retrace %.";
     }
     return null;
+  }
+  if (recipe.entrySource !== "price") {
+    return short ? "Select a Short condition type." : "Select a condition type.";
   }
   const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
   if (!(trigger > 0)) {

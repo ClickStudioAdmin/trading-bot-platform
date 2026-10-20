@@ -106,7 +106,9 @@ import {
   blankPerpsAddOrderGroups,
   perpsAddGroupsExpr,
   perpsAddGroupsFromStack,
+  perpsAddGroupsFieldIssue,
   perpsAddGroupsSizingMissing,
+  perpsAddGroupsToStack,
 } from "@/lib/futures/perps-add-condition";
 import {
   entryExtraOrdersMissing,
@@ -1024,14 +1026,17 @@ function RuleCard({
     shortSlLive &&
     shortClassic.slOrderType === "limit" &&
     !positiveText(shortClassic.slLimitPrice);
-  const sizeMissing = !closing && !positiveText(size);
+  const leadSizingShown = !closing && primaryDraft.entrySource !== "";
+  const sizeMissing = leadSizingShown && !positiveText(size);
   const orderLimitMissing =
-    !closing && orderType === "limit" && !positiveText(limitPrice);
-  const shortSizeMissing =
-    !closing && direction === "both" && !positiveText(shortSize);
-  const shortOrderLimitMissing =
+    leadSizingShown && orderType === "limit" && !positiveText(limitPrice);
+  const shortSizingShown =
     !closing &&
-    direction === "both" &&
+    storedDirection === "both" &&
+    entryDrafts.short.entrySource !== "";
+  const shortSizeMissing = shortSizingShown && !positiveText(shortSize);
+  const shortOrderLimitMissing =
+    shortSizingShown &&
     shortOrderType === "limit" &&
     !positiveText(shortLimitPrice);
   const groupSizingMissing =
@@ -1057,6 +1062,12 @@ function RuleCard({
     (!closing &&
       (direction === "short" || direction === "both") &&
       perpsAddGroupsSizingMissing(shortAddGroups));
+  const addIssue = !closing
+    ? perpsAddGroupsFieldIssue(
+        storedDirection === "short" ? shortAddGroups : longAddGroups,
+      ) ||
+      (storedDirection === "both" ? perpsAddGroupsFieldIssue(shortAddGroups) : null)
+    : null;
   const exitBlock = !closing
     ? exitCardsBlockReason(exitClauses) ||
       (storedDirection === "both" ? exitCardsBlockReason(shortClauses) : null)
@@ -1279,6 +1290,7 @@ function RuleCard({
     shortSizeMissing ||
     shortOrderLimitMissing ||
     groupSizingMissing ||
+    Boolean(addIssue) ||
     exitKindMissing ||
     nameMissing ||
     entryMissing ||
@@ -1300,7 +1312,7 @@ function RuleCard({
     return fallback;
   }
   function recipeNow(name: string) {
-    return snapshotPerpsRecipe({
+    const recipe = snapshotPerpsRecipe({
       name,
       symbol,
       action:
@@ -1328,9 +1340,28 @@ function RuleCard({
       tpsl,
       trailing,
       indicator: primaryLeg.indicator,
+      retrace: primaryLeg.retrace,
+      addStack: perpsAddGroupsToStack(
+        storedDirection === "short" ? shortAddGroups : longAddGroups,
+      ),
       confirm: primaryLeg.confirm,
       entryStack: primaryLeg.entryStack,
-      shortEntry: shortLeg,
+      exitActions: exitActionsForSave(exitClauses, primaryExitPrices, "flex"),
+      shortEntry:
+        shortLeg == null
+          ? null
+          : {
+              ...shortLeg,
+              ...(storedDirection === "both"
+                ? {
+                    actions: exitActionsForSave(
+                      shortClauses,
+                      shortExitPrices,
+                      "flex",
+                    ),
+                  }
+                : {}),
+            },
       exitIf: exitParts.filter,
       exitHard: exitParts.signal,
       exitStack,
@@ -1341,6 +1372,17 @@ function RuleCard({
         ? Number(breakevenOffsetPct.replace(/,/g, "")) || 0
         : null,
     });
+    if (!closing && primaryDraft.entrySource === "") {
+      recipe.entrySource = "";
+    }
+    if (
+      storedDirection === "both" &&
+      entryDrafts.short.entrySource === "" &&
+      recipe.shortEntry
+    ) {
+      recipe.shortEntry = { ...recipe.shortEntry, entrySource: "" };
+    }
+    return recipe;
   }
   function recipeForBacktest():
     | { ok: true; recipe: PerpsTemplateRecipe }
@@ -1360,9 +1402,13 @@ function RuleCard({
   }
   const saveError = !parsedLive.ok
     ? parsedLive.error
-    : requiredMissing
-      ? "Fill required fields before saving."
-      : null;
+    : addIssue
+      ? addIssue
+      : exitBlock
+        ? exitBlock
+        : requiredMissing
+          ? "Fill required fields before saving."
+          : null;
   const publishError = saveError;
   useEffect(() => {
     if (!embedded) {

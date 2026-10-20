@@ -22,6 +22,7 @@ import {
   parseListedRecipe,
   backtestLinksForBotRecipes,
   backtestOpenedSourceId,
+  backtestQueueIssueLines,
   deskBacktestBotParam,
   userBacktestFieldIssues,
 } from "./library";
@@ -542,6 +543,36 @@ assert.equal(
   }).ok,
   false,
 );
+const blankCondition = userBacktestFieldIssues({
+  ...perps,
+  entrySource: "",
+  size: "",
+  triggerPrice: "",
+});
+assert.deepEqual(
+  blankCondition.map((row) => row.message),
+  ["Select a condition type."],
+);
+assert.equal(
+  blankCondition.some((row) => /When price|size/i.test(row.message)),
+  false,
+);
+assert.deepEqual(
+  backtestQueueIssueLines(
+    ["Enter an activation percent."],
+    "Enter a retrace %.",
+  ),
+  ["Enter an activation percent."],
+);
+assert.deepEqual(
+  backtestQueueIssueLines(
+    ["Enter a When price.", "Enter a When price."],
+    "Enter a When price.",
+  ),
+  ["Enter a When price."],
+);
+assert.deepEqual(backtestQueueIssueLines([], "Enter a size."), ["Enter a size."]);
+assert.deepEqual(backtestQueueIssueLines([], null), []);
 
 const dcaForm = new FormData();
 dcaForm.set("name", "Grid");

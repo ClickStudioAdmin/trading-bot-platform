@@ -898,29 +898,43 @@ export function BacktestOriginBadges({
   if (!templateName && !deskLabel && !edited) {
     return null;
   }
+  const matched = Boolean(templateName || deskLabel);
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {templateName ? (
-        <p className="inline-flex items-center gap-1 rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-          Template · {templateName}
-          <TemplateParametersButton
-            name={templateName}
-            description={templateDescription}
-            recipe={templateRecipe}
-            templateId={templateId}
-          />
+    <div className={matched ? "space-y-1.5" : undefined}>
+      {matched ? (
+        <p className="text-sm text-ink">
+          Backtest Parameters Match the following:
         </p>
       ) : null}
-      {deskLabel ? (
-        <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-          Desk · {deskLabel}
-        </p>
-      ) : null}
-      {edited && !templateName && !deskLabel ? (
-        <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
-          Edited
-        </p>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {templateName ? (
+          <p className="inline-flex min-w-0 items-center gap-1.5 text-sm text-ink">
+            <span className="shrink-0 rounded-control border border-line bg-surface-raised px-2 py-0.5 text-xs text-ink">
+              Template
+            </span>
+            <span className="min-w-0 truncate">{templateName}</span>
+            <TemplateParametersButton
+              name={templateName}
+              description={templateDescription}
+              recipe={templateRecipe}
+              templateId={templateId}
+            />
+          </p>
+        ) : null}
+        {deskLabel ? (
+          <p className="inline-flex min-w-0 items-center gap-1.5 text-sm text-ink">
+            <span className="shrink-0 rounded-control border border-line bg-surface-raised px-2 py-0.5 text-xs text-ink">
+              Bot
+            </span>
+            <span className="min-w-0 truncate">{deskLabel}</span>
+          </p>
+        ) : null}
+        {edited && !templateName && !deskLabel ? (
+          <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
+            Edited
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

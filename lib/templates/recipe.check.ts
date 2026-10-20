@@ -829,6 +829,61 @@ assert.equal(perpsDrafts.short.entryRows.length, 1);
 assert.equal(perpsDrafts.short.entryRows[0]?.join, "or");
 assert.equal(exitRowsFromStack(perpsSeed.exitStack).length, 1);
 assert.equal(exitRowsFromStack(perpsSeed.shortEntry?.exitStack).length, 1);
+const trailedPerps = perpsRecipeFormSeed({
+  ...loadedPerps.recipe,
+  entrySource: "retrace",
+  retrace: {
+    source: "last",
+    from: "high",
+    pct: 5,
+    lookback: 20,
+    timeframe: "60",
+  },
+  exitActions: [
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "webhook", webhookId: "arm" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 5,
+      trailingTriggerPct: 8,
+    },
+  ],
+});
+assert.equal(trailedPerps.retrace?.pct, 5);
+assert.equal(trailedPerps.exitActions?.[0]?.trailingTriggerPct, 8);
+assert.equal(trailedPerps.exitActions?.[0]?.trailingPct, 5);
+const scaleIn = perpsRecipeToRule(
+  {
+    ...loadedPerps.recipe,
+    name: "Scale in",
+    symbol: "SOLUSDT",
+    entrySource: "retrace",
+    size: "500",
+    sizeUnit: "usdt",
+    triggerPrice: "0",
+    retrace: {
+      source: "last",
+      from: "high",
+      pct: 5,
+      lookback: 20,
+      timeframe: "60",
+    },
+    exitActions: trailedPerps.exitActions,
+  },
+  { sortOrder: 0 },
+);
+assert.equal(scaleIn.ok, true);
+if (scaleIn.ok) {
+  assert.equal(scaleIn.rule.retrace?.pct, 5);
+  assert.equal(scaleIn.rule.exitActions?.[0]?.trailingTriggerPct, 8);
+}
 
 const legacyConfirm = snapshotPerpsRecipe({
   name: "Confirm only",
@@ -913,6 +968,43 @@ assert.equal(loadedDca.recipe.shortEntryStack?.leaves.length, 1);
 const dcaSeed = dcaRecipePlaybookSeed(loadedDca.recipe);
 assert.equal(dcaSeed.direction, "both");
 assert.equal(dcaSeed.shortStartKind, "price");
+const trailedDca = dcaRecipePlaybookSeed({
+  ...loadedDca.recipe,
+  exitActions: [
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "webhook", webhookId: "arm" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 5,
+      trailingTriggerPct: 8,
+    },
+  ],
+  shortExitActions: [
+    {
+      id: "short-trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "webhook", webhookId: "arm" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 4,
+      trailingTriggerPct: 6,
+    },
+  ],
+});
+assert.equal(trailedDca.exitActions?.[0]?.trailingTriggerPct, 8);
+assert.equal(trailedDca.shortExitActions?.[0]?.trailingTriggerPct, 6);
 assert.equal(entryRowsFromSources(dcaSeed.entryStack, dcaSeed.confirm).length, 1);
 assert.equal(
   entryRowsFromSources(dcaSeed.shortEntryStack, dcaSeed.shortConfirm).length,

@@ -2222,7 +2222,11 @@ export function DcaPlaybookForm({
         ));
     onRecipeChangeRef.current({
       recipe: snapshotDcaRecipe(parsed.config),
-      error: missing ? "Fill required fields before saving." : null,
+      error: exitBlock
+        ? exitBlock
+        : missing
+          ? "Fill required fields before saving."
+          : null,
       fromUser: touched,
     });
   }, [embedded, formTick, liveRecipeKey, onRecipeChange]);
