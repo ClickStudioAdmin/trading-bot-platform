@@ -456,6 +456,157 @@ if (loadedFlexExits.ok && loadedFlexExits.recipe.kind === "flex") {
   );
 }
 
+const percentTrail = snapshotPerpsRecipe({
+  name: "Advanced - Scale In BTD when Protected + Trailing Stop",
+  symbol: "SOLUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "usdt",
+  size: 500,
+  limitPrice: null,
+  entrySource: "retrace",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 1,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: { distance: 5, activePrice: null, peak: null },
+  retrace: { source: "last", from: "high", pct: 5, lookback: 20, timeframe: "60" },
+  addStack: {
+    leaves: [
+      {
+        kind: "retrace",
+        source: "last",
+        from: "high",
+        pct: 2,
+        lookback: 20,
+        timeframe: "15",
+      },
+      { kind: "protection", is: "protected", amount: "entire", pct: null },
+    ],
+    joins: ["and", "and"],
+  },
+  exitActions: [
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 5,
+      trailingTriggerPct: 8,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+  ],
+});
+const loadedPercentTrail = parseTemplateRecipe(percentTrail, "flex", 1);
+assert.equal(
+  loadedPercentTrail.ok,
+  true,
+  loadedPercentTrail.ok ? "" : loadedPercentTrail.error,
+);
+if (loadedPercentTrail.ok && loadedPercentTrail.recipe.kind === "flex") {
+  assert.equal(loadedPercentTrail.recipe.exitActions?.[0]?.trailingTriggerPct, 8);
+  assert.equal(loadedPercentTrail.recipe.exitActions?.[0]?.trailingPct, 5);
+  assert.equal(loadedPercentTrail.recipe.trailing?.activePrice ?? null, null);
+  assert.equal(loadedPercentTrail.recipe.retrace?.pct, 5);
+  assert.equal(loadedPercentTrail.recipe.addStack?.leaves.length, 2);
+  assert.equal(
+    recipesMatchReplayFields(percentTrail, loadedPercentTrail.recipe),
+    true,
+  );
+}
+
+const shortPercentTrail = snapshotPerpsRecipe({
+  name: "Both percent trail",
+  symbol: "SOLUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "usdt",
+  size: 500,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 100,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: { distance: 5, activePrice: null, peak: null },
+  direction: "both",
+  exitActions: [
+    {
+      id: "long-trail",
+      kind: "trailing_stop",
+      scope: { kind: "all" },
+      groups: [],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      trailingPct: 5,
+      trailingTriggerPct: 8,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+  ],
+  shortEntry: {
+    entrySource: "price",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 90,
+    skipIfOpen: true,
+    indicator: null,
+    confirm: null,
+    entryStack: { leaves: [], joins: [] },
+    classic: {
+      tpsl: null,
+      trailing: { distance: 4, activePrice: null, peak: null },
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
+    },
+    actions: [
+      {
+        id: "short-trail",
+        kind: "trailing_stop",
+        scope: { kind: "all" },
+        groups: [],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+        trailingPct: 4,
+        trailingTriggerPct: 6,
+        breakevenActivationPct: null,
+        breakevenOffsetPct: null,
+      },
+    ],
+  },
+});
+const loadedShortTrail = parseTemplateRecipe(shortPercentTrail, "flex", 1);
+assert.equal(
+  loadedShortTrail.ok,
+  true,
+  loadedShortTrail.ok ? "" : loadedShortTrail.error,
+);
+if (loadedShortTrail.ok && loadedShortTrail.recipe.kind === "flex") {
+  assert.equal(loadedShortTrail.recipe.shortEntry?.actions?.[0]?.trailingTriggerPct, 6);
+  assert.equal(loadedShortTrail.recipe.shortEntry?.actions?.[0]?.trailingPct, 4);
+  assert.equal(loadedShortTrail.recipe.exitActions?.[0]?.trailingTriggerPct, 8);
+}
+
 const webhookPerps = snapshotPerpsRecipe({
   name: "Signal buy",
   symbol: "BTCUSDT",
