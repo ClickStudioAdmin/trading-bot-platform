@@ -1192,6 +1192,24 @@ function RuleCard({
     }
     if (!closing && trailLive) {
       snapshot.set(`${prefix}trailing`, "on");
+      snapshot.set(`${prefix}trailingActiveKind`, "percent");
+      snapshot.set(`${prefix}trailingStop`, trailingStop.replace(/,/g, "").trim());
+      snapshot.set(
+        `${prefix}trailingTriggerPct`,
+        trailingActive.replace(/,/g, "").trim(),
+      );
+    }
+    if (!closing && storedDirection === "both" && shortTrailLive) {
+      snapshot.set(`${prefix}short_trailing`, "on");
+      snapshot.set(`${prefix}short_trailingActiveKind`, "percent");
+      snapshot.set(
+        `${prefix}short_trailingStop`,
+        shortClassic.trailingStop.replace(/,/g, "").trim(),
+      );
+      snapshot.set(
+        `${prefix}short_trailingTriggerPct`,
+        shortClassic.trailingActive.replace(/,/g, "").trim(),
+      );
     }
     if (breakevenLive) {
       snapshot.set(`${prefix}breakeven`, "on");

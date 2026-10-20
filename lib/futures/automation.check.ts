@@ -572,6 +572,43 @@ if (bothRetrace.ok) {
   assert.equal(legs[0]?.rule.exitActions?.[0]?.id, "long-tp");
 }
 
+const percentTrail = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_trailing: "on",
+    r0_trailingStop: "2",
+    r0_trailingActiveKind: "percent",
+    r0_trailingTriggerPct: "6",
+    r0_exitActions: JSON.stringify([
+      {
+        id: "trail",
+        kind: "trailing_stop",
+        scope: { kind: "all" },
+        groups: [],
+        trailingPct: 2,
+        trailingTriggerPct: 6,
+      },
+    ]),
+  }),
+);
+assert.equal(percentTrail.ok, true);
+if (percentTrail.ok) {
+  assert.equal(percentTrail.rules[0]?.exitActions?.[0]?.trailingPct, 2);
+  assert.equal(percentTrail.rules[0]?.exitActions?.[0]?.trailingTriggerPct, 6);
+}
+const percentTrailAsPrice = parseFuturesAutomationForm(
+  perpsForm({
+    r0_action: "buy",
+    r0_trailing: "on",
+    r0_trailingStop: "2",
+    r0_trailingTriggerPct: "6",
+  }),
+);
+assert.equal(percentTrailAsPrice.ok, false);
+if (!percentTrailAsPrice.ok) {
+  assert.equal(percentTrailAsPrice.error, "Enter an activation price.");
+}
+
 assert.equal(bothSameSize.ok, true);
 if (bothSameSize.ok) {
   assert.equal(bothSameSize.rules[0]?.shortEntry?.size, undefined);
