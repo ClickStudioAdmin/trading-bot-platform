@@ -987,6 +987,7 @@ function RuleCard({
     storedDirection === "both"
       ? {
           ...perpsEntryLegFromDraft(entryDrafts.short, false),
+          addStack: perpsAddGroupsToStack(shortAddGroups),
           ...(shortExitIf || shortExitRows.some((row) => row.draft.trigger !== "unset")
             ? {
                 exitIf: shortExitParts.filter,

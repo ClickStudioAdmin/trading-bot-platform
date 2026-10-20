@@ -243,6 +243,7 @@ export function perpsEntryDraftFromLeg(
       triggerPrice: String(leg.triggerPrice),
       skipIfOpen: leg.skipIfOpen,
       indicator: leg.indicator,
+      retrace: leg.retrace ?? null,
       confirm: leg.confirm,
       entryStack: leg.entryStack,
     } as FuturesAutomationFormValues,
