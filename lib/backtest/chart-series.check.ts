@@ -96,6 +96,32 @@ const trend = replayIndicatorLegend(
 );
 assert.deepEqual(trend[0]?.values.map((value) => value.text), ["Up 12", "Down 9"]);
 
+const oneSide = replayIndicatorLegend(
+  [
+    {
+      ...layer,
+      id: "st",
+      title: "Supertrend 10 × 3 · 4h · Long entry",
+      price: [
+        {
+          id: "st-up",
+          title: "Supertrend 10 × 3 · 4h · Long entry",
+          color: "#34D399",
+          values: [12, null, null],
+        },
+        {
+          id: "st-down",
+          title: "Supertrend 10 × 3 · 4h · Long entry",
+          color: "#F07167",
+          values: [null, 9, 8],
+        },
+      ],
+    },
+  ],
+  1,
+);
+assert.deepEqual(oneSide[0]?.values.map((value) => value.text), ["Down 9"]);
+
 assert.equal(indicatorConditionLabel("Entry"), "Long entry");
 assert.equal(indicatorConditionLabel("Secondary entry"), "Long secondary entry");
 assert.equal(indicatorConditionLabel("Hard exit"), "Long hard exit");

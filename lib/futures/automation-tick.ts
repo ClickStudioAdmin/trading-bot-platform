@@ -15,11 +15,19 @@ import {
   futuresFilterMet,
   perpsExitForSide,
 } from "./conditions";
-import { entryStackListensOnPriceTick, entryStackMatchesWebhook } from "@/lib/strategy/expr";
 import {
+  addStackMatchesWebhook,
+  entryStackListensOnPriceTick,
+  entryStackMatchesWebhook,
+} from "@/lib/strategy/expr";
+import {
+  describeExitBook,
+  emptyExitRuntime,
   exitBookForClassic,
   exitClaimsCover,
+  exitRuntimeFromJson,
   sideExitActions,
+  type ExitBookSnapshot,
 } from "@/lib/strategy/exit-actions";
 import {
   applyPaperExitClaims,
@@ -40,7 +48,7 @@ import {
   isBybitAgreementReject,
 } from "@/lib/exchanges/agreement";
 import { runFuturesCommand } from "./command";
-import { parseFuturesPositionRow, type FuturesPosition } from "./model";
+import { parseFuturesPositionRow, type FuturesPosition, type FuturesSide } from "./model";
 import { FUTURES_LIVE_POSITION_STATUSES } from "./pending-close";
 import {
   fetchBybitTickers,
@@ -67,10 +75,13 @@ import type { CandleBar } from "@/lib/market/candles";
 import {
   formatBreakevenReason,
   formatFuturesEntryReasons,
+  futuresAddedMessage,
   futuresBreakevenMessage,
   futuresFiredMessage,
   futuresHardExitMessage,
 } from "@/lib/bots/condition-copy";
+import { flexAddDecision, flexAddLatchColumn } from "@/lib/futures/flex-add";
+import type { AddGroupOrder } from "@/lib/strategy/expr";
 
 type DeskAccount = {
   userId: string;
@@ -157,6 +168,7 @@ export async function runFuturesAutomationTick(input?: {
     list.push(row);
     opensByAccount.set(row.accountId, list);
   }
+  const savedBooks = savedExitBooks(openRows ?? []);
 
   const deskTickerCache = new Map<string, Map<string, BybitTicker>>();
   const klineCache = new Map<string, CandleBar[]>();
@@ -178,10 +190,16 @@ export async function runFuturesAutomationTick(input?: {
       continue;
     }
     parsedRules.push({ rawAccountId: accountId, rule, account });
-    const priceLegs = perpsAutomationLegs(rule).filter((leg) =>
+    const legs = perpsAutomationLegs(rule);
+    const priceLegs = legs.filter((leg) =>
       entryStackListensOnPriceTick(leg.rule.entrySource, leg.rule.entryStack),
     );
-    if (priceLegs.length === 0) {
+    const addOnlyLegs = legs.filter(
+      (leg) =>
+        !priceLegs.some((row) => row.side === leg.side) &&
+        (leg.rule.addStack?.leaves.length ?? 0) > 0,
+    );
+    if (priceLegs.length === 0 && addOnlyLegs.length === 0) {
       continue;
     }
     let deskTickers = tickers;
@@ -314,8 +332,29 @@ export async function runFuturesAutomationTick(input?: {
             reason: reasons,
           },
         });
+        const addNow = flexAddDecision({
+          stack: legRule.addStack,
+          side,
+          price,
+          prices,
+          barsByTimeframe,
+          wasTrue: false,
+          open: true,
+          protection: openOnSide
+            ? {
+                openQty: openOnSide.qty,
+                provenPct: flexAddProvenPct({
+                  open: openOnSide,
+                  rule,
+                  prices,
+                  savedBook: savedBooks.get(openOnSide.id) ?? null,
+                }),
+              }
+            : null,
+        });
         await patchRule(supabase, rule.id, {
           [leg.latch]: true,
+          [flexAddLatchColumn(leg.latch)]: addNow.met,
           last_fired_at: new Date().toISOString(),
         });
         continue;
@@ -324,6 +363,47 @@ export async function runFuturesAutomationTick(input?: {
         await patchRule(supabase, rule.id, {
           [leg.latch]: decision.nextTrue,
         });
+      }
+      const added = await placeFlexAdd({
+        supabase,
+        rule,
+        legRule,
+        latch: leg.latch,
+        side,
+        accountId,
+        userId: account.userId,
+        mode: account.mode,
+        open: openOnSide ?? null,
+        price,
+        prices,
+        barsByTimeframe,
+        savedBook: openOnSide ? (savedBooks.get(openOnSide.id) ?? null) : null,
+      });
+      fired += added;
+    }
+    if (!stopLegs) {
+      for (const leg of addOnlyLegs) {
+        const legRule = leg.rule;
+        const price = prices ? triggerPrice(legRule.triggerBy, prices) : null;
+        const openOnSide = bookOpens.find(
+          (row) => row.symbol === rule.symbol && row.side === leg.side,
+        );
+        const added = await placeFlexAdd({
+          supabase,
+          rule,
+          legRule,
+          latch: leg.latch,
+          side: leg.side,
+          accountId,
+          userId: account.userId,
+          mode: account.mode,
+          open: openOnSide ?? null,
+          price,
+          prices,
+          barsByTimeframe,
+          savedBook: openOnSide ? (savedBooks.get(openOnSide.id) ?? null) : null,
+        });
+        fired += added;
       }
     }
   }
@@ -402,6 +482,7 @@ export async function fireWebhookAutomationEntries(input: {
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
+  const savedBooks = savedExitBooks(openRows ?? []);
   const klineCache = new Map<string, CandleBar[]>();
   const needsPrice = matchedRows.some((raw) => {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
@@ -413,6 +494,9 @@ export async function fireWebhookAutomationEntries(input: {
           leg.rule.entrySource === "price" ||
           leg.rule.entrySource === "retrace" ||
           leg.rule.entryStack.leaves.some(
+            (leaf) => leaf.kind === "price" || leaf.kind === "retrace",
+          ) ||
+          (leg.rule.addStack?.leaves ?? []).some(
             (leaf) => leaf.kind === "price" || leaf.kind === "retrace",
           ) ||
           leg.rule.exitHard?.trigger === "price" ||
@@ -591,6 +675,25 @@ export async function fireWebhookAutomationEntries(input: {
         hasOpenOnSide: Boolean(openOnSide),
       });
       if (!decision.fire) {
+        if (addStackMatchesWebhook(legRule.addStack, input.webhookId)) {
+          const added = await placeFlexAdd({
+            supabase,
+            rule,
+            legRule,
+            latch: leg.latch,
+            side,
+            accountId: input.accountId,
+            userId: input.userId,
+            mode: input.mode,
+            open: openOnSide ?? null,
+            price,
+            prices,
+            barsByTimeframe,
+            firedWebhookId: input.webhookId,
+            savedBook: openOnSide ? (savedBooks.get(openOnSide.id) ?? null) : null,
+          });
+          fired += added;
+        }
         continue;
       }
       const reasons = formatFuturesEntryReasons({
@@ -640,7 +743,29 @@ export async function fireWebhookAutomationEntries(input: {
             reason: reasons,
           },
         });
+        const addNow = flexAddDecision({
+          stack: legRule.addStack,
+          side,
+          price,
+          prices,
+          barsByTimeframe,
+          wasTrue: false,
+          open: true,
+          firedWebhookId: input.webhookId,
+          protection: openOnSide
+            ? {
+                openQty: openOnSide.qty,
+                provenPct: flexAddProvenPct({
+                  open: openOnSide,
+                  rule,
+                  prices,
+                  savedBook: savedBooks.get(openOnSide.id) ?? null,
+                }),
+              }
+            : null,
+        });
         await patchRule(supabase, rule.id, {
+          [flexAddLatchColumn(leg.latch)]: addNow.met,
           last_fired_at: new Date().toISOString(),
         });
       } else if (
@@ -1183,6 +1308,241 @@ async function loadRuleBars(input: {
   return barsByTimeframe;
 }
 
+function savedExitBooks(
+  rows: readonly unknown[],
+): Map<string, ExitBookSnapshot> {
+  const books = new Map<string, ExitBookSnapshot>();
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as { id?: unknown; exit_runtime?: unknown };
+    const id = String(row.id ?? "");
+    const book = exitRuntimeFromJson(row.exit_runtime).book;
+    if (id && book) {
+      books.set(id, book);
+    }
+  }
+  return books;
+}
+
+/** Largest single protective stop, from the last exit book or the position columns. */
+function flexAddProvenPct(input: {
+  open: FuturesPosition;
+  rule: FuturesAutomationRule;
+  prices: { last: number | null; mark: number | null; index: number | null } | null;
+  savedBook: ExitBookSnapshot | null;
+}): number | null {
+  const actions = sideExitActions(
+    input.rule.exitActions,
+    input.rule.shortEntry?.actions,
+    input.rule.direction,
+    input.open.side,
+  );
+  if (actions && input.savedBook) {
+    return input.savedBook.protective.provenPct;
+  }
+  const last = input.prices?.last ?? input.prices?.mark ?? null;
+  const mark =
+    input.prices?.mark != null && input.prices.mark > 0
+      ? input.prices.mark
+      : last;
+  if (!(mark != null && mark > 0) || !(last != null && last > 0)) {
+    return null;
+  }
+  if (actions) {
+    return describeExitBook({
+      source: "actions",
+      actions,
+      runtime: emptyExitRuntime(),
+      lots: [
+        {
+          id: input.open.id,
+          qty: input.open.qty,
+          price: input.open.entryPrice,
+        },
+      ],
+      side: input.open.side,
+      mark,
+      last,
+      entryPrice: input.open.entryPrice,
+      nowMs: Date.now(),
+      claims: [],
+      breakevenDone: input.open.breakevenDone,
+      prices: input.prices,
+    }).protective.provenPct;
+  }
+  const sideClassic =
+    input.open.side === "short" && input.rule.direction === "both"
+      ? (input.rule.shortEntry?.classic ?? null)
+      : null;
+  const breakevenActivationPct = sideClassic
+    ? sideClassic.breakevenActivationPct
+    : input.rule.breakevenActivationPct;
+  const breakevenOffsetPct = sideClassic
+    ? sideClassic.breakevenOffsetPct
+    : input.rule.breakevenOffsetPct;
+  const breakevenMoving =
+    breakevenActivationPct != null &&
+    futuresBreakevenDue({
+      side: input.open.side,
+      qty: input.open.qty,
+      entryPrice: input.open.entryPrice,
+      mark: last,
+      activationPct: breakevenActivationPct,
+      done: input.open.breakevenDone,
+    });
+  return exitBookForClassic({
+    side: input.open.side,
+    qty: input.open.qty,
+    entryPrice: input.open.entryPrice,
+    mark,
+    last,
+    nowMs: Date.now(),
+    breakevenDone: input.open.breakevenDone,
+    trailingPeak: input.open.trailingPeak,
+    takeProfitPrice: input.open.takeProfit,
+    takeProfitQty: input.open.tpQty,
+    stopLossPrice: input.open.stopLoss,
+    stopLossQty: input.open.slQty,
+    trailingDistance: input.open.trailingStop,
+    trailingActivation: input.open.trailingActive,
+    breakevenActivationPct,
+    breakevenOffsetPct,
+    breakeven: breakevenMoving
+      ? {
+          activationPct: breakevenActivationPct,
+          offsetPct: breakevenOffsetPct ?? 0,
+          qty: null,
+        }
+      : null,
+  }).protective.provenPct;
+}
+
+/**
+ * Place one Flex additional order on the rising edge, while the position is open.
+ * A failed place leaves the latch clear so the next check tries again.
+ */
+async function placeFlexAdd(input: {
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>;
+  rule: FuturesAutomationRule;
+  legRule: FuturesAutomationRule;
+  latch: "condition_true" | "short_condition_true";
+  side: FuturesSide;
+  accountId: string;
+  userId: string;
+  mode: TradingAccountMode;
+  open: FuturesPosition | null;
+  price: number | null;
+  prices: { last: number | null; mark: number | null; index: number | null } | null;
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+  firedWebhookId?: string | null;
+  savedBook: ExitBookSnapshot | null;
+}): Promise<number> {
+  const stack = input.legRule.addStack;
+  if (!stack || stack.leaves.length === 0 || !input.rule.id) {
+    return 0;
+  }
+  if (
+    input.firedWebhookId &&
+    !addStackMatchesWebhook(stack, input.firedWebhookId)
+  ) {
+    return 0;
+  }
+  const column = flexAddLatchColumn(input.latch);
+  const wasTrue = input.legRule.addConditionTrue === true;
+  if (!input.open || input.open.status !== "open") {
+    if (!input.open && wasTrue) {
+      await patchRule(input.supabase, input.rule.id, { [column]: false });
+    }
+    return 0;
+  }
+  const decision = flexAddDecision({
+    stack,
+    side: input.side,
+    price: input.price,
+    prices: input.prices,
+    barsByTimeframe: input.barsByTimeframe,
+    wasTrue,
+    open: true,
+    firedWebhookId: input.firedWebhookId,
+    protection: {
+      openQty: input.open.qty,
+      provenPct: flexAddProvenPct({
+        open: input.open,
+        rule: input.rule,
+        prices: input.prices,
+        savedBook: input.savedBook,
+      }),
+    },
+  });
+  if (!decision.fire || !decision.order) {
+    if (decision.nextTrue !== wasTrue) {
+      await patchRule(input.supabase, input.rule.id, {
+        [column]: decision.nextTrue,
+      });
+    }
+    return 0;
+  }
+  const result = await fireAutomationRule({
+    rule: input.legRule,
+    accountId: input.accountId,
+    userId: input.userId,
+    mode: input.mode,
+    positionId: input.open.id,
+    reason: decision.because,
+    add: decision.order,
+  });
+  if (!result.ok) {
+    await writeEventLog({
+      level: "warning",
+      scope: "trade",
+      event: "engine.add_failed",
+      message: decision.because
+        ? `${result.error} Trying: ${decision.because}.`
+        : result.error,
+      userId: input.userId,
+      accountId: input.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        ruleId: input.rule.id,
+        ruleName: input.rule.name,
+        symbol: input.rule.symbol,
+        side: input.side,
+        positionId: input.open.id,
+        reason: decision.because,
+      },
+    });
+    return 0;
+  }
+  await writeEventLog({
+    scope: "trade",
+    event: "engine.added",
+    message: futuresAddedMessage({
+      name: input.rule.name,
+      symbol: input.rule.symbol,
+      side: input.side,
+      reasons: decision.because,
+    }),
+    userId: input.userId,
+    accountId: input.accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      ruleId: input.rule.id,
+      ruleName: input.rule.name,
+      symbol: input.rule.symbol,
+      side: input.side,
+      positionId: result.positionId,
+      reason: decision.because,
+    },
+  });
+  await patchRule(input.supabase, input.rule.id, {
+    [column]: true,
+    last_fired_at: new Date().toISOString(),
+  });
+  return 1;
+}
+
 async function fireAutomationRule(input: {
   rule: FuturesAutomationRule;
   accountId: string;
@@ -1190,6 +1550,8 @@ async function fireAutomationRule(input: {
   mode: TradingAccountMode;
   positionId: string | null;
   reason?: string;
+  /** Group size for a Flex additional order. Stops already on the position stay. */
+  add?: AddGroupOrder;
 }): Promise<
   { ok: true; positionId: string | null } | { ok: false; error: string }
 > {
@@ -1197,6 +1559,15 @@ async function fireAutomationRule(input: {
   if (!rule.id) {
     return { ok: false, error: "Rule is missing an id." };
   }
+  const adding = input.add != null;
+  const exitOwned =
+    rule.action === "flatten" ||
+    sideExitActions(
+      rule.exitActions,
+      rule.shortEntry?.actions,
+      rule.direction,
+      rule.action === "sell" ? "short" : "long",
+    );
   const result = await runFuturesCommand({
     actor: {
       userId: input.userId,
@@ -1207,36 +1578,30 @@ async function fireAutomationRule(input: {
       kind: "place",
       action: rule.action,
       symbol: rule.symbol,
-      orderType: rule.orderType,
+      orderType: adding ? input.add!.orderType : rule.orderType,
       positionId: rule.action === "flatten" ? input.positionId : undefined,
-      size: rule.size == null ? "" : String(rule.size),
-      sizeUnit: rule.sizeUnit,
-      limitPrice: rule.limitPrice == null ? undefined : String(rule.limitPrice),
-      idempotencyKey: futuresAutomationIdempotencyKey(rule.id, Date.now()),
+      size: adding
+        ? input.add!.size
+        : rule.size == null
+          ? ""
+          : String(rule.size),
+      sizeUnit: adding ? input.add!.sizeUnit : rule.sizeUnit,
+      limitPrice: adding
+        ? input.add!.orderType === "limit"
+          ? input.add!.limitPrice
+          : undefined
+        : rule.limitPrice == null
+          ? undefined
+          : String(rule.limitPrice),
+      idempotencyKey:
+        futuresAutomationIdempotencyKey(rule.id, Date.now()) +
+        (adding ? "add" : ""),
       source: "engine",
       ruleId: rule.id,
       ruleName: rule.name,
       reason: input.reason,
-      tpsl:
-        rule.action === "flatten" ||
-        sideExitActions(
-          rule.exitActions,
-          rule.shortEntry?.actions,
-          rule.direction,
-          rule.action === "sell" ? "short" : "long",
-        )
-          ? null
-          : rule.tpsl,
-      trailing:
-        rule.action === "flatten" ||
-        sideExitActions(
-          rule.exitActions,
-          rule.shortEntry?.actions,
-          rule.direction,
-          rule.action === "sell" ? "short" : "long",
-        )
-          ? null
-          : rule.trailing,
+      tpsl: adding || exitOwned ? null : rule.tpsl,
+      trailing: adding || exitOwned ? null : rule.trailing,
     },
   });
   if (!result.ok) {

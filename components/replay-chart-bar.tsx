@@ -40,6 +40,8 @@ export function ReplayChartBar({
   onToggleReference,
   indicatorNotice = null,
   indicatorsIntro = "Strategy indicators stay on. Anything else is a visual reference only.",
+  showConditionOrders = false,
+  onShowConditionOrders,
   leading = null,
   trailing = null,
 }: {
@@ -63,6 +65,8 @@ export function ReplayChartBar({
   ) => void;
   indicatorNotice?: ReactNode;
   indicatorsIntro?: string;
+  showConditionOrders?: boolean;
+  onShowConditionOrders?: (checked: boolean) => void;
   leading?: ReactNode;
   trailing?: ReactNode;
 }) {
@@ -90,6 +94,16 @@ export function ReplayChartBar({
         >
           Indicators
         </button>
+        {onShowConditionOrders ? (
+          <label className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+            <AppCheck
+              checked={showConditionOrders}
+              onChange={(event) => onShowConditionOrders(event.target.checked)}
+              className="mt-0"
+            />
+            Show condition orders
+          </label>
+        ) : null}
       </div>
       <div className="ml-auto flex items-center gap-0.5">
         <button

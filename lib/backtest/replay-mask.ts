@@ -27,12 +27,17 @@ import { hardExitMet, hardExitSignalFromJson } from "@/lib/dca/hard-exit";
 import { perpsExitForSide } from "@/lib/futures/conditions";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { CandleBar } from "@/lib/market/candles";
+import { formatStrategyLeafReason } from "@/lib/bots/condition-copy";
 import {
+  addStackGroupIndex,
+  addStackGroups,
+  addStackMet,
   entryStackMet,
   resolveEntryStack,
   type EntryStack,
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
+import { protectionMet } from "@/lib/strategy/protection";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import { retraceMet, type RetraceSpec } from "@/lib/strategy/retrace";
 import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
@@ -133,6 +138,42 @@ export class ReplayBook {
             });
     }
     return out;
+  }
+
+  /**
+   * Additional-order stack at one tape bar.
+   * The first fully true Or group supplies the size and the log sentence.
+   */
+  addDetail(
+    stack: EntryStack,
+    side: FuturesSide,
+    index: number,
+    protection?: { openQty: number | null; provenPct: number | null } | null,
+  ): { met: boolean; group: number | null; because: string } {
+    const price = this.tapeBars[index]?.close ?? 0;
+    const flags = stack.leaves.map((leaf) => {
+      if (leaf.kind === "protection") {
+        return protectionMet({
+          spec: leaf,
+          openQty: protection?.openQty ?? null,
+          provenPct: protection?.provenPct ?? null,
+        });
+      }
+      return this.entryLeafAt(leaf, side, index, price);
+    });
+    const group = addStackGroupIndex({ stack, leaves: flags });
+    const because =
+      group == null
+        ? ""
+        : (addStackGroups(stack)[group] ?? [])
+            .map((leaf) => formatStrategyLeafReason(leaf, side))
+            .filter(Boolean)
+            .join(", and ");
+    return {
+      met: addStackMet({ stack, leaves: flags }),
+      group,
+      because,
+    };
   }
 
   /** Prefix the fill sentence saw: resampled bars, including a still-open last bar. */

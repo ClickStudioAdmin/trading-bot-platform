@@ -51,6 +51,7 @@ import {
 } from "./conditions";
 import {
   emptyEntryStack,
+  addStackMatchesWebhook,
   entryStackMatchesWebhook,
 } from "@/lib/strategy/expr";
 import type { RetraceSpec } from "@/lib/strategy/retrace";
@@ -100,6 +101,10 @@ export type FuturesAutomationRule = {
   shortEntry: PerpsEntryLeg | null;
   conditionTrue: boolean;
   shortConditionTrue: boolean;
+  /** Rising-edge latch for the long additional-order stack. */
+  addConditionTrue?: boolean;
+  /** Rising-edge latch for the short additional-order stack on direction Both. */
+  shortAddConditionTrue?: boolean;
   lastFiredAtMs: number | null;
 };
 
@@ -1102,6 +1107,8 @@ function attachPerpsDirection(
   row: Record<string, unknown>,
 ): void {
   rule.shortConditionTrue = Boolean(row.short_condition_true);
+  rule.addConditionTrue = Boolean(row.add_condition_true);
+  rule.shortAddConditionTrue = Boolean(row.short_add_condition_true);
   if (rule.action === "flatten") {
     rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
     rule.shortEntry = null;
@@ -1236,6 +1243,8 @@ export function futuresAutomationToRow(
         : null,
     condition_true: false,
     short_condition_true: false,
+    add_condition_true: false,
+    short_add_condition_true: false,
     updated_at: new Date().toISOString(),
   };
 }
@@ -1310,6 +1319,7 @@ export function perpsAutomationLegs(
     indicator: short.indicator,
     retrace: short.retrace ?? null,
     addStack: short.addStack ?? null,
+    addConditionTrue: rule.shortAddConditionTrue === true,
     confirm: short.confirm,
     entryStack: short.entryStack,
     exitActions: short.actions ?? null,
@@ -1370,12 +1380,13 @@ export function perpsRuleMatchesWebhook(
   ) {
     return true;
   }
-  return perpsAutomationLegs(rule).some((leg) =>
-    entryStackMatchesWebhook(
-      leg.rule.entrySource,
-      leg.rule.webhookId,
-      leg.rule.entryStack,
-      firedId,
-    ),
+  return perpsAutomationLegs(rule).some(
+    (leg) =>
+      entryStackMatchesWebhook(
+        leg.rule.entrySource,
+        leg.rule.webhookId,
+        leg.rule.entryStack,
+        firedId,
+      ) || addStackMatchesWebhook(leg.rule.addStack, firedId),
   );
 }

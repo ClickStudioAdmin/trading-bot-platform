@@ -4,12 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
 import { DivergenceLinesPrimitive } from "@/lib/charts/divergence-lines";
+import { GappedLinePrimitive, gappedLineRuns } from "@/lib/charts/gapped-line";
 import { rsiDivergenceSegments } from "@/lib/strategy/rsi-divergence";
 import {
   indicatorRolesForReason,
   indicatorStyleTargets,
   oscillatorPaneStretch,
   visiblePriceBounds,
+  isTrendSidePlot,
   replayChartSeries,
   replayIndicatorCatalog,
   replayIndicatorLegend,
@@ -112,6 +114,10 @@ import {
   type SimulatedOrder,
 } from "@/lib/backtest/model";
 import { listBacktestCycles, replayPositionsPageSize } from "@/lib/backtest/positions";
+import {
+  conditionOrderLevels,
+  conditionOrderTimeframes,
+} from "@/lib/backtest/condition-orders";
 import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
@@ -553,6 +559,7 @@ export function ReplayPlayer({
     backtestVariantsStillRunning(variantRows, rootId) +
     useUnresolvedOptimisticCount(variantRows.map((row) => row.id));
   const [sideLanes, setSideLanes] = useState(true);
+  const [showConditionOrders, setShowConditionOrders] = useState(false);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
   const sideLanesRef = useRef(true);
@@ -775,6 +782,81 @@ export function ReplayPlayer({
 
   const throughMs = candles[head]?.timeMs ?? run.fromMs;
   const visibleOrders = ordersThrough(run.orders, throughMs);
+  const conditionFrames = useMemo(
+    () => (showConditionOrders ? conditionOrderTimeframes(run.recipe) : []),
+    [showConditionOrders, run.recipe],
+  );
+  const [conditionBars, setConditionBars] = useState<
+    ReadonlyMap<string, CandleBar[]>
+  >(() => new Map());
+  useEffect(() => {
+    if (!showConditionOrders) {
+      return;
+    }
+    const bounds = backtestChartFetchBounds(run);
+    const missing = conditionFrames.filter((timeframe) => timeframe !== interval);
+    if (missing.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      missing.map(async (timeframe) => {
+        const rows = await loadBacktestDisplayCandles({
+          venue: run.venue,
+          venueEnvironment: run.venueEnvironment,
+          symbol: run.symbol,
+          interval: timeframe,
+          fromMs: bounds.fromMs,
+          toMs: bounds.toMs,
+        });
+        return [timeframe, clipCandlesToWindow(rows, bounds.fromMs, bounds.toMs)] as const;
+      }),
+    )
+      .then((rows) => {
+        if (!cancelled) {
+          setConditionBars(new Map(rows));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setConditionBars(new Map());
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showConditionOrders, conditionFrames, interval, run]);
+  const conditionLevels = useMemo(() => {
+    if (!showConditionOrders) {
+      return [];
+    }
+    const shown = candles.slice(0, Math.max(0, head) + 1);
+    const barsByTimeframe = new Map<string, CandleBar[]>();
+    for (const [timeframe, rows] of conditionBars) {
+      barsByTimeframe.set(
+        timeframe,
+        rows.filter((bar) => bar.timeMs <= throughMs),
+      );
+    }
+    return conditionOrderLevels({
+      recipe: run.recipe,
+      orders: visibleOrders,
+      candles: shown,
+      tape: interval,
+      barsByTimeframe,
+    });
+  }, [
+    showConditionOrders,
+    candles,
+    head,
+    visibleOrders,
+    run.recipe,
+    interval,
+    conditionBars,
+    throughMs,
+  ]);
+  const conditionLevelsRef = useRef(conditionLevels);
+  conditionLevelsRef.current = conditionLevels;
   const visibleEvents = eventsThrough(events, throughMs);
   const eventGroups = useMemo(
     () => groupReplayEventsByPosition(visibleEvents, run.orders),
@@ -1204,6 +1286,7 @@ export function ReplayPlayer({
       });
       let drawn: Array<{
         lines: ReturnType<typeof chart.addSeries>[];
+        gaps: Array<GappedLinePrimitive | null>;
         dots: ReturnType<typeof chart.addSeries>;
         priceLines: DivergenceLinesPrimitive | null;
         rsiLines: DivergenceLinesPrimitive | null;
@@ -1237,6 +1320,13 @@ export function ReplayPlayer({
         });
       }
       function mountIndicators() {
+        for (const row of drawn) {
+          for (const gap of row.gaps) {
+            if (gap) {
+              candleSeries.detachPrimitive(gap);
+            }
+          }
+        }
         for (const api of indicatorApis) {
           chart.removeSeries(api);
         }
@@ -1254,7 +1344,9 @@ export function ReplayPlayer({
           paneCursor += 1;
           pane = paneCursor;
         }
+        const gaps: Array<GappedLinePrimitive | null> = [];
         const lines = layer.price.map((plot) => {
+          const gapped = isTrendSidePlot(plot.id);
           const line = chart.addSeries(
             charts.LineSeries,
             {
@@ -1262,12 +1354,23 @@ export function ReplayPlayer({
               lineWidth: 2,
               priceLineVisible: false,
               lastValueVisible: false,
+              // The library joins blank bars. Supertrend draws each run itself.
+              lineVisible: !gapped,
+              crosshairMarkerVisible: !gapped,
               ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
             },
             pane,
           );
           rememberIndicator(layer.id, plot.id, "line", plot.color, line);
           indicatorApis.push(line);
+          if (!gapped) {
+            gaps.push(null);
+            return line;
+          }
+          const gap = new GappedLinePrimitive();
+          gap.setStyleSource(line);
+          candleSeries.attachPrimitive(gap);
+          gaps.push(gap);
           return line;
         });
         const oscillator = {
@@ -1363,11 +1466,12 @@ export function ReplayPlayer({
           candleSeries.attachPrimitive(priceLines);
           oscillator.rsi.attachPrimitive(rsiLines);
         }
-        drawn.push({ lines, dots, oscillator, priceLines, rsiLines });
+        drawn.push({ lines, gaps, dots, oscillator, priceLines, rsiLines });
       }
       }
       mountIndicators();
       let initialRange: { from: number; to: number } | null = null;
+      const conditionLines: { remove: () => void }[] = [];
       function resetPriceScales() {
         for (const pane of chart.panes()) {
           pane.priceScale("right").setAutoScale(true);
@@ -1393,6 +1497,12 @@ export function ReplayPlayer({
             return;
           }
           layer.price.forEach((plot, plotIndex) => {
+            const gap = row.gaps[plotIndex];
+            if (gap) {
+              row.lines[plotIndex]?.setData([]);
+              gap.setRuns(gappedLineRuns(candles, plot.values, end));
+              return;
+            }
             row.lines[plotIndex]?.setData(
               lineData(candles, plot.values, end) as never,
             );
@@ -1559,6 +1669,31 @@ export function ReplayPlayer({
         }
         markers.setMarkers(lineMode ? [] : plotted);
         lineMarkers.setMarkers(lineMode ? plotted : []);
+        for (const row of conditionLines) {
+          row.remove();
+        }
+        conditionLines.length = 0;
+        const levelSeries = lineMode ? closeSeries : candleSeries;
+        const levelColor = colorWithOpacity(
+          cssVar(node, "--color-ink-faint", "#6B7382"),
+          48,
+        );
+        for (const level of conditionLevelsRef.current) {
+          if (!(level.price > 0) || !Number.isFinite(level.price)) {
+            continue;
+          }
+          const line = levelSeries.createPriceLine({
+            price: level.price,
+            color: levelColor,
+            lineWidth: 1,
+            lineStyle: charts.LineStyle.SparseDotted,
+            axisLabelVisible: true,
+            title: level.title,
+          });
+          conditionLines.push({
+            remove: () => levelSeries.removePriceLine(line),
+          });
+        }
       }
       chart.subscribeCrosshairMove((param) => {
         const time = typeof param.time === "number" ? param.time : null;
@@ -1984,6 +2119,15 @@ export function ReplayPlayer({
       | null;
     node?.__paint?.(head);
   }, [head]);
+
+  useEffect(() => {
+    const node = hostRef.current as
+      | (HTMLDivElement & {
+          __paint?: (index: number, follow?: boolean) => void;
+        })
+      | null;
+    node?.__paint?.(headRef.current, false);
+  }, [conditionLevels]);
 
   useEffect(() => {
     const node = hostRef.current as
@@ -2423,6 +2567,8 @@ export function ReplayPlayer({
               }
             />
           }
+          showConditionOrders={showConditionOrders}
+          onShowConditionOrders={setShowConditionOrders}
           onToggleReference={(id, enabled, anchor) => {
             if (enabled) {
               const denial = researchGate
