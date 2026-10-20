@@ -22,7 +22,6 @@ import {
   ClosedPaperCarryRows,
   OpenPaperCarryRows,
 } from "@/components/paper-carry-expand";
-import { OpenStats } from "@/components/open-stats";
 import {
   formatPct,
   formatSignedUsd,
@@ -36,7 +35,6 @@ import {
 } from "@/lib/paper/columns";
 import { formatTradingDaysNote } from "@/lib/futures/stats";
 import {
-  openExposure,
   paperDeskStats,
   type MarkedPaperCarry,
   type PaperCarryRow,
@@ -585,24 +583,6 @@ export function PaperPerformanceStats({
         />
       </div>
     </section>
-  );
-}
-
-export function PaperOpenStats({
-  signedIn,
-  open,
-}: {
-  signedIn: boolean;
-  open: MarkedPaperCarry[];
-}) {
-  const stats = paperDeskStats(open, []);
-  return (
-    <OpenStats
-      signedIn={signedIn}
-      notional={stats.openNotionalUsdt}
-      unrealized={stats.unrealizedUsdt}
-      exposure={openExposure(open)}
-    />
   );
 }
 

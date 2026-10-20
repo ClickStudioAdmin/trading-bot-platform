@@ -8,10 +8,7 @@ import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
 } from "@/components/desk-blotter-filters";
-import {
-  FuturesOpenStats,
-  OpenFuturesTrades,
-} from "@/components/futures-blotter";
+import { OpenFuturesTrades } from "@/components/futures-blotter";
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -69,7 +66,7 @@ import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
 export const metadata: Metadata = {
-  title: "Positions Snapshot",
+  title: "Positions",
   description: "Open USDT perpetual positions.",
 };
 
@@ -305,11 +302,10 @@ export default async function FuturesPositionsPage({
         {!showTicket || bots.length > 0 || botReturn.backHref ? (
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Positions Snapshot")}
+          title="Positions"
           backHref={botReturn.backHref}
           className="mb-3"
-          showTitle={!showTicket}
-          meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
+          showTitle={false}
           actions={
             <DeskBlotterScopeSelect
               values={filters}
