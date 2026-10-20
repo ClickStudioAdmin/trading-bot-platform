@@ -63,6 +63,8 @@ import {
   strategyLeafTimeframe,
 } from "@/lib/strategy/expr";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
+import { formatRetraceLabel } from "@/lib/strategy/retrace";
+import type { RetraceSpec } from "@/lib/strategy/retrace";
 
 export { canBacktestPerpsRecipe };
 
@@ -90,6 +92,7 @@ function perpsLegBecause(input: {
   indicator: PerpsTemplateRecipe["indicator"];
   confirm: PerpsTemplateRecipe["confirm"];
   entryStack: PerpsTemplateRecipe["entryStack"];
+  retrace?: RetraceSpec | null;
   side: FuturesSide;
   price: number;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
@@ -105,6 +108,11 @@ function perpsLegBecause(input: {
         })
         .filter(Boolean)
         .join(" ");
+  if (input.entrySource === "retrace") {
+    return [input.retrace ? formatRetraceLabel(input.retrace) : "Retrace", stackBecause]
+      .filter(Boolean)
+      .join(" ");
+  }
   if (input.entrySource === "price") {
     return [priceStartBecause(
       {
@@ -142,12 +150,28 @@ function perpsLegBecause(input: {
     .join(" ");
 }
 
-function sizeAtPrice(recipe: PerpsTemplateRecipe, price: number): number {
-  const size = Number(String(recipe.size).replace(/,/g, "").trim());
+function sizeAtPrice(
+  recipe: PerpsTemplateRecipe,
+  price: number,
+  side?: FuturesSide,
+): number {
+  const shortOrder = side === "short" ? recipe.shortEntry : null;
+  const shortSize = shortOrder?.size;
+  const own = shortSize != null && shortSize > 0;
+  const size = own
+    ? shortSize
+    : Number(String(recipe.size).replace(/,/g, "").trim());
+  const unit = own
+    ? shortOrder?.sizeUnit === "qty"
+      ? "qty"
+      : shortOrder?.sizeUnit === "usdt"
+        ? "usdt"
+        : recipe.sizeUnit
+    : recipe.sizeUnit;
   if (!(size > 0) || !(price > 0)) {
     return 0;
   }
-  return recipe.sizeUnit === "usdt" ? size / price : size;
+  return unit === "usdt" ? size / price : size;
 }
 
 type OpenSim = {
@@ -748,6 +772,7 @@ export async function replayPerpsPriceCross(input: {
       indicator: input.recipe.indicator,
       confirm: input.recipe.confirm,
       entryStack: input.recipe.entryStack,
+      retrace: input.recipe.retrace,
       side,
       price,
       barsByTimeframe,
@@ -1235,7 +1260,7 @@ async function replayPerpsBoth(input: {
       if (!decision.fire) {
         continue;
       }
-      const qty = sizeAtPrice(input.recipe, price);
+      const qty = sizeAtPrice(input.recipe, price, leg.side);
       if (!(qty > 0)) {
         continue;
       }
@@ -1255,6 +1280,7 @@ async function replayPerpsBoth(input: {
         indicator: leg.indicator,
         confirm: leg.confirm,
         entryStack: leg.entryStack,
+        retrace: leg.side === "short" ? short.retrace : input.recipe.retrace,
         side: leg.side,
         price,
         barsByTimeframe: series.barsAt(barIndex - 1, conditionTimeframes),

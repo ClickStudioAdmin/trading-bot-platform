@@ -53,6 +53,7 @@ import { tickerTriggerPrices } from "@/lib/futures/tpsl";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaArmTriggerForSide,
+  dcaRetraceForReason,
   dcaStartKindForSide,
   dcaClipsFilledFromGrid,
   dcaCycleEnded,
@@ -1425,6 +1426,7 @@ function dcaActionWhy(input: {
       indicator: dcaIndicatorStartForSide(playbook, side),
       confirm: dcaFilterForSide(playbook, side, "confirm"),
       price: input.lastPrice,
+      retrace: dcaRetraceForReason(playbook, side),
     });
   }
   if (action.kind === "disarm" && playbook.disarmTrigger) {

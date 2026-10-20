@@ -51,6 +51,7 @@ import {
 } from "@/lib/strategy/exit-clauses";
 import {
   clausesFromExitActions,
+  exitActionsForSave,
   exitCardsBlockReason,
   exitPricesFromLevels,
   savedBreakevenNumbers,
@@ -1150,8 +1151,29 @@ function RuleCard({
     breakevenActivationPct: breakevenLive ? breakevenActivationPct : "",
     breakevenOffsetPct: breakevenLive ? breakevenOffsetPct : "",
   };
-  let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
-  try {
+  const primaryExitPrices = exitPricesFromLevels({
+    takeProfit,
+    takeProfitKind: tpKind,
+    stopLoss,
+    stopLossKind: slKind,
+    trailingPct: trailingStop,
+    trailingActivationKind: "percent",
+    trailingTriggerPct: trailingActive,
+    breakevenActivationPct,
+    breakevenOffsetPct,
+  });
+  const shortExitPrices = exitPricesFromLevels({
+    takeProfit: shortClassic.takeProfit,
+    takeProfitKind: shortClassic.tpKind,
+    stopLoss: shortClassic.stopLoss,
+    stopLossKind: shortClassic.slKind,
+    trailingPct: shortClassic.trailingStop,
+    trailingActivationKind: "percent",
+    trailingTriggerPct: shortClassic.trailingActive,
+    breakevenActivationPct: shortClassic.breakevenActivationPct,
+    breakevenOffsetPct: shortClassic.breakevenOffsetPct,
+  });
+  function buildLiveSnapshot(): FormData {
     const snapshot = perpsFormToSnapshotSource(snapshotLayer, venueId);
     if (primaryDraft.entrySource === "") {
       snapshot.set("r0_entrySource", "");
@@ -1171,6 +1193,24 @@ function RuleCard({
     }
     if (!closing && trailLive) {
       snapshot.set(`${prefix}trailing`, "on");
+      snapshot.set(`${prefix}trailingActiveKind`, "percent");
+      snapshot.set(`${prefix}trailingStop`, trailingStop.replace(/,/g, "").trim());
+      snapshot.set(
+        `${prefix}trailingTriggerPct`,
+        trailingActive.replace(/,/g, "").trim(),
+      );
+    }
+    if (!closing && storedDirection === "both" && shortTrailLive) {
+      snapshot.set(`${prefix}short_trailing`, "on");
+      snapshot.set(`${prefix}short_trailingActiveKind`, "percent");
+      snapshot.set(
+        `${prefix}short_trailingStop`,
+        shortClassic.trailingStop.replace(/,/g, "").trim(),
+      );
+      snapshot.set(
+        `${prefix}short_trailingTriggerPct`,
+        shortClassic.trailingActive.replace(/,/g, "").trim(),
+      );
     }
     if (breakevenLive) {
       snapshot.set(`${prefix}breakeven`, "on");
@@ -1187,7 +1227,35 @@ function RuleCard({
         snapshot.set(`${prefix}short_addExpr`, shortExpr);
       }
     }
-    parsedLive = parseFuturesAutomationForm(snapshot, venueId);
+    if (!closing) {
+      const primaryActions = exitActionsForSave(exitClauses, primaryExitPrices, "flex");
+      if (primaryActions) {
+        snapshot.set(`${prefix}exitActions`, JSON.stringify(primaryActions));
+      }
+      if (storedDirection === "both") {
+        const shortActions = exitActionsForSave(shortClauses, shortExitPrices, "flex");
+        if (shortActions) {
+          snapshot.set(`${prefix}short_exitActions`, JSON.stringify(shortActions));
+        }
+        const shortQty = Number(shortSize.replace(/,/g, "").trim());
+        if (shortQty > 0) {
+          snapshot.set(`${prefix}short_size`, String(shortQty));
+          snapshot.set(`${prefix}short_sizeUnit`, shortSizeUnit);
+          snapshot.set(`${prefix}short_orderType`, shortOrderType);
+          if (shortOrderType === "limit") {
+            snapshot.set(
+              `${prefix}short_limitPrice`,
+              shortLimitPrice.replace(/,/g, "").trim(),
+            );
+          }
+        }
+      }
+    }
+    return snapshot;
+  }
+  let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
+  try {
+    parsedLive = parseFuturesAutomationForm(buildLiveSnapshot(), venueId);
   } catch {
     parsedLive = { ok: false, error: "Could not read the form." };
   }
@@ -1274,8 +1342,21 @@ function RuleCard({
         : null,
     });
   }
+  function recipeForBacktest():
+    | { ok: true; recipe: PerpsTemplateRecipe }
+    | { ok: false; error: string } {
+    if (!parsedLive.ok) {
+      return parsedLive;
+    }
+    const rule = parsedLive.rules[0];
+    if (!rule) {
+      return { ok: false, error: "Could not read the form." };
+    }
+    return { ok: true, recipe: snapshotPerpsRecipe(rule) };
+  }
   function liveRecipe() {
-    return recipeNow(layer.name);
+    const loaded = recipeForBacktest();
+    return loaded.ok ? loaded.recipe : recipeNow(layer.name);
   }
   const saveError = !parsedLive.ok
     ? parsedLive.error
@@ -1287,9 +1368,12 @@ function RuleCard({
     if (!embedded) {
       return;
     }
-    const recipe = recipeNow(
-      controlValue(`${prefix}name`, layer.name).trim() || layer.name,
-    );
+    const named =
+      controlValue(`${prefix}name`, layer.name).trim() || layer.name;
+    const loaded = recipeForBacktest();
+    const recipe = loaded.ok
+      ? { ...loaded.recipe, name: named }
+      : recipeNow(named);
     onRecipeChange?.(recipe, publishError, dirty);
     // formTick advances on each edit, so this effect reads the latest fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2211,17 +2295,7 @@ function RuleCard({
             labelClass={botLabelClass}
             showErrors={dirty}
             actionName={`${prefix}exitActions`}
-            prices={exitPricesFromLevels({
-              takeProfit,
-              takeProfitKind: tpKind,
-              stopLoss,
-              stopLossKind: slKind,
-              trailingPct: trailingStop,
-              trailingActivationKind: "percent",
-              trailingTriggerPct: trailingActive,
-              breakevenActivationPct,
-              breakevenOffsetPct,
-            })}
+            prices={primaryExitPrices}
             priceStyle="flex"
             renderTakeProfit={(slot) => perpsTakeProfitFields("primary", slot)}
             renderTrailingStop={(slot) => perpsTrailingFields("primary", slot)}
@@ -2248,31 +2322,7 @@ function RuleCard({
             actionName={
               direction === "both" ? `${prefix}short_exitActions` : `${prefix}exitActions`
             }
-            prices={exitPricesFromLevels(
-              direction === "both"
-                ? {
-                    takeProfit: shortClassic.takeProfit,
-                    takeProfitKind: shortClassic.tpKind,
-                    stopLoss: shortClassic.stopLoss,
-                    stopLossKind: shortClassic.slKind,
-                    trailingPct: shortClassic.trailingStop,
-                    trailingActivationKind: "percent",
-                    trailingTriggerPct: shortClassic.trailingActive,
-                    breakevenActivationPct: shortClassic.breakevenActivationPct,
-                    breakevenOffsetPct: shortClassic.breakevenOffsetPct,
-                  }
-                : {
-                    takeProfit,
-                    takeProfitKind: tpKind,
-                    stopLoss,
-                    stopLossKind: slKind,
-                    trailingPct: trailingStop,
-                    trailingActivationKind: "percent",
-                    trailingTriggerPct: trailingActive,
-                    breakevenActivationPct,
-                    breakevenOffsetPct,
-                  },
-            )}
+            prices={direction === "both" ? shortExitPrices : primaryExitPrices}
             priceStyle="flex"
             renderTakeProfit={(slot) =>
               perpsTakeProfitFields(direction === "both" ? "short" : "primary", slot)
@@ -2340,9 +2390,7 @@ function RuleCard({
             folders={folders}
             library={backtestLibrary}
             currentRecipe={liveRecipe()}
-            buildForm={() =>
-              perpsFormToSnapshotSource(snapshotLayer, venueId)
-            }
+            buildForm={buildLiveSnapshot}
             buttonClassName={botSidebarActionClass}
             onSaved={(saved) =>
               onTemplateSaved?.({
@@ -2360,6 +2408,7 @@ function RuleCard({
         >
           <BacktestTemplateLink
             current={liveRecipe()}
+            getRecipe={recipeForBacktest}
             templates={backtestLibrary}
             savedBacktests={savedBacktests}
             venueId={venueId}

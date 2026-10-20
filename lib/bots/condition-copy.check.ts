@@ -25,6 +25,39 @@ assert.equal(
 
 assert.equal(
   formatFuturesEntryReasons({
+    entrySource: "retrace",
+    side: "long",
+    triggerBy: "last",
+    triggerCompare: "gte",
+    triggerPrice: 0,
+    retrace: {
+      source: "last",
+      from: "high",
+      pct: 2,
+      lookback: 20,
+      timeframe: "240",
+    },
+  }),
+  "Last retraced 2% from the high of 20",
+);
+
+assert.equal(
+  formatDcaStartReasons({
+    startKind: "retrace",
+    side: "short",
+    retrace: {
+      source: "mark",
+      from: "low",
+      pct: 1.5,
+      lookback: 20,
+      timeframe: "60",
+    },
+  }),
+  "Mark retraced 1.5% from the low of 20",
+);
+
+assert.equal(
+  formatFuturesEntryReasons({
     entrySource: "indicator",
     side: "long",
     triggerBy: "last",
