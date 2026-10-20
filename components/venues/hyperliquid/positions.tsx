@@ -7,10 +7,7 @@ import {
   DeskBlotterFilters,
   DeskBlotterScopeSelect,
 } from "@/components/desk-blotter-filters";
-import {
-  FuturesOpenStats,
-  OpenFuturesTrades,
-} from "@/components/futures-blotter";
+import { OpenFuturesTrades } from "@/components/futures-blotter";
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { DeskReturnHeading } from "@/components/desk-return-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -259,11 +256,10 @@ export async function HyperliquidFuturesPositions({
         {!showTicket || bots.length > 0 || botReturn.backHref ? (
         <section>
         <DeskReturnHeading
-          title={botReturn.titleFor("Positions Snapshot")}
+          title="Positions"
           backHref={botReturn.backHref}
           className="mb-3"
-          showTitle={!showTicket}
-          meta={<FuturesOpenStats signedIn={desk.signedIn} open={visibleOpen} />}
+          showTitle={false}
           actions={
             <DeskBlotterScopeSelect
               values={filters}

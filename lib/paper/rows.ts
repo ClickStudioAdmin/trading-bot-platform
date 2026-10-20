@@ -238,20 +238,3 @@ export function paperDeskStats(
     greenCount: closed.filter((row) => (row.realizedUsdt ?? 0) > 0).length,
   };
 }
-
-export function openExposure(
-  open: MarkedPaperCarry[],
-): { baseCoin: string; notionalUsdt: number; share: number }[] {
-  const totals = new Map<string, number>();
-  for (const row of open) {
-    totals.set(row.baseCoin, (totals.get(row.baseCoin) ?? 0) + row.notionalUsdt);
-  }
-  const sum = open.reduce((total, row) => total + row.notionalUsdt, 0);
-  return [...totals.entries()]
-    .map(([baseCoin, notionalUsdt]) => ({
-      baseCoin,
-      notionalUsdt,
-      share: sum > 0 ? notionalUsdt / sum : 0,
-    }))
-    .sort((a, b) => b.notionalUsdt - a.notionalUsdt);
-}

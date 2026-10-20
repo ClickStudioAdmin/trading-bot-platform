@@ -5,6 +5,7 @@ import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
   attachedTemplateHref,
   attachedTemplateName,
+  findMatchingDraftBacktest,
   inheritPlatformBacktests,
   matchingPlatformTemplateIds,
   parseListedRecipe,
@@ -612,6 +613,44 @@ export async function loadBacktestRun(
     return null;
   }
   return parseBacktestRunRow(backtestRunRecord(data));
+}
+
+const DRAFT_MATCH_PAGE = 100;
+const DRAFT_MATCH_MAX_PAGES = 20;
+
+/** This user's newest draft whose replay recipe matches. */
+export async function findOwnedDraftBacktest(
+  userId: string,
+  recipe: BacktestRecipe,
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return null;
+  }
+  for (let page = 0; page < DRAFT_MATCH_MAX_PAGES; page += 1) {
+    const from = page * DRAFT_MATCH_PAGE;
+    const { data, error } = await supabase
+      .from("backtest_runs")
+      .select(backtestRunColumns({ orders: false, replayEvents: false }))
+      .eq("user_id", userId)
+      .eq("status", "draft")
+      .order("created_at", { ascending: false })
+      .range(from, from + DRAFT_MATCH_PAGE - 1);
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+    const rows = data
+      .map((row) => parseBacktestRunRow(backtestRunRecord(row)))
+      .filter((row): row is BacktestRun => Boolean(row));
+    const match = findMatchingDraftBacktest(recipe, userId, rows);
+    if (match) {
+      return match;
+    }
+    if (data.length < DRAFT_MATCH_PAGE) {
+      return null;
+    }
+  }
+  return null;
 }
 
 export async function listBacktestRuns(input: {

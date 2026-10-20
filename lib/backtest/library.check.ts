@@ -5,6 +5,7 @@ import {
   deskBotAutomationsHref,
   deskBacktestBotCandidates,
   findMatchingBacktestDeskBot,
+  findMatchingDraftBacktest,
   findMatchingSavedBacktest,
   toSavedBacktestMatch,
   findMatchingBacktestTemplate,
@@ -26,6 +27,7 @@ import {
   userBacktestFieldIssues,
 } from "./library";
 import {
+  parseTemplateRecipe,
   recipesMatchReplayFields,
   snapshotDcaRecipe,
   snapshotPaperRecipe,
@@ -248,6 +250,105 @@ assert.equal(
   null,
 );
 assert.equal(findMatchingSavedBacktest(null, []), null);
+assert.equal(
+  findMatchingDraftBacktest(perps, "user-1", [
+    {
+      id: "draft-new",
+      status: "draft",
+      userId: "user-1",
+      recipe: perps,
+    },
+    {
+      id: "draft-renamed",
+      status: "draft",
+      userId: "user-1",
+      recipe: { ...perps, name: "Renamed" },
+    },
+  ])?.id,
+  "draft-new",
+);
+assert.equal(
+  findMatchingDraftBacktest(
+    { ...perps, name: "Other title" },
+    "user-1",
+    [
+      {
+        id: "draft-1",
+        status: "draft",
+        userId: "user-1",
+        recipe: perps,
+      },
+    ],
+  )?.id,
+  "draft-1",
+);
+assert.equal(
+  findMatchingDraftBacktest(perps, "user-1", [
+    {
+      id: "other-user",
+      status: "draft",
+      userId: "user-2",
+      recipe: perps,
+    },
+    {
+      id: "done",
+      status: "done",
+      userId: "user-1",
+      recipe: perps,
+    },
+    {
+      id: "other-contract",
+      status: "draft",
+      userId: "user-1",
+      recipe: { ...perps, symbol: "ETHUSDT" },
+    },
+    {
+      id: "other-trigger",
+      status: "draft",
+      userId: "user-1",
+      recipe: { ...perps, triggerPrice: "1" },
+    },
+  ]),
+  null,
+);
+const seededDraft = parseBacktestRecipeJson(perps);
+assert.ok(seededDraft);
+const storedDraft = { ...seededDraft, symbol: seededDraft.symbol };
+const reloadedDraft = parseTemplateRecipe(
+  JSON.parse(JSON.stringify(storedDraft)),
+  storedDraft.kind,
+  1,
+  "bybit",
+);
+assert.equal(reloadedDraft.ok, true);
+if (!reloadedDraft.ok) {
+  throw new Error("reloaded draft");
+}
+assert.equal(
+  reloadedDraft.recipe.kind === "flex" || reloadedDraft.recipe.kind === "dca",
+  true,
+);
+if (reloadedDraft.recipe.kind !== "flex" && reloadedDraft.recipe.kind !== "dca") {
+  throw new Error("reloaded draft kind");
+}
+assert.equal(
+  findMatchingDraftBacktest(storedDraft, "user-1", [
+    {
+      id: "draft-reloaded",
+      status: "draft",
+      userId: "user-1",
+      recipe: reloadedDraft.recipe,
+    },
+  ])?.id,
+  "draft-reloaded",
+);
+assert.equal(findMatchingDraftBacktest(null, "user-1", []), null);
+assert.equal(
+  findMatchingDraftBacktest(perps, "", [
+    { id: "draft-1", status: "draft", userId: "user-1", recipe: perps },
+  ]),
+  null,
+);
 assert.equal(
   toSavedBacktestMatch({
     id: "run-1",
