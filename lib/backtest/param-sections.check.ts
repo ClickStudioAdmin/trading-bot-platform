@@ -211,6 +211,31 @@ assert.deepEqual(
     ?.groups[0]?.rows.map((row) => `${row.label}: ${row.value}`),
   ["Condition Type: Off", "Size: Off", "Unit: Off", "Order: Off"],
 );
+const sizedAddSections = recipeParamSections({
+  ...perps,
+  addStack: {
+    leaves: [
+      {
+        kind: "retrace",
+        source: "last",
+        from: "high",
+        pct: 2,
+        lookback: 20,
+        timeframe: "15",
+      },
+    ],
+    joins: ["and"],
+    orders: [
+      { size: "500", sizeUnit: "usdt", orderType: "market", limitPrice: "" },
+    ],
+  },
+});
+assert.deepEqual(
+  sizedAddSections
+    .find((section) => section.title === "Long Additional Orders")
+    ?.groups[0]?.rows.map((row) => `${row.label}: ${row.value}`),
+  ["Condition Type: Off", "Size: 500 USDT", "Unit: USDT", "Order: Market"],
+);
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
   ["Name", "Contract", "Direction"],

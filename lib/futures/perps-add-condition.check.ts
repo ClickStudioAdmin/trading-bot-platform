@@ -8,12 +8,18 @@ import {
   countPerpsAddConditions,
   perpsAddConditionDraftForType,
   groupShowsPositionSizing,
+  perpsAddGroupsExpr,
+  perpsAddGroupsFromStack,
   perpsAddGroupsSizingMissing,
+  perpsAddOrderSettingRows,
   perpsOrderValuesMissing,
   revealGroupOrder,
   sharesGroupLeadSizing,
+  type PerpsAddOrderGroup,
 } from "./perps-add-condition";
 import { entryExtraOrdersMissing } from "@/components/entry-group-order";
+import { conditionColumns, conditionsFromRow } from "./conditions";
+import { entryStackFromJson } from "@/lib/strategy/expr";
 
 const blank = blankPerpsAddConditionDraft("long");
 assert.equal(blank.kind, "");
@@ -190,6 +196,120 @@ assert.equal(
     { g2: false },
   ),
   false,
+);
+
+function retraceGroup(
+  side: "long" | "short",
+  order: PerpsAddOrderGroup["order"],
+  extra?: Partial<PerpsAddOrderGroup>,
+): PerpsAddOrderGroup {
+  const base = blankPerpsAddOrderGroups(side)[0]!;
+  return {
+    ...base,
+    ...extra,
+    lead: {
+      ...base.lead,
+      type: "retrace",
+      draft: {
+        ...base.lead.draft,
+        triggerBy: "last",
+        retraceFrom: side === "short" ? "low" : "high",
+        retracePct: "2",
+        retraceLookback: "20",
+        timeframe: "15",
+      },
+    },
+    order,
+  };
+}
+
+const sizedLong = retraceGroup("long", {
+  size: "1,500",
+  sizeUnit: "usdt",
+  orderType: "market",
+  limitPrice: "9",
+});
+const andPrice = appendPerpsAddCondition(sizedLong, "long");
+andPrice.conditions[0] = {
+  ...andPrice.conditions[0]!,
+  type: "price",
+  draft: {
+    ...andPrice.conditions[0]!.draft,
+    triggerBy: "mark",
+    triggerCompare: "gte",
+    triggerPrice: "3",
+  },
+};
+const ownSizedSecond = retraceGroup(
+  "long",
+  { size: "2", sizeUnit: "qty", orderType: "limit", limitPrice: "1.25" },
+  { sameAsGroup1: false },
+);
+const savedExpr = perpsAddGroupsExpr([andPrice, ownSizedSecond]);
+const savedStack = entryStackFromJson(JSON.parse(savedExpr));
+assert.equal(savedStack?.leaves.length, 3);
+assert.equal(savedStack?.orders?.length, 2);
+assert.equal(savedStack?.orders?.[0]?.size, "1500");
+assert.equal(savedStack?.orders?.[0]?.limitPrice, "");
+assert.equal(savedStack?.orders?.[0]?.sameAsGroup1, undefined);
+assert.equal(savedStack?.orders?.[1]?.sameAsGroup1, false);
+assert.equal(savedStack?.orders?.[1]?.sizeUnit, "qty");
+assert.equal(savedStack?.orders?.[1]?.orderType, "limit");
+assert.equal(savedStack?.orders?.[1]?.limitPrice, "1.25");
+
+const restored = perpsAddGroupsFromStack(savedStack, "long");
+assert.equal(restored.length, 2);
+assert.equal(restored[0]?.conditions.length, 1);
+assert.equal(restored[0]?.order.size, "1500");
+assert.equal(restored[0]?.order.sizeUnit, "usdt");
+assert.equal(restored[0]?.order.orderType, "market");
+assert.equal(restored[0]?.order.limitPrice, "");
+assert.equal(restored[1]?.sameAsGroup1, false);
+assert.equal(restored[1]?.order.size, "2");
+assert.equal(restored[1]?.order.sizeUnit, "qty");
+assert.equal(restored[1]?.order.orderType, "limit");
+assert.equal(restored[1]?.order.limitPrice, "1.25");
+
+const sharedSizedSecond = retraceGroup("long", blankPerpsAddOrderValues(), {
+  sameAsGroup1: true,
+});
+const sharedStack = entryStackFromJson(
+  JSON.parse(perpsAddGroupsExpr([sizedLong, sharedSizedSecond])),
+);
+const sharedRestored = perpsAddGroupsFromStack(sharedStack, "long");
+assert.equal(sharedRestored[0]?.order.size, "1500");
+assert.equal(sharedRestored[1]?.sameAsGroup1, true);
+assert.equal(sharedRestored[1]?.order.size, "");
+
+const legacy = perpsAddGroupsFromStack(
+  savedStack ? { leaves: savedStack.leaves, joins: savedStack.joins } : null,
+  "long",
+);
+assert.equal(legacy[0]?.order.size, "");
+assert.equal(legacy[1]?.sameAsGroup1, true);
+
+const storedRow = conditionColumns({
+  entryStack: { leaves: [], joins: [] },
+  addStack: savedStack,
+});
+const loaded = conditionsFromRow(storedRow);
+assert.equal(loaded.addStack?.orders?.[0]?.size, "1500");
+assert.equal(loaded.addStack?.orders?.[1]?.limitPrice, "1.25");
+const reopened = perpsAddGroupsFromStack(loaded.addStack, "long");
+assert.equal(reopened[0]?.order.size, "1500");
+assert.equal(reopened[1]?.order.orderType, "limit");
+assert.equal(reopened[1]?.sameAsGroup1, false);
+
+const settingRows = perpsAddOrderSettingRows(loaded.addStack);
+assert.equal(settingRows.find((row) => row.label === "Group 1 size")?.value, "1500 USDT");
+assert.equal(settingRows.find((row) => row.label === "Group 2 order")?.value, "Limit");
+assert.equal(
+  settingRows.find((row) => row.label === "Group 2 limit price")?.value,
+  "1.25",
+);
+assert.equal(
+  perpsAddOrderSettingRows(null).find((row) => row.label === "Size")?.value,
+  null,
 );
 
 console.log("perps add condition checks passed");

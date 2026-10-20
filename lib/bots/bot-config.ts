@@ -1,6 +1,7 @@
 import { formatDcaFilterReason, type DcaFilterSpec } from "@/lib/dca/filters";
 import { formatExitExpressionText } from "@/lib/dca/exit-stack";
 import { perpsLegHasOwnExit } from "@/lib/futures/conditions";
+import { perpsAddOrderSettingRows } from "@/lib/futures/perps-add-condition";
 import { dcaEntryStackForSide } from "@/lib/dca/entry-stack";
 import {
   dcaArmTriggerForSide,
@@ -649,12 +650,11 @@ export function perpsBotConfig(
       : exitSides.map((addSide) =>
           section(
             addSide === "short" ? "Short Additional Orders" : "Long Additional Orders",
-            [
-              setting("Condition Type", null),
-              setting("Size", null),
-              setting("Unit", null),
-              setting("Order", null),
-            ],
+            perpsAddOrderSettingRows(
+              addSide === "short" && rule.direction === "both"
+                ? rule.shortEntry?.addStack
+                : rule.addStack,
+            ).map((row) => setting(row.label, row.value)),
           ),
         )),
     ...exitSides.map((exitSide) => {

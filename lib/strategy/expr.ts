@@ -109,6 +109,19 @@ export type EntryConflictSlot = {
 };
 
 /**
+ * Flex additional-order Position Sizing, one slot per Or group that produced a leaf.
+ * Entry and exit stacks omit it. Group 1 has no Same as Group 1 flag.
+ */
+export type AddGroupOrder = {
+  size: string;
+  sizeUnit: "qty" | "usdt";
+  orderType: "market" | "limit";
+  limitPrice: string;
+  /** Group 2 and later. False means the group keeps its own size. */
+  sameAsGroup1?: boolean;
+};
+
+/**
  * Conditions after the Condition Type.
  * `joins[i]` is how `leaves[i]` attaches: And stays in the current group,
  * Or starts a new group. Groups are OR'd. Leaves inside a group are AND'd.
@@ -116,6 +129,8 @@ export type EntryConflictSlot = {
 export type EntryStack = {
   leaves: StrategyLeaf[];
   joins: StrategyJoin[];
+  /** Flex additional-order sizing. Absent on entry and exit stacks. */
+  orders?: AddGroupOrder[];
 };
 
 export function emptyEntryStack(): EntryStack {
@@ -547,11 +562,80 @@ export function entryStackError(input: {
   return null;
 }
 
+function addGroupOrderText(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return "";
+}
+
+function addGroupOrderFromJson(raw: unknown): AddGroupOrder {
+  const blank: AddGroupOrder = {
+    size: "",
+    sizeUnit: "usdt",
+    orderType: "market",
+    limitPrice: "",
+  };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return blank;
+  }
+  const row = raw as Record<string, unknown>;
+  const orderType = row.orderType === "limit" ? "limit" : "market";
+  const order: AddGroupOrder = {
+    size: addGroupOrderText(row.size),
+    sizeUnit: row.sizeUnit === "qty" ? "qty" : "usdt",
+    orderType,
+    limitPrice: orderType === "limit" ? addGroupOrderText(row.limitPrice) : "",
+  };
+  if (row.sameAsGroup1 === false) {
+    order.sameAsGroup1 = false;
+  } else if (row.sameAsGroup1 === true) {
+    order.sameAsGroup1 = true;
+  }
+  return order;
+}
+
+function addGroupOrdersFromJson(raw: unknown): AddGroupOrder[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return undefined;
+  }
+  return raw.map((item) => addGroupOrderFromJson(item));
+}
+
+function addGroupOrdersToJson(
+  orders: AddGroupOrder[] | undefined,
+): AddGroupOrder[] | undefined {
+  if (!orders || orders.length === 0) {
+    return undefined;
+  }
+  return orders.map((order) => {
+    const orderType = order.orderType === "limit" ? "limit" : "market";
+    const stored: AddGroupOrder = {
+      size: order.size,
+      sizeUnit: order.sizeUnit === "qty" ? "qty" : "usdt",
+      orderType,
+      limitPrice: orderType === "limit" ? order.limitPrice : "",
+    };
+    if (order.sameAsGroup1 === true || order.sameAsGroup1 === false) {
+      stored.sameAsGroup1 = order.sameAsGroup1;
+    }
+    return stored;
+  });
+}
+
 export function entryStackToJson(stack: EntryStack): {
   leaves: StrategyLeaf[];
   joins: StrategyJoin[];
+  orders?: AddGroupOrder[];
 } {
-  return {
+  const json: {
+    leaves: StrategyLeaf[];
+    joins: StrategyJoin[];
+    orders?: AddGroupOrder[];
+  } = {
     leaves: stack.leaves.map((leaf) => {
       if (leaf.kind === "filter") {
         return { kind: "filter", spec: leaf.spec };
@@ -592,6 +676,11 @@ export function entryStackToJson(stack: EntryStack): {
     }),
     joins: [...stack.joins],
   };
+  const orders = addGroupOrdersToJson(stack.orders);
+  if (orders) {
+    json.orders = orders;
+  }
+  return json;
 }
 
 const LEAF_INDICATOR_KINDS = [
@@ -766,9 +855,15 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
     leaves.push(parsed);
     joins.push(join);
   }
-  const stack = { leaves, joins };
+  const stack: EntryStack = { leaves, joins };
   if (entryStackError({ stack })) {
     return null;
+  }
+  const orders = addGroupOrdersFromJson(
+    (row as { orders?: unknown }).orders,
+  );
+  if (orders) {
+    stack.orders = orders;
   }
   return stack;
 }

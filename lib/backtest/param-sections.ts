@@ -32,6 +32,7 @@ import {
   scopeLabel,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
+import { perpsAddOrderSettingRows } from "@/lib/futures/perps-add-condition";
 import type { RsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 import { trailActivationKind } from "@/lib/strategy/exit-clauses";
 import {
@@ -1379,12 +1380,14 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
           addSide === "short" ? "Short Additional Orders" : "Long Additional Orders",
         groups: [
           {
-            rows: [
-              { label: "Condition Type", value: "Off" },
-              { label: "Size", value: "Off" },
-              { label: "Unit", value: "Off" },
-              { label: "Order", value: "Off" },
-            ],
+            rows: perpsAddOrderSettingRows(
+              addSide === "short" && recipe.direction === "both"
+                ? recipe.shortEntry?.addStack
+                : recipe.addStack,
+            ).map((row) => ({
+              label: row.label,
+              value: row.value?.trim() || "Off",
+            })),
           },
         ],
       });
