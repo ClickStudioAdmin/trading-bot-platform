@@ -3,9 +3,31 @@ import {
   claimEngineDesksFromState,
   type DeskLease,
 } from "./lease";
-import { deskKindsFromTypes, mergeHotAccountIds } from "./hot-desks";
+import {
+  deskKindsFromTypes,
+  hotEngineAccountIds,
+  mergeHotAccountIds,
+} from "./hot-desks";
 
 assert.deepEqual(mergeHotAccountIds(["b", "a", ""], ["a", null]), ["a", "b"]);
+assert.deepEqual(
+  hotEngineAccountIds({
+    futures: ["flex-open"],
+    dca: [],
+    flex: ["flex-rule"],
+    cashAndCarry: ["carry-active", ""],
+  }),
+  ["carry-active", "flex-open", "flex-rule"],
+);
+assert.deepEqual(
+  hotEngineAccountIds({
+    futures: [],
+    dca: [],
+    flex: [],
+    cashAndCarry: ["bybit-starter-3"],
+  }),
+  ["bybit-starter-3"],
+);
 assert.deepEqual(deskKindsFromTypes(["dca", "manual"]), {
   cashAndCarry: false,
   linear: true,
