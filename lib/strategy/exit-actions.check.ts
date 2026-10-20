@@ -840,6 +840,50 @@ const overlapped = describeExitBook({
 });
 assert.equal(overlapped.protective.provenPct, 100);
 assert.equal(overlapped.protective.stackedPct, 100);
+assert.equal(overlapped.noLoss.provenPct, 0);
+
+const mixedCover = describeExitBook({
+  source: "actions",
+  actions: [
+    {
+      id: "loss-stop",
+      kind: "stop_loss",
+      scope: { kind: "all" },
+      groups: [{ anchor: { trigger: "stop" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: 90,
+      trailingDistance: null,
+      trailingActivation: null,
+    },
+    {
+      id: "be-part",
+      kind: "breakeven",
+      scope: { kind: "percent", pct: 40 },
+      groups: [{ anchor: { trigger: "profit" }, rows: [] }],
+      takeProfitPct: null,
+      takeProfitPrice: null,
+      stopLossPct: null,
+      stopLossPrice: null,
+      trailingDistance: null,
+      trailingActivation: null,
+      breakevenActivationPct: 1,
+      breakevenOffsetPct: 0,
+    },
+  ],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "position", qty: 10, price: 100 }],
+  side: "long",
+  mark: 102,
+  last: 102,
+  entryPrice: 100,
+  nowMs: 6,
+  claims: [],
+  breakevenDone: true,
+});
+assert.equal(mixedCover.protective.provenPct, 100);
+assert.equal(mixedCover.noLoss.provenPct, 40);
 
 const tracked = exitBookForClassic({
   side: "long",
@@ -857,6 +901,54 @@ assert.equal(tracked.source, "classic");
 assert.equal(tracked.actions.find((action) => action.kind === "trailing_stop")?.status, "protecting");
 assert.equal(tracked.trailingOrBreakeven.provenPct, 100);
 assert.equal(tracked.byKind.stop_loss.provenPct, 100);
+assert.equal(tracked.protective.provenPct, 100);
+assert.equal(tracked.noLoss.provenPct, 100);
+
+const lossStop = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 110,
+  last: 110,
+  nowMs: 9,
+  stopLossPrice: 90,
+});
+assert.equal(lossStop.protective.provenPct, 100);
+assert.equal(lossStop.noLoss.provenPct, 0);
+const shortCovered = exitBookForClassic({
+  side: "short",
+  qty: 2,
+  entryPrice: 100,
+  mark: 90,
+  last: 90,
+  nowMs: 9,
+  stopLossPrice: 90,
+});
+assert.equal(shortCovered.noLoss.provenPct, 100);
+const shortLoss = exitBookForClassic({
+  side: "short",
+  qty: 2,
+  entryPrice: 100,
+  mark: 90,
+  last: 90,
+  nowMs: 9,
+  stopLossPrice: 110,
+});
+assert.equal(shortLoss.protective.provenPct, 100);
+assert.equal(shortLoss.noLoss.provenPct, 0);
+const trailStillLosing = exitBookForClassic({
+  side: "long",
+  qty: 2,
+  entryPrice: 100,
+  mark: 103,
+  last: 103,
+  nowMs: 9,
+  trailingDistance: 5,
+  trailingActivation: 101,
+  trailingPeak: 103,
+});
+assert.equal(trailStillLosing.protective.provenPct, 100);
+assert.equal(trailStillLosing.noLoss.provenPct, 0);
 
 const classicQuietTrail = exitBookForClassic({
   side: "long",
@@ -884,6 +976,7 @@ const classicMove = exitBookForClassic({
 });
 assert.equal(classicMove.actions[0]?.status, "moving");
 assert.equal(classicMove.trailingOrBreakeven.provenQty, 0);
+assert.equal(classicMove.noLoss.provenQty, 0);
 const classicLatched = exitBookForClassic({
   side: "long",
   qty: 2,
@@ -896,13 +989,22 @@ const classicLatched = exitBookForClassic({
 });
 assert.equal(classicLatched.actions[0]?.status, "done");
 assert.equal(classicLatched.trailingOrBreakeven.provenPct, 100);
+assert.equal(classicLatched.noLoss.provenPct, 100);
 
 const roundTrip = exitRuntimeFromJson({
   arms: { "classic:trailing_stop": { armedAt: 9, peak: 110, condition: true, scopeLive: true } },
   book: tracked,
 });
 assert.equal(roundTrip.book?.trailingOrBreakeven.provenPct, 100);
+assert.equal(roundTrip.book?.noLoss.provenPct, 100);
 assert.equal(roundTrip.arms["classic:trailing_stop"]?.peak, 110);
+const staleBook = { ...tracked } as { noLoss?: unknown };
+delete staleBook.noLoss;
+assert.equal(
+  exitRuntimeFromJson({ arms: { a: { armedAt: 1, peak: 2, condition: true } }, book: staleBook })
+    .book?.noLoss.provenPct,
+  0,
+);
 assert.equal(exitRuntimeFromJson({ arms: { a: { armedAt: 1, peak: 2, condition: false } } }).book, undefined);
 
 console.log("exit-actions.check ok");

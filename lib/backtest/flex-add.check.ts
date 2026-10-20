@@ -224,6 +224,85 @@ const levels = conditionOrderLevels({
 assert.equal(levels.some((row) => row.role === "exit" && row.title === "Long TP" && row.price === 120), true);
 assert.equal(levels.some((row) => row.role === "add"), false);
 
+const noLossStack = {
+  leaves: [
+    { kind: "protection" as const, is: "no_loss" as const, amount: "entire" as const, pct: null },
+  ],
+  joins: ["and" as const],
+  orders: [{ size: "1", sizeUnit: "qty" as const, orderType: "market" as const, limitPrice: "" }],
+};
+const lossStopRecipe: PerpsTemplateRecipe = {
+  ...longRecipe,
+  name: "Loss stop",
+  triggerPrice: "100",
+  tpsl: {
+    takeProfit: null,
+    stopLoss: 90,
+    tpTrigger: "last",
+    slTrigger: "last",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  addStack: noLossStack,
+};
+const stillLosing = await replayPerpsPriceCross({
+  bars: [bar(0, 99), bar(1, 100), bar(2, 104), bar(3, 110)],
+  recipe: lossStopRecipe,
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+assert.equal(stillLosing.orders.filter((row) => row.reason === "clip").length, 0);
+
+const covered = await replayPerpsPriceCross({
+  bars: [bar(0, 99), bar(1, 100), bar(2, 101), bar(3, 102)],
+  recipe: {
+    ...lossStopRecipe,
+    name: "Breakeven covers",
+    breakevenActivationPct: 2,
+    breakevenOffsetPct: 0,
+  },
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+const coveredClips = covered.orders.filter((row) => row.reason === "clip");
+assert.equal(coveredClips.length, 1);
+assert.equal(coveredClips[0]?.price, 102);
+assert.match(
+  covered.events.find((row) => row.reason === "clip")?.text ?? "",
+  /Protected - No Loss, entire position/,
+);
+
+const protectedTrail = await replayPerpsPriceCross({
+  bars: [bar(0, 100), bar(1, 104, 104, 104), bar(2, 106, 106, 106)],
+  recipe: {
+    ...longRecipe,
+    name: "Trail protects",
+    triggerPrice: "100",
+    trailing: { distance: 1, activePrice: 105, peak: null },
+    addStack: {
+      leaves: [
+        { kind: "protection", is: "protected", amount: "entire", pct: null },
+      ],
+      joins: ["and"],
+      orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+const trailClips = protectedTrail.orders.filter((row) => row.reason === "clip");
+assert.equal(trailClips.length, 1);
+assert.equal(trailClips[0]?.price, 106);
+assert.match(
+  protectedTrail.events.find((row) => row.reason === "clip")?.text ?? "",
+  /Protected, entire position/,
+);
+
 console.log("flex add replay checks passed");
 }
 

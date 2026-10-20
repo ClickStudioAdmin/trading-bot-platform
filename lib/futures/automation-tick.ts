@@ -343,7 +343,7 @@ export async function runFuturesAutomationTick(input?: {
           protection: openOnSide
             ? {
                 openQty: openOnSide.qty,
-                provenPct: flexAddProvenPct({
+                ...flexAddCoverage({
                   open: openOnSide,
                   rule,
                   prices,
@@ -755,7 +755,7 @@ export async function fireWebhookAutomationEntries(input: {
           protection: openOnSide
             ? {
                 openQty: openOnSide.qty,
-                provenPct: flexAddProvenPct({
+                ...flexAddCoverage({
                   open: openOnSide,
                   rule,
                   prices,
@@ -1326,13 +1326,14 @@ function savedExitBooks(
   return books;
 }
 
-/** Largest single protective stop, from the last exit book or the position columns. */
-function flexAddProvenPct(input: {
+/** Protective coverage for a Flex add, from the last exit book or the position columns. */
+function flexAddCoverage(input: {
   open: FuturesPosition;
   rule: FuturesAutomationRule;
   prices: { last: number | null; mark: number | null; index: number | null } | null;
   savedBook: ExitBookSnapshot | null;
-}): number | null {
+}): { provenPct: number | null; noLossProvenPct: number | null } {
+  const none = { provenPct: null, noLossProvenPct: null };
   const actions = sideExitActions(
     input.rule.exitActions,
     input.rule.shortEntry?.actions,
@@ -1340,7 +1341,10 @@ function flexAddProvenPct(input: {
     input.open.side,
   );
   if (actions && input.savedBook) {
-    return input.savedBook.protective.provenPct;
+    return {
+      provenPct: input.savedBook.protective.provenPct,
+      noLossProvenPct: input.savedBook.noLoss.provenPct,
+    };
   }
   const last = input.prices?.last ?? input.prices?.mark ?? null;
   const mark =
@@ -1348,10 +1352,10 @@ function flexAddProvenPct(input: {
       ? input.prices.mark
       : last;
   if (!(mark != null && mark > 0) || !(last != null && last > 0)) {
-    return null;
+    return none;
   }
   if (actions) {
-    return describeExitBook({
+    const book = describeExitBook({
       source: "actions",
       actions,
       runtime: emptyExitRuntime(),
@@ -1370,7 +1374,11 @@ function flexAddProvenPct(input: {
       claims: [],
       breakevenDone: input.open.breakevenDone,
       prices: input.prices,
-    }).protective.provenPct;
+    });
+    return {
+      provenPct: book.protective.provenPct,
+      noLossProvenPct: book.noLoss.provenPct,
+    };
   }
   const sideClassic =
     input.open.side === "short" && input.rule.direction === "both"
@@ -1392,7 +1400,7 @@ function flexAddProvenPct(input: {
       activationPct: breakevenActivationPct,
       done: input.open.breakevenDone,
     });
-  return exitBookForClassic({
+  const book = exitBookForClassic({
     side: input.open.side,
     qty: input.open.qty,
     entryPrice: input.open.entryPrice,
@@ -1416,7 +1424,11 @@ function flexAddProvenPct(input: {
           qty: null,
         }
       : null,
-  }).protective.provenPct;
+  });
+  return {
+    provenPct: book.protective.provenPct,
+    noLossProvenPct: book.noLoss.provenPct,
+  };
 }
 
 /**
@@ -1468,7 +1480,7 @@ async function placeFlexAdd(input: {
     firedWebhookId: input.firedWebhookId,
     protection: {
       openQty: input.open.qty,
-      provenPct: flexAddProvenPct({
+      ...flexAddCoverage({
         open: input.open,
         rule: input.rule,
         prices: input.prices,

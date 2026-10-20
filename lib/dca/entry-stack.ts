@@ -10,6 +10,7 @@ import {
   type EntryStack,
   type StrategyJoin,
 } from "@/lib/strategy/expr";
+import type { ProtectionReading } from "@/lib/strategy/protection";
 import { retraceMet } from "@/lib/strategy/retrace";
 import type { RetraceSpec } from "@/lib/strategy/retrace";
 import { dcaFilterForSide, dcaFilterMet } from "./filters";
@@ -200,7 +201,7 @@ export function dcaSideGates(input: {
   } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
-  protection?: { openQty: number | null; provenPct: number | null } | null;
+  protection?: ProtectionReading | null;
 }): { retraceMet: boolean; addMet: boolean } {
   const shortLeg = input.playbook.direction === "both" && input.side === "short";
   const spec = shortLeg ? input.playbook.shortRetrace : input.playbook.retrace;

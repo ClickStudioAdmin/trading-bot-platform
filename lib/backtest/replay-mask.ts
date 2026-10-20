@@ -37,7 +37,7 @@ import {
   type EntryStack,
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
-import { protectionMet } from "@/lib/strategy/protection";
+import { protectionMet, type ProtectionReading } from "@/lib/strategy/protection";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import { retraceMet, type RetraceSpec } from "@/lib/strategy/retrace";
 import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
@@ -148,7 +148,7 @@ export class ReplayBook {
     stack: EntryStack,
     side: FuturesSide,
     index: number,
-    protection?: { openQty: number | null; provenPct: number | null } | null,
+    protection?: ProtectionReading | null,
   ): { met: boolean; group: number | null; because: string } {
     const price = this.tapeBars[index]?.close ?? 0;
     const flags = stack.leaves.map((leaf) => {
@@ -157,6 +157,7 @@ export class ReplayBook {
           spec: leaf,
           openQty: protection?.openQty ?? null,
           provenPct: protection?.provenPct ?? null,
+          noLossProvenPct: protection?.noLossProvenPct ?? null,
         });
       }
       return this.entryLeafAt(leaf, side, index, price);

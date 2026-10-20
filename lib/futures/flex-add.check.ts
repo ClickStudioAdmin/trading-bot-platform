@@ -7,8 +7,18 @@ import {
   perpsRuleMatchesWebhook,
 } from "@/lib/futures/automation";
 import { flexAddDecision, flexAddLatchColumn } from "@/lib/futures/flex-add";
-import { addStackMatchesWebhook } from "@/lib/strategy/expr";
-import type { EntryStack } from "@/lib/strategy/expr";
+import {
+  addStackMatchesWebhook,
+  emptyEntryStack,
+  entryExprMetaFromJson,
+  entryExprToJson,
+  type EntryStack,
+} from "@/lib/strategy/expr";
+import {
+  formatProtectionLabel,
+  parseProtectionSpec,
+  protectionMet,
+} from "@/lib/strategy/protection";
 
 const bars = new Map();
 
@@ -144,7 +154,7 @@ assert.equal(
     barsByTimeframe: bars,
     wasTrue: false,
     open: true,
-    protection: { openQty: 2, provenPct: 100 },
+    protection: { openQty: 2, provenPct: 100, noLossProvenPct: 0 },
   }).fire,
   true,
 );
@@ -156,9 +166,93 @@ assert.equal(
     barsByTimeframe: bars,
     wasTrue: false,
     open: true,
-    protection: { openQty: 2, provenPct: 40 },
+    protection: { openQty: 2, provenPct: 40, noLossProvenPct: 40 },
   }).fire,
   false,
+);
+const noLossAdd: EntryStack = {
+  leaves: [{ kind: "protection", is: "no_loss", amount: "entire", pct: null }],
+  joins: ["and"],
+  orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+};
+assert.equal(
+  flexAddDecision({
+    stack: noLossAdd,
+    side: "long",
+    price: 100,
+    barsByTimeframe: bars,
+    wasTrue: false,
+    open: true,
+    protection: { openQty: 2, provenPct: 100, noLossProvenPct: 0 },
+  }).fire,
+  false,
+);
+assert.equal(
+  flexAddDecision({
+    stack: noLossAdd,
+    side: "short",
+    price: 100,
+    barsByTimeframe: bars,
+    wasTrue: false,
+    open: true,
+    protection: { openQty: 2, provenPct: 100, noLossProvenPct: 100 },
+  }).because,
+  "Protected - No Loss, entire position",
+);
+assert.equal(
+  protectionMet({
+    spec: { is: "protected", amount: "entire", pct: null },
+    openQty: 2,
+    provenPct: 100,
+    noLossProvenPct: 0,
+  }),
+  true,
+);
+assert.equal(
+  protectionMet({
+    spec: { is: "no_loss", amount: "entire", pct: null },
+    openQty: 2,
+    provenPct: 100,
+    noLossProvenPct: 0,
+  }),
+  false,
+);
+assert.equal(
+  protectionMet({
+    spec: { is: "no_loss", amount: "at_least", pct: 40 },
+    openQty: 2,
+    provenPct: 100,
+    noLossProvenPct: 40,
+  }),
+  true,
+);
+assert.equal(parseProtectionSpec({ is: "unprotected", amount: "entire" }), null);
+assert.equal(
+  formatProtectionLabel({ is: "no_loss", amount: "entire", pct: null }),
+  "Protected - No Loss, entire position",
+);
+const savedNoLoss = entryExprToJson(emptyEntryStack(), {
+  add: {
+    leaves: [{ kind: "protection", is: "no_loss", amount: "at_least", pct: 40 }],
+    joins: ["and"],
+  },
+});
+const savedLeaf = entryExprMetaFromJson(savedNoLoss).add?.leaves[0];
+assert.equal(savedLeaf?.kind, "protection");
+if (savedLeaf?.kind === "protection") {
+  assert.equal(savedLeaf.is, "no_loss");
+  assert.equal(savedLeaf.pct, 40);
+}
+assert.equal(
+  entryExprMetaFromJson({
+    leaves: [],
+    joins: [],
+    add: {
+      leaves: [{ kind: "protection", is: "unprotected", amount: "entire", pct: null }],
+      joins: ["and"],
+    },
+  }).add,
+  null,
 );
 
 assert.equal(flexAddLatchColumn("condition_true"), "add_condition_true");

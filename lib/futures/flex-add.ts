@@ -11,6 +11,7 @@ import {
   type AddGroupOrder,
   type EntryStack,
 } from "@/lib/strategy/expr";
+import type { ProtectionReading } from "@/lib/strategy/protection";
 
 export type FlexAddDecision = {
   met: boolean;
@@ -37,7 +38,7 @@ export function flexAddDecision(input: {
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   wasTrue: boolean;
   open: boolean;
-  protection?: { openQty: number | null; provenPct: number | null } | null;
+  protection?: ProtectionReading | null;
   firedWebhookId?: string | null;
 }): FlexAddDecision {
   const idle: FlexAddDecision = {
