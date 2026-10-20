@@ -54,6 +54,7 @@ import {
   clearBacktestParentRun,
   countBacktestRunsForTemplate,
   deleteBacktestRun,
+  findOwnedDraftBacktest,
   insertBacktestRun,
   linkBacktestRunTemplate,
   unlinkBacktestRunTemplate,
@@ -170,6 +171,10 @@ export async function seedBacktestDraftAction(
   const storedRecipe = { ...recipe, symbol: contract.symbol };
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
+  const existing = await findOwnedDraftBacktest(auth.member.id, storedRecipe);
+  if (existing) {
+    return { ok: true, runId: existing.id };
+  }
   const sourceTemplateId = await resolveSourceTemplateId(
     String(formData.get("sourceTemplateId") ?? ""),
     storedRecipe,
