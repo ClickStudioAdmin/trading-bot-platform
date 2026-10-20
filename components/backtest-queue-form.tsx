@@ -1125,9 +1125,12 @@ export function BacktestQueueForm({
               ) : (
               <>
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm text-ink-muted">
-                  Select a bot or a template.
-                </p>
+                {deskBotSelected || libraryTemplateSelected ? null : (
+                  <p className="text-sm text-ink-muted">
+                    Select a bot or a template.
+                  </p>
+                )}
+                <div className="ml-auto">
                 <BacktestOriginBadges
                   templateName={matchingTemplate?.name ?? null}
                   templateDescription={matchingTemplate?.description ?? null}
@@ -1140,6 +1143,7 @@ export function BacktestQueueForm({
                   }
                   edited={editedAway}
                 />
+                </div>
               </div>
               <div
                 className={`mt-3 grid min-w-0 gap-3 [&>*]:min-w-0${
