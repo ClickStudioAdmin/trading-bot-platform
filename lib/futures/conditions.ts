@@ -1423,7 +1423,9 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
   if (source === "retrace" && !retrace) {
     return null;
   }
-  const addStack = row.add == null ? null : entryStackFromJson(row.add);
+  // Desk storage names the stack `add`. A backtest recipe names it `addStack`.
+  const addRaw = row.add != null ? row.add : row.addStack;
+  const addStack = addRaw == null ? null : entryStackFromJson(addRaw);
   const stack =
     row.entryStack == null
       ? emptyEntryStack()
