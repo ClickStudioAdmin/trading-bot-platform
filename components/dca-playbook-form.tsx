@@ -3854,6 +3854,7 @@ export function DcaPlaybookForm({
             savedBacktests={savedBacktests}
             venueId={policy.venueId}
             venueEnvironment={venueEnvironment}
+            deskBotId={playbook?.id ? `dca:${playbook.id}` : ""}
             className="flex w-full flex-col"
             buttonClassName={botSidebarActionClass}
           />

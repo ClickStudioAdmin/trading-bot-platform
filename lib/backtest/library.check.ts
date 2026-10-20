@@ -20,6 +20,8 @@ import {
   parseBacktestRecipeJson,
   parseListedRecipe,
   backtestLinksForBotRecipes,
+  backtestOpenedSourceId,
+  deskBacktestBotParam,
   userBacktestFieldIssues,
 } from "./library";
 import {
@@ -304,6 +306,43 @@ assert.equal(
 assert.equal(
   deskBotAutomationsHref({ id: "dca:pb-1", deskId: "desk-1" }),
   "/strategies/futures/automations?desk=desk-1#bot-pb-1",
+);
+assert.equal(deskBacktestBotParam("flex:bot-1"), "flex:bot-1");
+assert.equal(deskBacktestBotParam("spot:bot-1"), "");
+assert.equal(
+  backtestOpenedSourceId({
+    deskBotId: "flex:bot-1",
+    templateId: "tmpl-1",
+    deskBotIds: ["flex:bot-1"],
+    templateIds: ["tmpl-1"],
+    matchedDeskBotId: "flex:other",
+  }),
+  "flex:bot-1",
+);
+assert.equal(
+  backtestOpenedSourceId({
+    deskBotId: "flex:missing",
+    templateId: "tmpl-1",
+    deskBotIds: ["flex:bot-1"],
+    templateIds: ["tmpl-1"],
+  }),
+  "tmpl-1",
+);
+assert.equal(
+  backtestOpenedSourceId({
+    templateId: "",
+    deskBotIds: ["flex:bot-1"],
+    templateIds: [],
+    matchedDeskBotId: "flex:bot-1",
+  }),
+  "flex:bot-1",
+);
+assert.equal(
+  backtestOpenedSourceId({
+    deskBotIds: [],
+    templateIds: [],
+  }),
+  "",
 );
 
 const grouped = groupBacktestLibrary(

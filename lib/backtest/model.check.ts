@@ -888,6 +888,14 @@ assert.equal(
   backtestListEntryHref({ draft: "d1", env: "demo" }),
   "/account/backtests/new?draft=d1&env=demo",
 );
+assert.equal(
+  backtestNewHref({ draft: "d1", bot: "flex:bot-1", venue: "bybit" }),
+  "/account/backtests/new?draft=d1&bot=flex%3Abot-1&venue=bybit",
+);
+assert.equal(
+  backtestListEntryHref({ draft: "d1", bot: "flex:bot-1" }),
+  "/account/backtests/new?draft=d1&bot=flex%3Abot-1",
+);
 assert.equal(parseBacktestListPage("2"), 2);
 assert.equal(parseBacktestListPage("0"), 1);
 assert.equal(parseBacktestListPage("nope"), 1);

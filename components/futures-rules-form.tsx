@@ -2413,6 +2413,7 @@ function RuleCard({
             savedBacktests={savedBacktests}
             venueId={venueId}
             venueEnvironment={venueEnvironment}
+            deskBotId={layer.id ? `flex:${layer.id}` : ""}
             className="flex w-full flex-col"
             buttonClassName={botSidebarActionClass}
           />
