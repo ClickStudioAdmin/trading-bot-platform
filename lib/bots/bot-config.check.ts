@@ -208,6 +208,29 @@ assert.equal(value(perps, "Long Additional Orders", "Condition Type"), "Off");
 assert.equal(value(perps, "Long Additional Orders", "Size"), "Off");
 assert.equal(value(perps, "Long Additional Orders", "Unit"), "Off");
 assert.equal(value(perps, "Long Additional Orders", "Order"), "Off");
+const perpsSizedAdd = perpsBotConfig({
+  ...defaultFuturesAutomationForm(0, "ETHUSDT"),
+  formAction: "buy",
+  addStack: {
+    leaves: [
+      {
+        kind: "retrace",
+        source: "last",
+        from: "high",
+        pct: 2,
+        lookback: 20,
+        timeframe: "15",
+      },
+    ],
+    joins: ["and"],
+    orders: [
+      { size: "500", sizeUnit: "usdt", orderType: "market", limitPrice: "" },
+    ],
+  },
+});
+assert.equal(value(perpsSizedAdd, "Long Additional Orders", "Size"), "500 USDT");
+assert.equal(value(perpsSizedAdd, "Long Additional Orders", "Unit"), "USDT");
+assert.equal(value(perpsSizedAdd, "Long Additional Orders", "Order"), "Market");
 assert.equal(value(perps, "Long Exit Conditions", "Take profit"), "3% · Last · Market");
 assert.equal(value(perps, "Long Exit Conditions", "Stop loss"), "Off");
 assert.equal(value(perps, "Long Exit Conditions", "Custom conditions"), "Off");

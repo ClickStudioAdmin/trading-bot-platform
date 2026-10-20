@@ -7,7 +7,12 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { parseDcaIndicatorCompare } from "@/lib/dca/indicators";
-import { entryStackToJson, type EntryStack, type StrategyLeaf } from "@/lib/strategy/expr";
+import {
+  entryStackToJson,
+  type AddGroupOrder,
+  type EntryStack,
+  type StrategyLeaf,
+} from "@/lib/strategy/expr";
 import { parseProtectionSpec } from "@/lib/strategy/protection";
 import { parseRetraceSpec } from "@/lib/strategy/retrace";
 import { parseRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
@@ -367,15 +372,64 @@ function conditionFromLeaf(
   return null;
 }
 
-/** Conditions only. Order size stays on the form until that save lands. */
+function storedAddGroupOrder(
+  group: PerpsAddOrderGroup,
+  groupIndex: number,
+): AddGroupOrder {
+  const orderType = group.order.orderType === "limit" ? "limit" : "market";
+  const order: AddGroupOrder = {
+    size: group.order.size.replace(/,/g, "").trim(),
+    sizeUnit: group.order.sizeUnit === "qty" ? "qty" : "usdt",
+    orderType,
+    limitPrice:
+      orderType === "limit"
+        ? group.order.limitPrice.replace(/,/g, "").trim()
+        : "",
+  };
+  if (groupIndex > 0) {
+    order.sameAsGroup1 = group.sameAsGroup1 !== false;
+  }
+  return order;
+}
+
+function addGroupOrderMatters(order: AddGroupOrder, index: number): boolean {
+  if (index > 0 && order.sameAsGroup1 === false) {
+    return true;
+  }
+  if (index > 0) {
+    return false;
+  }
+  return (
+    order.size !== "" ||
+    order.sizeUnit !== "usdt" ||
+    order.orderType !== "market" ||
+    order.limitPrice !== ""
+  );
+}
+
+function orderValuesFromStored(order: AddGroupOrder | undefined): PerpsAddOrderValues {
+  if (!order) {
+    return blankPerpsAddOrderValues();
+  }
+  return {
+    size: order.size,
+    sizeUnit: order.sizeUnit === "qty" ? "qty" : "usdt",
+    orderType: order.orderType === "limit" ? "limit" : "market",
+    limitPrice: order.orderType === "limit" ? order.limitPrice : "",
+  };
+}
+
+/** Conditions plus each group's Size, Unit, Order, and Limit price. */
 export function perpsAddGroupsToStack(
   groups: readonly PerpsAddOrderGroup[],
 ): EntryStack {
   const leaves: StrategyLeaf[] = [];
   const joins: EntryStack["joins"] = [];
+  const orders: AddGroupOrder[] = [];
   groups.forEach((group, groupIndex) => {
     const rows = [group.lead, ...group.conditions];
     let first = true;
+    let contributed = false;
     for (const condition of rows) {
       const leaf = leafFromAddCondition(condition);
       if (!leaf) {
@@ -384,9 +438,16 @@ export function perpsAddGroupsToStack(
       leaves.push(leaf);
       joins.push(!first && groupIndex === 0 ? "and" : first && groupIndex > 0 ? "or" : "and");
       first = false;
+      contributed = true;
+    }
+    if (contributed) {
+      orders.push(storedAddGroupOrder(group, orders.length));
     }
   });
-  return { leaves, joins };
+  if (!orders.some((order, index) => addGroupOrderMatters(order, index))) {
+    return { leaves, joins };
+  }
+  return { leaves, joins, orders };
 }
 
 export function perpsAddGroupsFromStack(
@@ -403,12 +464,15 @@ export function perpsAddGroupsFromStack(
       return;
     }
     if (groups.length === 0 || stack.joins[index] === "or") {
+      const stored = stack.orders?.[groups.length];
       groups.push({
         key: perpsAddKey("group"),
         lead: condition,
         conditions: [],
-        order: blankPerpsAddOrderValues(),
-        ...(groups.length > 0 ? { sameAsGroup1: true } : {}),
+        order: orderValuesFromStored(stored),
+        ...(groups.length > 0
+          ? { sameAsGroup1: stored ? stored.sameAsGroup1 !== false : true }
+          : {}),
       });
       return;
     }
@@ -422,6 +486,85 @@ export function perpsAddGroupsExpr(
 ): string {
   const stack = perpsAddGroupsToStack(groups);
   return stack.leaves.length > 0 ? JSON.stringify(entryStackToJson(stack)) : "";
+}
+
+export type PerpsAddOrderSummary = {
+  group: number;
+  size: string;
+  sizeUnit: "qty" | "usdt";
+  orderType: "market" | "limit";
+  limitPrice: string;
+};
+
+/** Saved Position Sizing for each additional-order group that keeps its own order. */
+export function perpsAddStackOrderSummaries(
+  stack: EntryStack | null | undefined,
+): PerpsAddOrderSummary[] {
+  const orders = stack?.orders;
+  if (!orders || orders.length === 0) {
+    return [];
+  }
+  const rows: PerpsAddOrderSummary[] = [];
+  orders.forEach((order, index) => {
+    if (index > 0 && order.sameAsGroup1 !== false) {
+      return;
+    }
+    if (!positiveSizingText(order.size)) {
+      return;
+    }
+    const orderType = order.orderType === "limit" ? "limit" : "market";
+    rows.push({
+      group: index + 1,
+      size: order.size.trim(),
+      sizeUnit: order.sizeUnit === "qty" ? "qty" : "usdt",
+      orderType,
+      limitPrice: orderType === "limit" ? order.limitPrice.trim() : "",
+    });
+  });
+  return rows;
+}
+
+/** Parameter rows for additional-order Position Sizing. Empty values stay unset. */
+export function perpsAddOrderSettingRows(
+  stack: EntryStack | null | undefined,
+): { label: string; value: string | null }[] {
+  const summaries = perpsAddStackOrderSummaries(stack);
+  const rows: { label: string; value: string | null }[] = [
+    { label: "Condition Type", value: null },
+  ];
+  if (summaries.length === 0) {
+    rows.push(
+      { label: "Size", value: null },
+      { label: "Unit", value: null },
+      { label: "Order", value: null },
+    );
+    return rows;
+  }
+  const many = summaries.length > 1;
+  for (const summary of summaries) {
+    const unit = summary.sizeUnit === "qty" ? "Token qty" : "USDT";
+    rows.push(
+      {
+        label: many ? `Group ${summary.group} size` : "Size",
+        value: unit === "USDT" ? `${summary.size} USDT` : summary.size,
+      },
+      {
+        label: many ? `Group ${summary.group} unit` : "Unit",
+        value: unit,
+      },
+      {
+        label: many ? `Group ${summary.group} order` : "Order",
+        value: summary.orderType === "limit" ? "Limit" : "Market",
+      },
+    );
+    if (summary.orderType === "limit") {
+      rows.push({
+        label: many ? `Group ${summary.group} limit price` : "Limit price",
+        value: summary.limitPrice || null,
+      });
+    }
+  }
+  return rows;
 }
 
 export function countPerpsAddConditions(
