@@ -813,6 +813,64 @@ assert.equal(loadedPerps.recipe.entryStack?.leaves.length, 1);
 assert.equal(loadedPerps.recipe.shortEntry?.triggerPrice, 90);
 assert.equal(loadedPerps.recipe.shortEntry?.entryStack.leaves.length, 1);
 assert.equal(loadedPerps.recipe.shortEntry?.exitHard?.trigger, "price");
+const shortAddPerps = snapshotPerpsRecipe({
+  name: "Short add",
+  symbol: "SOLUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "usdt",
+  size: 500,
+  limitPrice: null,
+  entrySource: "retrace",
+  triggerBy: "last",
+  triggerCompare: "gte",
+  triggerPrice: 1,
+  skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
+  retrace: { source: "last", from: "high", pct: 5, lookback: 20, timeframe: "60" },
+  confirm: null,
+  direction: "both",
+  shortEntry: {
+    entrySource: "retrace",
+    webhookId: null,
+    triggerBy: "last",
+    triggerCompare: "lte",
+    triggerPrice: 1,
+    skipIfOpen: true,
+    indicator: null,
+    retrace: { source: "last", from: "low", pct: 5, lookback: 20, timeframe: "15" },
+    confirm: null,
+    entryStack: { leaves: [], joins: [] },
+    addStack: {
+      leaves: [
+        {
+          kind: "retrace",
+          source: "last",
+          from: "low",
+          pct: 2,
+          lookback: 20,
+          timeframe: "15",
+        },
+      ],
+      joins: ["and"],
+      orders: [
+        { size: "500", sizeUnit: "usdt", orderType: "market", limitPrice: "" },
+      ],
+    },
+  },
+});
+const loadedShortAdd = parseTemplateRecipe(shortAddPerps, "flex", TEMPLATE_RECIPE_VERSION);
+assert.equal(loadedShortAdd.ok, true);
+if (!loadedShortAdd.ok || loadedShortAdd.recipe.kind !== "flex") {
+  throw new Error("expected a short additional-order recipe");
+}
+assert.equal(loadedShortAdd.recipe.shortEntry?.addStack?.leaves[0]?.kind, "retrace");
+assert.equal(loadedShortAdd.recipe.shortEntry?.addStack?.leaves[0]?.pct, 2);
+assert.equal(loadedShortAdd.recipe.shortEntry?.addStack?.orders?.[0]?.size, "500");
+const shortAddSeed = perpsRecipeFormSeed(loadedShortAdd.recipe);
+assert.equal(shortAddSeed.shortEntry?.addStack?.leaves.length, 1);
 assert.equal(loadedPerps.recipe.exitStack?.leaves.length, 1);
 const perpsSeed = perpsRecipeFormSeed(loadedPerps.recipe);
 assert.equal(perpsSeed.direction, "both");

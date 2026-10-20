@@ -74,6 +74,15 @@ export const DCA_STATUS_OPTIONS: readonly BotStatusOption[] = [
   },
 ];
 
+/** A status change counts only while it differs from the saved mode. */
+export function botFormHasChanges(input: {
+  edited: boolean;
+  status: string;
+  savedStatus: string;
+}): boolean {
+  return input.edited || input.status !== input.savedStatus;
+}
+
 export function statusOptionsFor(desk: BotDeskKind): readonly BotStatusOption[] {
   if (desk === "dca") {
     return DCA_STATUS_OPTIONS;
@@ -105,6 +114,33 @@ export function parseDcaBotStatus(raw: unknown): DcaBotStatus {
   return "active";
 }
 
+/** Save says it is closing only when status moves to Disabled and a row is open. */
+export function saveClosesOwnedRows(input: {
+  previousMode: string | null | undefined;
+  nextMode: string;
+  ownedCount: number;
+}): boolean {
+  const previous = String(input.previousMode ?? "").trim();
+  return (
+    input.nextMode === "disabled" &&
+    previous !== "disabled" &&
+    input.ownedCount > 0
+  );
+}
+
+export function botSavedNotice(input: {
+  many?: boolean;
+  closing?: boolean;
+  subject?: "positions" | "carries";
+}): string {
+  if (input.closing) {
+    return input.subject === "carries"
+      ? "Bot saved. Closing carries…"
+      : "Bot saved. Closing positions…";
+  }
+  return input.many ? "Bots saved." : "Bot saved.";
+}
+
 export function flattenOwnedRuleIds<
   T extends { id: string | number | null; mode: string },
 >(rules: readonly T[]): Array<T & { id: NonNullable<T["id"]> }> {
@@ -123,10 +159,13 @@ export function dcaSaveVerb(input: {
   hasOpenPosition: boolean;
 }): "save" | "arm" | "disarm" | "close-playbook" {
   if (input.selected === "disabled") {
+    if (!input.armed && !input.running) {
+      return "save";
+    }
     if (input.hasOpenPosition) {
       return "close-playbook";
     }
-    return input.armed || input.running ? "disarm" : "save";
+    return "disarm";
   }
   if (input.selected === "stop_adding") {
     return input.armed ? "disarm" : "save";

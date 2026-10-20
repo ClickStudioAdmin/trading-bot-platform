@@ -401,6 +401,7 @@ export function BotStatusField({
           value={selected.value}
           onChange={(event) => onChange(event.target.value)}
           aria-label="Status"
+          trackDirty={false}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>

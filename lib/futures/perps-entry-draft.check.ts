@@ -73,6 +73,47 @@ assert.equal(openedBoth.long.triggerCompare, "gte");
 assert.equal(openedBoth.short.triggerPrice, "90");
 assert.equal(openedBoth.short.triggerCompare, "lte");
 
+const bothRetrace = defaultFuturesAutomationForm(0, "SOLUSDT");
+bothRetrace.id = "rule-4";
+bothRetrace.direction = "both";
+bothRetrace.entrySource = "retrace";
+bothRetrace.retrace = {
+  source: "last",
+  from: "high",
+  pct: 5,
+  lookback: 20,
+  timeframe: "60",
+};
+bothRetrace.shortEntry = {
+  entrySource: "retrace",
+  webhookId: null,
+  triggerBy: "last",
+  triggerCompare: "lte",
+  triggerPrice: 0,
+  skipIfOpen: true,
+  indicator: null,
+  confirm: null,
+  entryStack: { leaves: [], joins: [] },
+  retrace: {
+    source: "last",
+    from: "low",
+    pct: 3,
+    lookback: 20,
+    timeframe: "15",
+  },
+};
+const openedRetrace = initialPerpsEntryDrafts(bothRetrace);
+assert.equal(openedRetrace.long.retracePct, "5");
+assert.equal(openedRetrace.long.retraceFrom, "high");
+assert.equal(openedRetrace.long.retraceTimeframe, "60");
+assert.equal(openedRetrace.short.entrySource, "retrace");
+assert.equal(openedRetrace.short.retracePct, "3");
+assert.equal(openedRetrace.short.retraceFrom, "low");
+assert.equal(openedRetrace.short.retraceSource, "last");
+assert.equal(openedRetrace.short.retraceLookback, "20");
+assert.equal(openedRetrace.short.retraceTimeframe, "15");
+assert.equal(perpsEntryDraftMissing(openedRetrace.short, false), false);
+
 assert.equal(perpsEntryDraftMissing(fresh.long, false), true);
 const priced = { ...openedLong.long, triggerPrice: "" };
 assert.equal(perpsEntryDraftMissing(priced, false), true);
