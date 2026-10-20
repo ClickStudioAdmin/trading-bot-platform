@@ -1,11 +1,9 @@
 import { groupBacktestOrdersIntoCycles } from "@/lib/backtest/positions";
 import {
-  atrValues,
   resampleBarsForTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
-import { dcaAtrStep, dcaDipPctAt, dcaPlannedExits } from "@/lib/dca/grid";
-import { dcaCapHit } from "@/lib/dca/playbook";
+import { dcaPlannedExits } from "@/lib/dca/grid";
 import type { HardExitDraft } from "@/lib/dca/hard-exit";
 import { futuresBreakevenStop } from "@/lib/futures/conditions";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -39,9 +37,7 @@ export function conditionOrderTimeframes(
 ): DcaIndicatorTimeframe[] {
   const frames = new Set<DcaIndicatorTimeframe>();
   if (recipe.kind === "flex") {
-    collectStackFrames(frames, recipe.addStack);
     collectStackFrames(frames, recipe.exitStack);
-    collectStackFrames(frames, recipe.shortEntry?.addStack);
     collectStackFrames(frames, recipe.shortEntry?.exitStack);
     for (const action of [
       ...(recipe.exitActions ?? []),
@@ -57,8 +53,6 @@ export function conditionOrderTimeframes(
     }
   }
   if (recipe.kind === "dca") {
-    collectStackFrames(frames, recipe.addStack);
-    collectStackFrames(frames, recipe.shortAddStack);
     collectStackFrames(frames, recipe.exitStack);
     collectStackFrames(frames, recipe.shortExitStack);
   }
@@ -99,8 +93,6 @@ export function conditionOrderLevels(input: {
         cycle.side,
         cycle.entryPrice,
         cycle.firstFillPrice,
-        cycle.clipCount,
-        cycle.orders,
         since,
       );
     }
@@ -165,11 +157,6 @@ function flexLevels(
     push(levels, side, "exit", "Exit", exitHard.price);
   }
   stackLevels(levels, exitStack, side, "exit", "Exit", input);
-  const addStack =
-    side === "short" && recipe.direction === "both"
-      ? recipe.shortEntry?.addStack
-      : recipe.addStack;
-  stackLevels(levels, addStack, side, "add", "Add", input);
 }
 
 function dcaLevels(
@@ -183,12 +170,9 @@ function dcaLevels(
   side: FuturesSide,
   entry: number,
   first: number,
-  clips: number,
-  orders: SimulatedOrder[],
   since: readonly CandleBar[],
 ) {
   const recipe = input.recipe;
-  const candles = input.candles;
   const classic =
     side === "short" && recipe.direction === "both" && recipe.shortClassic
       ? recipe.shortClassic
@@ -223,47 +207,12 @@ function dcaLevels(
     since,
     planned.stopLoss,
   );
-  const last = [...orders].reverse().find((row) => row.action !== "flatten");
-  const lastPrice = last?.price ?? entry;
-  const capped = dcaCapHit({
-    clipsFilled: clips,
-    maxClips: recipe.maxClips,
-    maxValue: recipe.maxValue,
-    markValue: (since[since.length - 1]?.close ?? lastPrice) * (last ? clips : 0),
-  });
-  if (!capped && clips > 0 && lastPrice > 0) {
-    const addIndex = Math.max(0, clips - 1);
-    if (recipe.spacingKind === "atr" && recipe.atrSpacingMult != null) {
-      const period = recipe.atrPeriod ?? 14;
-      const series = atrValues(candles.map((bar) => ({ high: bar.high, low: bar.low, close: bar.close })), period);
-      const atr = [...series].reverse().find((row) => row != null && row > 0) ?? null;
-      if (atr != null) {
-        const step = dcaAtrStep(addIndex, atr, recipe.atrSpacingMult, recipe.deviationMultiplier);
-        push(
-          levels,
-          side,
-          "add",
-          "Add",
-          side === "long" ? lastPrice - step : lastPrice + step,
-        );
-      }
-    } else if (recipe.dipPct != null && recipe.dipPct > 0) {
-      const dip = dcaDipPctAt(addIndex, recipe.dipPct, recipe.deviationMultiplier);
-      push(
-        levels,
-        side,
-        "add",
-        "Add",
-        side === "long" ? lastPrice * (1 - dip / 100) : lastPrice * (1 + dip / 100),
-      );
-    }
-  }
   stackLevels(
     levels,
-    side === "short" && recipe.direction === "both" ? recipe.shortAddStack : recipe.addStack,
+    side === "short" && recipe.direction === "both" ? recipe.shortExitStack : recipe.exitStack,
     side,
-    "add",
-    "Add",
+    "exit",
+    "Exit",
     input,
   );
 }
@@ -348,19 +297,12 @@ function stackLevels(
   if (!stack) {
     return;
   }
-  addStackGroups(stack).forEach((leaves, group) => {
+  if (role !== "exit") {
+    return;
+  }
+  addStackGroups(stack).forEach((leaves) => {
     for (const leaf of leaves) {
       leafLevel(levels, leaf, side, role, title, input);
-    }
-    if (role !== "add") {
-      return;
-    }
-    const order = stack.orders?.[group];
-    const useFirst = group > 0 && order?.sameAsGroup1 !== false;
-    const sized = useFirst ? stack.orders?.[0] : order;
-    if (sized?.orderType === "limit") {
-      const limit = Number(String(sized.limitPrice).replace(/,/g, ""));
-      push(levels, side, "add", "Limit", limit);
     }
   });
 }
@@ -517,7 +459,6 @@ function breakevenLevel(
   const mark = since[since.length - 1]?.close ?? entry;
   const movedPct = side === "long" ? ((mark - entry) / entry) * 100 : ((entry - mark) / entry) * 100;
   if (movedPct + 1e-9 < activationPct) {
-    push(levels, side, "exit", "BE", moved(side, entry, activationPct, "profit"));
     return;
   }
   const stop = futuresBreakevenStop({
@@ -554,9 +495,6 @@ function trailedStop(
         stop = next;
       }
     }
-  }
-  if (stop == null && activePrice != null && activePrice > 0) {
-    return activePrice;
   }
   return stop;
 }

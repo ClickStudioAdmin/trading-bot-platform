@@ -222,10 +222,7 @@ const levels = conditionOrderLevels({
   tape: "5",
 });
 assert.equal(levels.some((row) => row.role === "exit" && row.title === "Long TP" && row.price === 120), true);
-assert.equal(
-  levels.some((row) => row.role === "add" && row.title === "Long Add" && row.price === 80 * 1.01),
-  true,
-);
+assert.equal(levels.some((row) => row.role === "add"), false);
 
 console.log("flex add replay checks passed");
 }

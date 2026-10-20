@@ -101,7 +101,7 @@ export function ReplayChartBar({
               onChange={(event) => onShowConditionOrders(event.target.checked)}
               className="mt-0"
             />
-            Show condition orders
+            Show Enabled Exits
           </label>
         ) : null}
       </div>
