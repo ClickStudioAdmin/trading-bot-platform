@@ -61,7 +61,10 @@ import {
 } from "@/lib/charts/desk-chart-view";
 import { indicatorAddDenial, researchTrialLine } from "@/lib/membership/entitlements";
 import { DESK_CANDLE_LIMIT, type CandleBar, type CandleVenue } from "@/lib/market/candles";
-import { DivergenceLinesPrimitive } from "@/lib/charts/divergence-lines";
+import {
+  DivergenceLinesPrimitive,
+  releaseDivergenceLines,
+} from "@/lib/charts/divergence-lines";
 import { GappedLinePrimitive, gappedLineRuns } from "@/lib/charts/gapped-line";
 import { rsiDivergenceSegments } from "@/lib/strategy/rsi-divergence";
 
@@ -529,6 +532,7 @@ export function DeskTradeChart({
               candleSeries.detachPrimitive(gap);
             }
           }
+          releaseDivergenceLines(candleSeries, row.priceLines, row.rsiLines);
         }
         for (const api of indicatorApis) {
           chart.removeSeries(api);

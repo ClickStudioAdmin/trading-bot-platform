@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AutoscaleInfo } from "lightweight-charts";
-import { DivergenceLinesPrimitive } from "@/lib/charts/divergence-lines";
+import {
+  DivergenceLinesPrimitive,
+  releaseDivergenceLines,
+} from "@/lib/charts/divergence-lines";
 import { GappedLinePrimitive, gappedLineRuns } from "@/lib/charts/gapped-line";
 import { rsiDivergenceSegments } from "@/lib/strategy/rsi-divergence";
 import {
@@ -1326,6 +1329,7 @@ export function ReplayPlayer({
               candleSeries.detachPrimitive(gap);
             }
           }
+          releaseDivergenceLines(candleSeries, row.priceLines, row.rsiLines);
         }
         for (const api of indicatorApis) {
           chart.removeSeries(api);
