@@ -52,8 +52,12 @@ export type ParamRow = { label: string; value: string };
 
 export type ParamGroup = { title?: string; rows: ParamRow[] };
 
-/** One condition inside a form-style group. */
-export type ParamCondition = { rows: ParamRow[] };
+/** One condition inside a form-style group. `join: "none"` stays in the group without an And. */
+export type ParamCondition = {
+  rows: ParamRow[];
+  title?: string;
+  join?: "and" | "none";
+};
 
 /**
  * Conditions grouped the same way as the bot form.
@@ -225,6 +229,30 @@ function whenLabel(value: string | null | undefined): string {
   return value === "lte" ? "At or below" : "At or above";
 }
 
+function retraceFieldRows(
+  spec:
+    | {
+        source?: string | null;
+        from?: string | null;
+        pct?: number | string | null;
+        lookback?: number | string | null;
+        timeframe?: string | null;
+      }
+    | null
+    | undefined,
+): ParamRow[] {
+  return [
+    { label: "Price source", value: priceSourceLabel(spec?.source) },
+    {
+      label: "From",
+      value: spec?.from === "low" ? "Low" : spec?.from === "high" ? "High" : "—",
+    },
+    { label: "Retrace %", value: num(spec?.pct) },
+    { label: "Lookback", value: num(spec?.lookback) },
+    { label: "Timeframe", value: timeframeLabel(spec?.timeframe) },
+  ];
+}
+
 function divergenceWhenLabel(when: string | null | undefined): string {
   if (when === "bearish") {
     return "Bearish";
@@ -343,11 +371,7 @@ function leafConditionRows(
   if (leaf.kind === "retrace") {
     return [
       { label: "Condition Type", value: "Retrace" },
-      { label: "Price source", value: priceSourceLabel(leaf.source) },
-      { label: "From", value: leaf.from === "low" ? "Low" : "High" },
-      { label: "Retrace %", value: num(leaf.pct) },
-      { label: "Lookback", value: num(leaf.lookback) },
-      { label: "Timeframe", value: timeframeLabel(leaf.timeframe) },
+      ...retraceFieldRows(leaf),
     ];
   }
   if (leaf.kind === "protection") {
@@ -619,6 +643,12 @@ function dcaSideEntry(
     lead.push(
       ...priceRows(
         shortLeg ? (recipe.shortArmTrigger ?? recipe.armTrigger) : recipe.armTrigger,
+      ),
+    );
+  } else if (startKind === "retrace") {
+    lead.push(
+      ...retraceFieldRows(
+        shortLeg ? (recipe.shortRetrace ?? recipe.retrace) : recipe.retrace,
       ),
     );
   } else if (startKind === "indicator" || startKind === "trend") {
@@ -940,6 +970,12 @@ function actionDraftRows(
   draft: HardExitDraft,
   side: "long" | "short",
 ): ParamRow[] | null {
+  if (draft.trigger === "retrace") {
+    return [
+      { label: "Condition Type", value: "Retrace" },
+      ...retraceFieldRows(draft),
+    ];
+  }
   if (isExitPriceRule(draft.trigger)) {
     return [];
   }
@@ -1188,6 +1224,9 @@ function perpsTriggerLabel(source: PerpsTemplateRecipe["entrySource"]): string {
   if (source === "retrace") {
     return "Retrace";
   }
+  if (source === "") {
+    return "—";
+  }
   return "Price cross";
 }
 
@@ -1230,6 +1269,79 @@ function perpsExitLevel(
   return optionalGroup(title, level != null, rows);
 }
 
+function addOrderSizeRows(
+  order: NonNullable<EntryStack["orders"]>[number],
+  quote: string,
+): ParamRow[] {
+  const size = order.size.trim();
+  if (size === "" || !(Number(size.replace(/,/g, "")) > 0)) {
+    return [];
+  }
+  const qty = order.sizeUnit === "qty";
+  const rows: ParamRow[] = [
+    { label: "Size", value: qty ? size : `${size} ${quote}` },
+    { label: "Unit", value: qty ? "Token qty" : quote },
+    { label: "Order", value: order.orderType === "limit" ? "Limit" : "Market" },
+  ];
+  if (order.orderType === "limit") {
+    rows.push({ label: "Limit price", value: num(order.limitPrice) });
+  }
+  return rows;
+}
+
+function orderForAddGroup(
+  orders: EntryStack["orders"],
+  index: number,
+): NonNullable<EntryStack["orders"]>[number] | null {
+  const order = orders?.[index];
+  if (!order) {
+    return null;
+  }
+  if (index > 0 && order.sameAsGroup1 !== false) {
+    return orders?.[0] ?? order;
+  }
+  return order;
+}
+
+function perpsAddSections(
+  stack: EntryStack | null | undefined,
+  side: "long" | "short",
+  quote: string,
+): { groups: ParamGroup[]; stack?: ParamStack } {
+  const leaves = stack?.leaves ?? [];
+  if (leaves.length === 0) {
+    return {
+      groups: [
+        {
+          rows: perpsAddOrderSettingRows(stack).map((row) => ({
+            label: row.label,
+            value: row.value?.trim() || "Off",
+          })),
+        },
+      ],
+    };
+  }
+  const groups = conditionStack(
+    null,
+    leaves,
+    stack?.joins ?? [],
+    side,
+    "flex",
+    quote,
+  ).map((conditions, index) => {
+    const order = orderForAddGroup(stack?.orders, index);
+    const rows = order ? addOrderSizeRows(order, quote) : [];
+    if (rows.length === 0) {
+      return conditions;
+    }
+    return [
+      ...conditions,
+      { title: "Position Sizing", join: "none" as const, rows },
+    ];
+  });
+  return { groups: [], stack: { groups } };
+}
+
 function perpsEntry(
   recipe: PerpsTemplateRecipe,
   side: "long" | "short",
@@ -1257,9 +1369,9 @@ function perpsEntry(
         divergence: start?.divergence,
       }),
     );
-  } else if (recipe.entrySource === "webhook") {
-    lead.push({ label: "Webhook", value: "Not set" });
-  } else {
+  } else if (recipe.entrySource === "retrace") {
+    lead.push(...retraceFieldRows(recipe.retrace));
+  } else if (recipe.entrySource === "price") {
     lead.push(
       { label: "Price source", value: perpsPriceSource(recipe.triggerBy) },
       { label: "Compare", value: whenLabel(recipe.triggerCompare) },
@@ -1357,6 +1469,7 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
                 triggerPrice: String(recipe.shortEntry.triggerPrice),
                 skipIfOpen: recipe.shortEntry.skipIfOpen,
                 indicator: recipe.shortEntry.indicator,
+                retrace: recipe.shortEntry.retrace ?? null,
                 confirm: recipe.shortEntry.confirm,
                 entryStack: recipe.shortEntry.entryStack,
               },
@@ -1378,18 +1491,13 @@ function perpsSections(recipe: PerpsTemplateRecipe): ParamSection[] {
       sections.push({
         title:
           addSide === "short" ? "Short Additional Orders" : "Long Additional Orders",
-        groups: [
-          {
-            rows: perpsAddOrderSettingRows(
-              addSide === "short" && recipe.direction === "both"
-                ? recipe.shortEntry?.addStack
-                : recipe.addStack,
-            ).map((row) => ({
-              label: row.label,
-              value: row.value?.trim() || "Off",
-            })),
-          },
-        ],
+        ...perpsAddSections(
+          addSide === "short" && recipe.direction === "both"
+            ? recipe.shortEntry?.addStack
+            : recipe.addStack,
+          addSide,
+          quote,
+        ),
       });
     }
   }
