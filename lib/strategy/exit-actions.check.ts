@@ -1204,7 +1204,57 @@ const trailFired = planExitClaims({
 });
 assert.equal(trailFired.claims.length, 1);
 assert.equal(trailFired.claims[0]?.qty, 1);
+assert.equal(trailFired.claims[0]?.price, 105);
 assert.equal(trailFired.lots.find((lot) => lot.id === "b")?.qty, 1);
+
+const shortTrail: StoredExitAction = {
+  ...lotTrail,
+  trailingDistance: null,
+  trailingPct: 1,
+  trailingTriggerPct: 5,
+};
+const shortLots = [
+  { id: "first", qty: 4.73, price: 105.69 },
+  { id: "add", qty: 4.682, price: 106.78 },
+];
+const shortArmed = planExitClaims({
+  actions: [shortTrail],
+  runtime: emptyExitRuntime(),
+  lots: shortLots,
+  side: "short",
+  mark: 101,
+  last: 101,
+  favorable: 100,
+  adverse: 102,
+  entryPrice: 106.23,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(shortArmed.claims.length, 0, "the arming bar does not fill");
+assert.equal(shortArmed.runtime.arms.trail?.lots?.add?.peak, 100);
+assert.equal(shortArmed.runtime.arms.trail?.lots?.first?.peak, 100);
+const shortBounce = planExitClaims({
+  actions: [shortTrail],
+  runtime: shortArmed.runtime,
+  lots: shortLots,
+  side: "short",
+  mark: 104.39,
+  last: 104.39,
+  favorable: 103,
+  adverse: 105,
+  entryPrice: 106.23,
+  nowMs: 2,
+  conditionTrue: {},
+});
+assert.equal(shortBounce.claims.length, 2);
+assert.ok(
+  shortBounce.claims.every((claim) => (claim.price ?? 0) < 104.39),
+  "a short trail sits above the low and fills when price trades back up through it",
+);
+assert.deepEqual(
+  shortBounce.claims.map((claim) => claim.entry),
+  [105.69, 106.78],
+);
 
 const lotBreakeven: StoredExitAction = {
   id: "be",

@@ -70,6 +70,7 @@ import {
 } from "./model";
 import { fillSentence, skippedEntrySentence } from "./events";
 import {
+  claimSlice,
   dcaClassicActions,
   emptyExitRuntime,
   evaluateExitActions,
@@ -1113,12 +1114,12 @@ export async function replayDcaPlaybook(input: {
         }
         for (const claim of settled.claims) {
           const current = legs[side];
-          const take = Math.min(current.qty, claim.qty);
-          if (!(take > 0)) {
+          const closed = claimSlice(current, claim, price);
+          if (!closed) {
             continue;
           }
-          const fee = feeUsdt(take, price, input.feeRate);
-          const pnl = unrealized(side, take, current.entry, price) - fee;
+          const fee = feeUsdt(closed.take, closed.fill, input.feeRate);
+          const pnl = unrealized(side, closed.take, closed.basis, closed.fill) - fee;
           realized += pnl;
           trades += 1;
           if (pnl > 0) {
@@ -1127,27 +1128,25 @@ export async function replayDcaPlaybook(input: {
           } else {
             grossLoss += Math.abs(pnl);
           }
-          remember(
-            {
-              atMs: bar.timeMs,
-              action: "flatten",
-              side,
-              qty: take,
-              price,
-              feeUsdt: fee,
-              realizedUsdt: pnl,
-              reason: claimFillReason(claim.kind),
-            },
-          );
-          const left = current.qty - take;
-          if (!(left > 1e-8)) {
+          remember({
+            atMs: bar.timeMs,
+            action: "flatten",
+            side,
+            qty: closed.take,
+            price: closed.fill,
+            feeUsdt: fee,
+            realizedUsdt: pnl,
+            reason: claimFillReason(claim.kind),
+            ...(claim.entry != null && claim.entry > 0 ? { basisPrice: claim.entry } : {}),
+          });
+          if (!(closed.left > 1e-8)) {
             legs[side] = emptyLeg();
             exitLots[side] = [];
             exitArms[side] = emptyExitRuntime();
             closedThisBar = true;
             break;
           }
-          legs[side] = { ...current, qty: left };
+          legs[side] = { ...current, qty: closed.left, entry: closed.nextEntry };
         }
       }
     }
