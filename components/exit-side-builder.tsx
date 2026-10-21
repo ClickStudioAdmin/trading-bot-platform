@@ -31,6 +31,7 @@ import {
 import type { FuturesSide } from "@/lib/futures/model";
 import {
   clauseOrGroups,
+  clauseReference,
   clauseScope,
   customExitClause,
   emptyExitClause,
@@ -211,6 +212,7 @@ export function ExitSideBuilder({
   actionName,
   prices = EMPTY_EXIT_PRICES,
   priceStyle = "dca",
+  stopIsPercent = false,
 }: {
   clauses: ExitBuilderClause[];
   onChange: (next: ExitBuilderClause[]) => void;
@@ -231,6 +233,8 @@ export function ExitSideBuilder({
   prices?: ExitSidePrices;
   /** Later cards use this desk's price fields. */
   priceStyle?: ExitPriceStyle;
+  /** The first stop card is a percent stop, so it shows Execution. */
+  stopIsPercent?: boolean;
 }) {
   const normalized = useMemo(
     () => clauses.map((clause) => normalizeExitClause(clause)),
@@ -336,6 +340,26 @@ export function ExitSideBuilder({
       ],
     }));
   }
+  function showExecution(clause: ExitBuilderClause, firstOfKind: boolean): boolean {
+    if (clause.kind === "trailing_stop" || clause.kind === "breakeven") {
+      return true;
+    }
+    if (clause.kind !== "stop_loss") {
+      return false;
+    }
+    if (!firstOfKind) {
+      const method = clause.levels?.method;
+      if (method === "price") {
+        return false;
+      }
+      if (method === "percent") {
+        return true;
+      }
+      return priceStyle === "dca";
+    }
+    return priceStyle === "dca" || stopIsPercent;
+  }
+
   function setScope(clause: ExitBuilderClause, kind: ExitScope["kind"]) {
     const next: ExitScope =
       kind === "percent"
@@ -493,6 +517,22 @@ export function ExitSideBuilder({
               ) : null}
               {clause.kind !== "" ? (
                 <div className={`${exitCardGrid} border-t border-line pt-4`}>
+                  {showExecution(clause, firstOfKind) ? (
+                    <label className={labelClass}>
+                      <HintLabel text="Execution" />
+                      <AppSelect
+                        value={clauseReference(clause)}
+                        onChange={(event) => {
+                          const reference = event.target.value === "lot" ? "lot" : "average";
+                          patch(clause.key, (current) => ({ ...current, reference }));
+                        }}
+                        className={fieldClass}
+                      >
+                        <option value="lot">Per lot</option>
+                        <option value="average">Average</option>
+                      </AppSelect>
+                    </label>
+                  ) : null}
                   <label className={labelClass}>
                     <HintLabel text="Applies To" />
                     <AppSelect
@@ -503,8 +543,10 @@ export function ExitSideBuilder({
                       className={fieldClass}
                     >
                       <option value="all">Entire Position</option>
-                      <option value="percent">Percentage of Position</option>
-                      <option value="qty">Quantity</option>
+                      {scope.kind === "percent" ? (
+                        <option value="percent">Percentage of Position</option>
+                      ) : null}
+                      {scope.kind === "qty" ? <option value="qty">Quantity</option> : null}
                       <option value="fills">Fills in profit</option>
                       <option value="remainder" disabled={remainderUsed && scope.kind !== "remainder"}>
                         Remainder

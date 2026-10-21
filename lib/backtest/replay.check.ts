@@ -541,6 +541,66 @@ const sizedBoth = await replayPerpsPriceCross({
 assert.equal(sizedBoth.orders.find((row) => row.action === "buy")?.qty, 1);
 assert.equal(sizedBoth.orders.find((row) => row.action === "sell")?.qty, 3);
 
+function breakevenAction(reference?: "lot") {
+  return {
+    id: "be",
+    kind: "breakeven" as const,
+    scope: { kind: "all" as const },
+    ...(reference ? { reference } : {}),
+    groups: [],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+    breakevenActivationPct: 1,
+    breakevenOffsetPct: 0,
+  };
+}
+const breakevenBars = [
+  { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+  { timeMs: 2_000, open: 102, high: 102, low: 102, close: 102 },
+  { timeMs: 3_000, open: 99, high: 99, low: 99, close: 99 },
+];
+for (const reference of [undefined, "lot"] as const) {
+  const run = await replayPerpsPriceCross({
+    bars: breakevenBars,
+    recipe: { ...base, tpsl: null, exitActions: [breakevenAction(reference)] },
+    feeRate: 0,
+    startingUsdt: 10_000,
+  });
+  assert.equal(run.orders.at(-1)?.reason, "stop", reference ?? "average");
+}
+const wickStop = await replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 98, high: 98, low: 90, close: 98 },
+  ],
+  recipe: {
+    ...base,
+    tpsl: null,
+    exitActions: [
+      {
+        id: "sl",
+        kind: "stop_loss",
+        scope: { kind: "all" },
+        reference: "lot",
+        groups: [],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: 5,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ],
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(wickStop.orders.some((row) => row.action === "flatten"), false);
+
 console.log("backtest replay checks passed");
 }
 

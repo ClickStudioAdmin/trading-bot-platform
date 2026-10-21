@@ -706,6 +706,82 @@ assert.equal(
   actionCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
   "Fills at least 20% in profit",
 );
+const perLotCards = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "trail",
+        kind: "trailing_stop",
+        scope: { kind: "all" },
+        reference: "lot",
+        groups: [{ anchor: { trigger: "trail" }, rows: [] }],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+        trailingPct: 2,
+        trailingTriggerPct: 1,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+assert.equal(
+  perLotCards?.stacks?.[0]?.rows?.find((row) => row.label === "Execution")?.value,
+  "Per lot",
+);
+assert.equal(
+  perLotCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
+  "Entire Position",
+);
+const averageTrail = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "trail",
+        kind: "trailing_stop",
+        scope: { kind: "all" },
+        groups: [{ anchor: { trigger: "trail" }, rows: [] }],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+        trailingPct: 2,
+        trailingTriggerPct: 1,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+assert.equal(
+  averageTrail?.stacks?.[0]?.rows?.find((row) => row.label === "Execution")?.value,
+  "Average",
+);
+const priceStopList = recipeParamSections(
+  dcaWithExits({
+    exitActions: JSON.stringify([
+      {
+        id: "sl",
+        kind: "stop_loss",
+        scope: { kind: "all" },
+        reference: "lot",
+        groups: [{ anchor: { trigger: "stop" }, rows: [] }],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: null,
+        stopLossPrice: 90,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ]),
+  }),
+).find((section) => section.title === "Long Exit Conditions");
+assert.equal(
+  priceStopList?.stacks?.[0]?.rows?.some((row) => row.label === "Execution"),
+  false,
+);
 assert.equal(
   recipeParamRows(
     dcaWithExits({

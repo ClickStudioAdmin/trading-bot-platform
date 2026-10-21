@@ -1165,7 +1165,12 @@ export async function runDcaPlaybookTick(input?: {
           const full = exitClaimsCover(settled.claims, open.qty);
           if (account.mode === "paper" || full) {
             actionExit = true;
-            const reason = settled.claims.some((claim) => claim.kind === "stop_loss")
+            const reason = settled.claims.some(
+              (claim) =>
+                claim.kind === "stop_loss" ||
+                claim.kind === "breakeven" ||
+                claim.kind === "trailing_stop",
+            )
               ? "stop_loss"
               : settled.claims.some((claim) => claim.kind === "take_profit")
                 ? "take_profit"
@@ -1197,6 +1202,8 @@ export async function runDcaPlaybookTick(input?: {
             if (full) {
               open.qty = 0;
             }
+          } else {
+            await saveExitRuntime(open.id, settled.runtime);
           }
         }
       } else if (open && open.qty > 0 && prices.mark != null && prices.mark > 0) {

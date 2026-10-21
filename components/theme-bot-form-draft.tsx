@@ -3190,6 +3190,7 @@ export function ThemeBotFormDraft() {
               renderTrailingStop={(slot) => themeTrailingFields("primary", slot)}
               renderStopLoss={(slot) => themeStopFields("primary", slot)}
               renderBreakeven={(slot) => themeBreakevenFields("primary", slot)}
+              stopIsPercent={desk === "dca" || slMethod === "percent"}
             />
           </BotFormStep>
         ) : null}
@@ -3230,6 +3231,10 @@ export function ThemeBotFormDraft() {
               }
               renderBreakeven={(slot) =>
                 themeBreakevenFields(themeBothExits ? "short" : "primary", slot)
+              }
+              stopIsPercent={
+                desk === "dca" ||
+                (themeBothExits ? shortClassic.slMethod : slMethod) === "percent"
               }
             />
           </BotFormStep>

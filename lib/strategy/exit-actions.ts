@@ -15,6 +15,7 @@ import {
   clauseHasPriceRule,
   clauseLevels,
   clauseOrGroups,
+  clauseReference,
   clauseScope,
   classicExitClause,
   customExitClause,
@@ -29,6 +30,7 @@ import {
   type TrailActivationKind,
   type ExitBuilderClause,
   type ExitOrGroup,
+  type ExitReference,
   type ExitRepeatLevels,
   type ExitScope,
 } from "@/lib/strategy/exit-clauses";
@@ -52,6 +54,8 @@ export type StoredExitAction = {
   id: string;
   kind: ExitActionKind;
   scope: SavedExitScope;
+  /** Absent on a card saved before Execution existed. That card stays Average. */
+  reference?: ExitReference;
   groups: ExitConditionGroup[];
   takeProfitPct: number | null;
   takeProfitPrice: number | null;
@@ -217,11 +221,19 @@ export type ExitLot = {
   price: number;
 };
 
+export type ExitLotArm = {
+  peak: number | null;
+  /** This fill has reached its breakeven activation. */
+  breakeven: boolean;
+};
+
 export type ExitArmState = {
   armedAt: number | null;
   peak: number | null;
   condition: boolean;
   scopeLive: boolean;
+  /** Per-lot peak and breakeven latch. Absent when the card uses Average. */
+  lots?: Record<string, ExitLotArm>;
 };
 
 export type ExitRuntime = {
@@ -464,6 +476,7 @@ export function exitActionsFromJson(value: unknown): StoredExitAction[] | null {
       id: String(row.id ?? "").trim() || `exit-${actions.length + 1}`,
       kind,
       scope,
+      ...(row.reference === "lot" ? { reference: "lot" as const } : {}),
       groups,
       takeProfitPct: positiveOrNull(row.takeProfitPct),
       takeProfitPrice: positiveOrNull(row.takeProfitPrice),
@@ -856,6 +869,22 @@ function repeatPrices(
   return blank;
 }
 
+function clauseSavesLotReference(
+  clause: ExitBuilderClause,
+  priced: { stopLossPct: number | null; stopLossPrice: number | null },
+): boolean {
+  if (clauseReference(clause) !== "lot") {
+    return false;
+  }
+  if (clause.kind === "trailing_stop" || clause.kind === "breakeven") {
+    return true;
+  }
+  if (clause.kind !== "stop_loss") {
+    return false;
+  }
+  return priced.stopLossPrice == null && priced.stopLossPct != null;
+}
+
 /** Null when the side still belongs on the classic columns. */
 export function exitActionsForSave(
   clauses: readonly ExitBuilderClause[],
@@ -863,7 +892,20 @@ export function exitActionsForSave(
   style?: "flex" | "dca" | null,
 ): StoredExitAction[] | null {
   const trailingCard = clauses.some((clause) => clause.kind === "trailing_stop");
-  if (exitSideUsesColumns(clauses) && (!trailingCard || trailFitsColumns(prices, style))) {
+  const lotReference = clauses.some((clause, index) => {
+    if (clause.kind === "") {
+      return false;
+    }
+    const seenCount = clauses
+      .slice(0, index + 1)
+      .filter((item) => item.kind === clause.kind).length;
+    return clauseSavesLotReference(clause, pricesFor(clause, seenCount, prices));
+  });
+  if (
+    exitSideUsesColumns(clauses) &&
+    !lotReference &&
+    (!trailingCard || trailFitsColumns(prices, style))
+  ) {
     return null;
   }
   const seen = new Map<string, number>();
@@ -880,12 +922,14 @@ export function exitActionsForSave(
     }
     const kind: ExitActionKind = clause.kind === "custom" ? "close" : clause.kind;
     const levels = seenCount > 1 && isClassicExitKind(clause.kind) ? clauseLevels(clause) : undefined;
+    const priced = pricesFor(clause, seenCount, prices);
     actions.push({
       id: clause.key,
       kind,
       scope,
+      ...(clauseSavesLotReference(clause, priced) ? { reference: "lot" as const } : {}),
       groups: groupsOf(clause),
-      ...pricesFor(clause, seenCount, prices),
+      ...priced,
       ...(levels ? { levels } : {}),
     });
   }
@@ -990,6 +1034,7 @@ export function clausesFromExitActions(
       rows,
       orGroups,
       scope: action.scope,
+      reference: action.reference === "lot" ? "lot" : "average",
       ownPct: null,
       ownDistance: null,
       levels,
@@ -1069,6 +1114,43 @@ function pnlPct(side: FuturesSide, entry: number, mark: number): number | null {
   }
   const raw = ((mark - entry) / entry) * 100;
   return side === "long" ? raw : -raw;
+}
+
+/** A percent stop, breakeven, or trailing stop that prices each fill on its own. */
+export function actionUsesLotReference(action: StoredExitAction): boolean {
+  if (action.reference !== "lot") {
+    return false;
+  }
+  if (action.kind === "trailing_stop" || action.kind === "breakeven") {
+    return true;
+  }
+  if (action.kind !== "stop_loss") {
+    return false;
+  }
+  if (action.stopLossPrice != null || action.levels?.method === "price") {
+    return false;
+  }
+  return action.stopLossPct != null || action.levels?.method === "percent";
+}
+
+/** Parameter-list label. Null when this card has no Execution choice. */
+export function executionLabel(action: StoredExitAction): string | null {
+  if (action.kind === "trailing_stop" || action.kind === "breakeven") {
+    return action.reference === "lot" ? "Per lot" : "Average";
+  }
+  if (action.kind !== "stop_loss") {
+    return null;
+  }
+  if (action.stopLossPrice != null && action.stopLossPct == null) {
+    return null;
+  }
+  if (action.levels?.method === "price") {
+    return null;
+  }
+  if (action.stopLossPct == null && action.levels?.method !== "percent") {
+    return null;
+  }
+  return action.reference === "lot" ? "Per lot" : "Average";
 }
 
 function armOf(runtime: ExitRuntime, id: string): ExitArmState {
@@ -1190,6 +1272,8 @@ export function evaluateExitActions(input: {
     side: input.side,
     mark: input.mark,
     last: input.last,
+    favorable: input.favorable,
+    adverse: input.adverse,
     entryPrice: input.entryPrice,
     nowMs: input.nowMs,
     claims: settled.claims,
@@ -1390,6 +1474,101 @@ function trailReady(input: {
   return input.side === "long" ? input.last >= activation : input.last <= activation;
 }
 
+type PriceFire = {
+  fire: boolean;
+  peak: number | null;
+  /** Fills whose own level fired. Null means every eligible fill. */
+  lotIds: string[] | null;
+  lots: Record<string, ExitLotArm> | null;
+};
+
+function lotReferenceFires(input: {
+  action: StoredExitAction;
+  side: FuturesSide;
+  mark: number;
+  last: number;
+  favorable?: number;
+  adverse?: number;
+  lots: readonly ExitLot[];
+  arm: ExitArmState;
+}): PriceFire {
+  const { action, side } = input;
+  const favorable = input.favorable ?? input.last;
+  const adverse = input.adverse ?? input.mark;
+  const trailAdverse = input.adverse ?? input.last;
+  const open = input.lots.filter((lot) => lot.qty > QTY_EPS);
+  const previous = input.arm.lots ?? {};
+  const next: Record<string, ExitLotArm> = {};
+  const hit: string[] = [];
+  if (action.kind === "stop_loss") {
+    const pct = action.stopLossPct;
+    for (const lot of open) {
+      const pnl = pct != null ? pnlPct(side, lot.price, input.mark) : null;
+      if (pnl != null && pnl <= -pct!) {
+        hit.push(lot.id);
+      }
+    }
+    return { fire: hit.length > 0, peak: input.arm.peak, lotIds: hit, lots: null };
+  }
+  if (action.kind === "breakeven") {
+    const pct = action.breakevenActivationPct;
+    const offset = action.breakevenOffsetPct ?? 0;
+    for (const lot of open) {
+      const prior = previous[lot.id] ?? { peak: null, breakeven: false };
+      let latched = prior.breakeven;
+      if (!latched && pct != null && pct > 0) {
+        const pnl = pnlPct(side, lot.price, input.mark);
+        if (pnl != null && pnl >= pct) {
+          latched = true;
+        }
+      }
+      next[lot.id] = { peak: null, breakeven: latched };
+      if (!prior.breakeven || !latched) {
+        continue;
+      }
+      const stop = dcaBreakevenPrice({ side, basisPrice: lot.price, offsetPct: offset });
+      const fired = side === "long" ? adverse <= stop : adverse >= stop;
+      if (fired) {
+        hit.push(lot.id);
+      }
+    }
+    return { fire: hit.length > 0, peak: input.arm.peak, lotIds: hit, lots: next };
+  }
+  if (action.kind !== "trailing_stop") {
+    return { fire: false, peak: input.arm.peak, lotIds: null, lots: null };
+  }
+  let best: number | null = null;
+  for (const lot of open) {
+    const prior = previous[lot.id] ?? { peak: null, breakeven: false };
+    if (!trailReady({ action, side, last: favorable, entryPrice: lot.price })) {
+      next[lot.id] = prior;
+      continue;
+    }
+    const distance = trailDistance(action, input.last);
+    if (distance == null) {
+      next[lot.id] = prior;
+      continue;
+    }
+    const fresh = prior.peak == null;
+    const peak = fresh
+      ? favorable
+      : side === "long"
+        ? Math.max(prior.peak ?? favorable, favorable)
+        : Math.min(prior.peak ?? favorable, favorable);
+    next[lot.id] = { peak, breakeven: false };
+    best = best == null ? peak : side === "long" ? Math.max(best, peak) : Math.min(best, peak);
+    if (fresh) {
+      continue;
+    }
+    const stop = side === "long" ? peak - distance : peak + distance;
+    const fired = side === "long" ? trailAdverse <= stop : trailAdverse >= stop;
+    if (fired) {
+      hit.push(lot.id);
+    }
+  }
+  return { fire: hit.length > 0, peak: best ?? input.arm.peak, lotIds: hit, lots: next };
+}
+
 function priceFires(input: {
   action: StoredExitAction;
   side: FuturesSide;
@@ -1400,49 +1579,68 @@ function priceFires(input: {
   /** Worst price on the bar. Tests whether the trail filled. Defaults to last. */
   adverse?: number;
   entryPrice: number | null;
+  lots?: readonly ExitLot[];
   arm: ExitArmState;
   justArmed: boolean;
-}): { fire: boolean; peak: number | null } {
+}): PriceFire {
+  if (actionUsesLotReference(input.action)) {
+    return lotReferenceFires({
+      action: input.action,
+      side: input.side,
+      mark: input.mark,
+      last: input.last,
+      favorable: input.favorable,
+      adverse: input.adverse,
+      lots: input.lots ?? [],
+      arm: input.arm,
+    });
+  }
   const { action, side, arm } = input;
+  const average = (fire: boolean, peak: number | null): PriceFire => ({
+    fire,
+    peak,
+    lotIds: null,
+    lots: null,
+  });
   if (action.kind === "close") {
-    return { fire: false, peak: arm.peak };
+    return average(false, arm.peak);
   }
   if (action.kind === "take_profit") {
     if (action.takeProfitPrice != null) {
       const fire =
         side === "long" ? input.mark >= action.takeProfitPrice : input.mark <= action.takeProfitPrice;
-      return { fire, peak: arm.peak };
+      return average(fire, arm.peak);
     }
     const entry = input.entryPrice;
     const pct = action.takeProfitPct;
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
-    return { fire: pnl != null && pnl >= pct!, peak: arm.peak };
+    return average(pnl != null && pnl >= pct!, arm.peak);
   }
   if (action.kind === "breakeven") {
     const pct = action.breakevenActivationPct;
     const entry = input.entryPrice;
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
-    return { fire: pnl != null && pct != null && pnl >= pct, peak: arm.peak };
+    return average(pnl != null && pct != null && pnl >= pct, arm.peak);
   }
   if (action.kind === "stop_loss") {
     if (action.stopLossPrice != null) {
       const fire =
         side === "long" ? input.mark <= action.stopLossPrice : input.mark >= action.stopLossPrice;
-      return { fire, peak: arm.peak };
+      return average(fire, arm.peak);
     }
     const entry = input.entryPrice;
     const pct = action.stopLossPct;
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
-    return { fire: pnl != null && pnl <= -pct!, peak: arm.peak };
+    return average(pnl != null && pnl <= -pct!, arm.peak);
   }
   const peakRef = input.favorable ?? input.last;
   const hitRef = input.adverse ?? input.last;
   if (!trailReady({ action, side, last: peakRef, entryPrice: input.entryPrice })) {
-    return { fire: false, peak: arm.peak };
+    return average(false, arm.peak);
   }
   const distance = trailDistance(action, input.last);
   if (distance == null) {
-    return { fire: false, peak: arm.peak };
+    return average(false, arm.peak);
   }
   const peak = arm.peak == null || input.justArmed
     ? peakRef
@@ -1450,11 +1648,11 @@ function priceFires(input: {
       ? Math.max(arm.peak, peakRef)
       : Math.min(arm.peak, peakRef);
   if (arm.peak == null || input.justArmed) {
-    return { fire: false, peak };
+    return average(false, peak);
   }
   const stop = side === "long" ? peak - distance : peak + distance;
   const fire = side === "long" ? hitRef <= stop : hitRef >= stop;
-  return { fire, peak };
+  return average(fire, peak);
 }
 
 function takeQty(lots: ExitLot[], ids: Set<string>, qty: number): number {
@@ -1471,6 +1669,19 @@ function takeQty(lots: ExitLot[], ids: Set<string>, qty: number): number {
     left -= used;
   }
   return qty - left;
+}
+
+function claimReason(kind: ExitActionKind): ExitClaim["reason"] {
+  if (kind === "close") {
+    return "close";
+  }
+  if (kind === "trailing_stop") {
+    return "trailing_stop";
+  }
+  if (kind === "take_profit") {
+    return "take_profit";
+  }
+  return "stop_loss";
 }
 
 /**
@@ -1507,7 +1718,7 @@ export function planExitClaims(input: {
     return { claims: [], runtime, lots: book, breakeven: null };
   }
 
-  const firing = new Map<string, { peak: number | null; edge: boolean }>();
+  const firing = new Map<string, { peak: number | null; edge: boolean; lotIds: string[] | null }>();
   for (const action of input.actions) {
     const previous = armOf(input.runtime, action.id);
     const condition = input.conditionTrue[action.id] === true;
@@ -1521,6 +1732,7 @@ export function planExitClaims(input: {
       peak: previous.peak,
       condition: confirm,
       scopeLive: previous.scopeLive,
+      ...(previous.lots ? { lots: previous.lots } : {}),
     };
     if (action.kind === "close") {
       const eligible = eligibleLots(action, book, input.side, input.mark);
@@ -1531,11 +1743,11 @@ export function planExitClaims(input: {
           : condition && !previous.condition;
       next.scopeLive = live;
       if (edge) {
-        firing.set(action.id, { peak: null, edge: true });
+        firing.set(action.id, { peak: null, edge: true, lotIds: null });
       }
     } else if (!needsPrice) {
       if (confirm && !previous.condition) {
-        firing.set(action.id, { peak: null, edge: true });
+        firing.set(action.id, { peak: null, edge: true, lotIds: null });
       }
     } else if (armed) {
       const hit = priceFires({
@@ -1546,12 +1758,47 @@ export function planExitClaims(input: {
         favorable: input.favorable,
         adverse: input.adverse,
         entryPrice: input.entryPrice,
-        arm: { ...previous, peak: justArmed ? null : previous.peak },
+        lots: book,
+        arm: {
+          ...previous,
+          peak: justArmed ? null : previous.peak,
+          lots: justArmed ? {} : previous.lots,
+        },
         justArmed,
       });
       next.peak = hit.peak;
-      if (hit.fire && confirm) {
-        firing.set(action.id, { peak: hit.peak, edge: false });
+      if (hit.lots) {
+        const live = new Set(book.map((lot) => lot.id));
+        const profitIds =
+          action.kind === "breakeven" && action.scope.kind === "fills"
+            ? new Set(
+                eligibleLots(
+                  action,
+                  book,
+                  input.side,
+                  input.favorable ?? input.mark,
+                ).map((lot) => lot.id),
+              )
+            : null;
+        const kept: Record<string, ExitLotArm> = {};
+        for (const [id, state] of Object.entries(hit.lots)) {
+          if (!live.has(id)) {
+            continue;
+          }
+          const wasLatched = previous.lots?.[id]?.breakeven === true;
+          kept[id] =
+            profitIds && state.breakeven && !wasLatched && !profitIds.has(id)
+              ? { ...state, breakeven: false }
+              : state;
+        }
+        next.lots = kept;
+      }
+      const lotIds =
+        hit.lotIds == null
+          ? null
+          : hit.lotIds.filter((id) => next.lots?.[id]?.breakeven !== false || action.kind !== "breakeven");
+      if (hit.fire && confirm && (lotIds == null || lotIds.length > 0)) {
+        firing.set(action.id, { peak: hit.peak, edge: false, lotIds });
       }
     }
     runtime.arms[action.id] = next;
@@ -1565,7 +1812,10 @@ export function planExitClaims(input: {
     if (action.scope.kind !== "all" && action.scope.kind !== "fills") {
       continue;
     }
-    const eligible = eligibleLots(action, book, input.side, input.mark);
+    const allowed = firing.get(action.id)?.lotIds;
+    const eligible = eligibleLots(action, book, input.side, input.mark).filter(
+      (lot) => allowed == null || allowed.includes(lot.id),
+    );
     for (const lot of eligible) {
       reserved.add(lot.id);
     }
@@ -1581,7 +1831,7 @@ export function planExitClaims(input: {
     if (!firing.has(action.id)) {
       continue;
     }
-    if (action.kind === "breakeven") {
+    if (action.kind === "breakeven" && !actionUsesLotReference(action)) {
       if (
         !input.breakevenDone &&
         breakeven == null &&
@@ -1604,8 +1854,16 @@ export function planExitClaims(input: {
       continue;
     }
     const remaining = book.filter((lot) => lot.qty > QTY_EPS);
-    const eligible = eligibleLots(action, remaining, input.side, input.mark).filter(
-      (lot) => action.kind === "stop_loss" || !reserved.has(lot.id),
+    const lotIds = firing.get(action.id)?.lotIds ?? null;
+    const perLotBreakeven = action.kind === "breakeven" && actionUsesLotReference(action);
+    const eligible = (
+      perLotBreakeven
+        ? remaining
+        : eligibleLots(action, remaining, input.side, input.mark)
+    ).filter(
+      (lot) =>
+        (lotIds == null || lotIds.includes(lot.id)) &&
+        (action.kind === "stop_loss" || perLotBreakeven || !reserved.has(lot.id)),
     );
     const unclaimed = lotQty(eligible);
     const wanted = floorToStep(scopeQty(action, eligible, unclaimed), stepQty);
@@ -1625,7 +1883,7 @@ export function planExitClaims(input: {
       actionId: action.id,
       kind: action.kind,
       qty,
-      reason: action.kind === "close" ? "close" : action.kind,
+      reason: claimReason(action.kind),
     });
   }
   return {
@@ -1778,6 +2036,8 @@ export function describeExitBook(input: {
   side: FuturesSide;
   mark: number;
   last: number;
+  favorable?: number;
+  adverse?: number;
   entryPrice: number | null;
   nowMs: number;
   claims: readonly ExitClaim[];
@@ -1810,18 +2070,23 @@ export function describeExitBook(input: {
       side: input.side,
       mark: input.mark,
       last: input.last,
+      favorable: input.favorable,
+      adverse: input.adverse,
       entryPrice: input.entryPrice,
+      lots: input.lots,
       arm,
       justArmed: false,
     });
     const activationMet =
       action.kind === "trailing_stop"
-        ? trailReady({
-            action,
-            side: input.side,
-            last: input.last,
-            entryPrice: input.entryPrice,
-          })
+        ? actionUsesLotReference(action)
+          ? Object.values(arm.lots ?? {}).some((lot) => lot.peak != null)
+          : trailReady({
+              action,
+              side: input.side,
+              last: input.last,
+              entryPrice: input.entryPrice,
+            })
         : null;
     const priceMet = action.kind === "close" ? null : hit.fire;
     const groups = action.groups.map((group) => {
@@ -1866,6 +2131,15 @@ export function describeExitBook(input: {
       protectingQty = appliesQty;
     } else if (action.kind === "trailing_stop" && arm.armedAt != null) {
       status = "armed";
+    }
+    if (action.kind === "breakeven" && actionUsesLotReference(action) && claimQty <= QTY_EPS) {
+      const latchedQty = input.lots.reduce((sum, lot) => {
+        return arm.lots?.[lot.id]?.breakeven ? sum + Math.max(0, lot.qty) : sum;
+      }, 0);
+      if (latchedQty > QTY_EPS) {
+        status = "protecting";
+        protectingQty = latchedQty;
+      }
     }
     if (
       protectingQty > QTY_EPS &&
@@ -2044,6 +2318,21 @@ export function exitBookForClassic(input: {
   });
 }
 
+/** Drop closed coins from the oldest fills. */
+export function reduceOpenLots(lots: readonly ExitLot[], qty: number): ExitLot[] {
+  let left = qty;
+  const next = lots.map((lot) => ({ ...lot }));
+  for (const lot of next) {
+    if (left <= QTY_EPS) {
+      break;
+    }
+    const used = Math.min(lot.qty, left);
+    lot.qty -= used;
+    left -= used;
+  }
+  return next.filter((lot) => lot.qty > QTY_EPS);
+}
+
 /** Rebuild open lots from entry fills minus later flatten orders. */
 export function openLotsFromFills(
   fills: readonly { id: string; action: string; qty: number; price: number | null }[],
@@ -2202,6 +2491,24 @@ export function exitBookFromJson(value: unknown): ExitBookSnapshot | null {
   };
 }
 
+function lotArmsFromJson(value: unknown): Record<string, ExitLotArm> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const lots: Record<string, ExitLotArm> = {};
+  for (const [id, arm] of Object.entries(value as Record<string, unknown>)) {
+    if (!arm || typeof arm !== "object" || Array.isArray(arm)) {
+      continue;
+    }
+    const row = arm as { peak?: unknown; breakeven?: unknown };
+    lots[id] = {
+      peak: positiveOrNull(row.peak),
+      breakeven: row.breakeven === true,
+    };
+  }
+  return Object.keys(lots).length > 0 ? lots : null;
+}
+
 export function exitRuntimeFromJson(value: unknown): ExitRuntime {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return emptyExitRuntime();
@@ -2216,11 +2523,13 @@ export function exitRuntimeFromJson(value: unknown): ExitRuntime {
       continue;
     }
     const item = arm as Partial<ExitArmState>;
+    const lots = lotArmsFromJson((item as { lots?: unknown }).lots);
     arms[id] = {
       armedAt: finiteOrNull(item.armedAt),
       peak: positiveOrNull(item.peak),
       condition: item.condition === true,
       scopeLive: item.scopeLive === true,
+      ...(lots ? { lots } : {}),
     };
   }
   const book = exitBookFromJson(row.book);

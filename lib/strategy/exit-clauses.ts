@@ -28,6 +28,9 @@ export type ExitScope =
 
 export const EXIT_SCOPE_ALL: ExitScope = { kind: "all" };
 
+/** Per lot prices each fill on its own. Average uses one blended entry. */
+export type ExitReference = "lot" | "average";
+
 /** An Or group after the first And group on one action. */
 export type ExitOrGroup = {
   key: string;
@@ -49,6 +52,11 @@ export type ExitBuilderClause = {
   /** Later condition groups. Each joins the first group with Or. */
   orGroups: ExitOrGroup[];
   scope: ExitScope;
+  /**
+   * Per lot or Average. A new card is per lot. A card loaded from columns,
+   * or from an older action with no choice stored, stays Average.
+   */
+  reference?: ExitReference;
   /** Target for a repeated take profit or stop. The first card uses the side fields. */
   ownPct: number | null;
   /** Distance for a repeated trailing stop. */
@@ -181,6 +189,7 @@ export function emptyExitClause(): ExitBuilderClause {
     rows: [],
     orGroups: [],
     scope: EXIT_SCOPE_ALL,
+    reference: "lot",
     ownPct: null,
     ownDistance: null,
   };
@@ -369,6 +378,11 @@ export function customExitClause(
 
 export function clauseScope(clause: ExitBuilderClause): ExitScope {
   return clause.scope ?? EXIT_SCOPE_ALL;
+}
+
+/** Missing means Average, which is how a saved card and the classic columns behave. */
+export function clauseReference(clause: ExitBuilderClause): ExitReference {
+  return clause.reference === "lot" ? "lot" : "average";
 }
 
 export function clauseOrGroups(clause: ExitBuilderClause): ExitOrGroup[] {

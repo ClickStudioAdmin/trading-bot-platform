@@ -29,6 +29,7 @@ import {
 } from "@/lib/dca/hard-exit";
 import {
   actionKindLabel,
+  executionLabel,
   scopeLabel,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
@@ -1051,8 +1052,10 @@ function exitActionStacks(
     const hasPriceRule = action.groups.some((group) =>
       [group.anchor, ...group.rows].some((draft) => isExitPriceRule(draft.trigger)),
     );
+    const execution = executionLabel(action);
     const rows: ParamRow[] = [
       { label: "Action", value: actionKindLabel(action.kind) },
+      ...(execution ? [{ label: "Execution", value: execution }] : []),
       { label: "Applies To", value: scopeLabel(action.scope) },
       ...(hasPriceRule ? [] : actionPriceRows(action)),
     ];

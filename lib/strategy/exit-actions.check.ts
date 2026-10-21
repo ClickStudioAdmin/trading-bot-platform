@@ -8,8 +8,10 @@ import {
   trailActivationKind,
 } from "./exit-clauses";
 import {
+  actionUsesLotReference,
   clausesFromExitActions,
   describeExitBook,
+  executionLabel,
   emptyExitRuntime,
   evaluateExitActions,
   exitBookForClassic,
@@ -1042,5 +1044,265 @@ assert.equal(trailBar({ close: 108 }).runtime.arms.trail?.peak ?? null, null);
 const armedOnHigh = trailBar({ close: 108, favorable: 112, adverse: 108 });
 assert.equal(armedOnHigh.claims.length, 0);
 assert.equal(armedOnHigh.runtime.arms.trail?.peak, 112);
+
+const lotStop = {
+  id: "sl",
+  kind: "stop_loss" as const,
+  scope: { kind: "all" as const },
+  reference: "lot" as const,
+  groups: [] as StoredExitAction["groups"],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: 5,
+  stopLossPrice: null,
+  trailingDistance: null,
+  trailingActivation: null,
+};
+const twoLots = [
+  { id: "a", qty: 1, price: 100 },
+  { id: "b", qty: 1, price: 80 },
+];
+const lotHit = planExitClaims({
+  actions: [lotStop],
+  runtime: emptyExitRuntime(),
+  lots: twoLots,
+  side: "long",
+  mark: 94,
+  last: 94,
+  entryPrice: 90,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(actionUsesLotReference(lotStop), true);
+assert.deepEqual(
+  lotHit.claims.map((claim) => claim.qty),
+  [1],
+);
+assert.equal(lotHit.lots.find((lot) => lot.id === "a"), undefined);
+assert.equal(lotHit.lots.find((lot) => lot.id === "b")?.qty, 1);
+
+const averageStop: StoredExitAction = { ...lotStop, reference: "average" };
+const averageQuiet = planExitClaims({
+  actions: [averageStop],
+  runtime: emptyExitRuntime(),
+  lots: twoLots,
+  side: "long",
+  mark: 94,
+  last: 94,
+  entryPrice: 90,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(averageQuiet.claims.length, 0);
+assert.equal(executionLabel(averageStop), "Average");
+assert.equal(executionLabel(lotStop), "Per lot");
+const wickIgnored = planExitClaims({
+  actions: [lotStop],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 98,
+  last: 98,
+  adverse: 90,
+  entryPrice: 100,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(wickIgnored.claims.length, 0, "a percent stop uses the mark, not the wick");
+const closeHit = planExitClaims({
+  actions: [lotStop],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 94,
+  last: 94,
+  adverse: 99,
+  entryPrice: 100,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(closeHit.claims.length, 1);
+
+const gated = planExitClaims({
+  actions: [{ ...lotStop, groups: [{ anchor: { trigger: "stop" }, rows: [] }] }],
+  runtime: emptyExitRuntime(),
+  lots: twoLots,
+  side: "long",
+  mark: 90,
+  last: 90,
+  adverse: 90,
+  entryPrice: 90,
+  nowMs: 1,
+  conditionTrue: { sl: false },
+});
+assert.equal(gated.claims.length, 0);
+
+const winnersOnly = planExitClaims({
+  actions: [{ ...lotStop, scope: { kind: "fills", minProfitPct: 1 } }],
+  runtime: emptyExitRuntime(),
+  lots: [
+    { id: "winner", qty: 1, price: 100 },
+    { id: "loser", qty: 1, price: 130 },
+  ],
+  side: "long",
+  mark: 110,
+  last: 110,
+  adverse: 110,
+  entryPrice: 115,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(winnersOnly.claims.length, 0);
+
+const lotTrail: StoredExitAction = {
+  id: "trail",
+  kind: "trailing_stop",
+  scope: { kind: "all" },
+  reference: "lot",
+  groups: [],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: 5,
+  trailingActivation: null,
+  trailingTriggerPct: 1,
+};
+const trailLots = [
+  { id: "a", qty: 1, price: 100 },
+  { id: "b", qty: 1, price: 140 },
+];
+const trailArmed = planExitClaims({
+  actions: [lotTrail],
+  runtime: emptyExitRuntime(),
+  lots: trailLots,
+  side: "long",
+  mark: 110,
+  last: 110,
+  favorable: 110,
+  adverse: 110,
+  entryPrice: 120,
+  nowMs: 1,
+  conditionTrue: {},
+});
+assert.equal(trailArmed.claims.length, 0);
+assert.equal(trailArmed.runtime.arms.trail?.lots?.a?.peak, 110);
+assert.equal(trailArmed.runtime.arms.trail?.lots?.b?.peak ?? null, null);
+const trailFired = planExitClaims({
+  actions: [lotTrail],
+  runtime: trailArmed.runtime,
+  lots: trailLots,
+  side: "long",
+  mark: 108,
+  last: 108,
+  favorable: 110,
+  adverse: 104,
+  entryPrice: 120,
+  nowMs: 2,
+  conditionTrue: {},
+});
+assert.equal(trailFired.claims.length, 1);
+assert.equal(trailFired.claims[0]?.qty, 1);
+assert.equal(trailFired.lots.find((lot) => lot.id === "b")?.qty, 1);
+
+const lotBreakeven: StoredExitAction = {
+  id: "be",
+  kind: "breakeven",
+  scope: { kind: "all" },
+  reference: "lot",
+  groups: [],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: null,
+  trailingActivation: null,
+  breakevenActivationPct: 1,
+  breakevenOffsetPct: 0,
+};
+const beLots = [
+  { id: "a", qty: 1, price: 100 },
+  { id: "b", qty: 1, price: 130 },
+];
+const beLatched = evaluateExitActions({
+  actions: [lotBreakeven],
+  runtime: emptyExitRuntime(),
+  lots: beLots,
+  side: "long",
+  mark: 102,
+  last: 102,
+  favorable: 102,
+  adverse: 102,
+  entryPrice: 115,
+  nowMs: 1,
+  barsByTimeframe: new Map(),
+});
+assert.equal(beLatched.claims.length, 0);
+assert.equal(beLatched.breakeven, null);
+assert.equal(beLatched.runtime.arms.be?.lots?.a?.breakeven, true);
+const wickLatch = evaluateExitActions({
+  actions: [lotBreakeven],
+  runtime: emptyExitRuntime(),
+  lots: [{ id: "a", qty: 1, price: 100 }],
+  side: "long",
+  mark: 100.4,
+  last: 100.4,
+  favorable: 102,
+  adverse: 100.4,
+  entryPrice: 100,
+  nowMs: 1,
+  barsByTimeframe: new Map(),
+});
+assert.equal(wickLatch.runtime.arms.be?.lots?.a?.breakeven, false);
+assert.equal(beLatched.runtime.arms.be?.lots?.b?.breakeven, false);
+assert.equal(beLatched.book.actions[0]?.status, "protecting");
+const beClosed = evaluateExitActions({
+  actions: [lotBreakeven],
+  runtime: beLatched.runtime,
+  lots: beLots,
+  side: "long",
+  mark: 101,
+  last: 101,
+  favorable: 102,
+  adverse: 100,
+  entryPrice: 115,
+  nowMs: 2,
+  barsByTimeframe: new Map(),
+});
+assert.equal(beClosed.claims.length, 1);
+assert.equal(beClosed.claims[0]?.kind, "breakeven");
+assert.equal(beClosed.lots.find((lot) => lot.id === "b")?.qty, 1);
+
+const remembered = exitRuntimeFromJson({
+  arms: {
+    trail: {
+      armedAt: 1,
+      peak: 110,
+      condition: true,
+      scopeLive: true,
+      lots: { a: { peak: 110, breakeven: false } },
+    },
+  },
+});
+assert.equal(remembered.arms.trail?.lots?.a?.peak, 110);
+
+const freshLot = emptyExitClause();
+freshLot.kind = "trailing_stop";
+freshLot.anchor = { trigger: "trail" };
+assert.equal(exitActionsForSave([freshLot], prices)?.[0]?.reference, "lot");
+assert.equal(exitActionsForSave([classicExitClause("trailing_stop")], prices), null);
+const priceStop = emptyExitClause();
+priceStop.kind = "stop_loss";
+priceStop.anchor = { trigger: "stop" };
+assert.equal(
+  exitActionsForSave([priceStop], { ...prices, stopLossPct: null, stopLossPrice: 90 }),
+  null,
+);
+const percentStop = emptyExitClause();
+percentStop.kind = "stop_loss";
+percentStop.anchor = { trigger: "stop" };
+assert.equal(exitActionsForSave([percentStop], prices)?.[0]?.reference, "lot");
+const opened = clausesFromExitActions(exitActionsForSave([freshLot], prices));
+assert.equal(opened?.[0]?.reference, "lot");
 
 console.log("exit-actions.check ok");
