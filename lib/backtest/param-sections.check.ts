@@ -209,7 +209,7 @@ assert.deepEqual(
 assert.deepEqual(
   perpsSections
     .find((section) => section.title === "Long Entry Conditions")
-    ?.sizing?.map((row) => `${row.label}: ${row.value}`),
+    ?.stack?.sizing?.[0]?.map((row) => `${row.label}: ${row.value}`),
   ["Size: 2", "Unit: ETH", "Order: Market"],
 );
 assert.deepEqual(
@@ -308,7 +308,8 @@ assert.deepEqual(
   ["Name", "Contract", "Direction"],
 );
 assert.equal(
-  perpsSections[1]?.groups[0]?.rows[0]?.value,
+  perpsSections[1]?.stack?.groups[0]?.[0]?.rows.find((row) => row.label === "Condition Type")
+    ?.value,
   "Price cross",
 );
 assert.equal(
@@ -577,7 +578,7 @@ const shortSized = recipeParamSections({
 assert.deepEqual(
   shortSized
     .find((section) => section.title === "Short Entry Conditions")
-    ?.sizing?.map((row) => `${row.label}: ${row.value}`),
+    ?.stack?.sizing?.[0]?.map((row) => `${row.label}: ${row.value}`),
   ["Size: 4", "Unit: USDT", "Order: Limit", "Limit price: 80"],
 );
 const longTpsl = {
@@ -700,12 +701,16 @@ const actionCards = recipeParamSections(
   }),
 ).find((section) => section.title === "Long Exit Conditions");
 assert.equal(actionCards?.groups.length, 0);
-assert.equal(actionCards?.stacks?.length, 1);
-assert.equal(actionCards?.stacks?.[0]?.title, "Close");
+assert.equal(actionCards?.stack?.groups.length, 1);
 assert.equal(
-  actionCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
+  actionCards?.stack?.groups[0]?.[0]?.rows.find((row) => row.label === "Action")?.value,
+  "Close",
+);
+assert.equal(
+  actionCards?.stack?.sizing?.[0]?.find((row) => row.label === "Applies To")?.value,
   "Fills at least 20% in profit",
 );
+assert.equal(actionCards?.stack?.sizingTitle, "Execution and Scope");
 const perLotCards = recipeParamSections(
   dcaWithExits({
     exitActions: JSON.stringify([
@@ -728,12 +733,18 @@ const perLotCards = recipeParamSections(
   }),
 ).find((section) => section.title === "Long Exit Conditions");
 assert.equal(
-  perLotCards?.stacks?.[0]?.rows?.find((row) => row.label === "Execution")?.value,
+  perLotCards?.stack?.sizing?.[0]?.find((row) => row.label === "Execution")?.value,
   "Per lot",
 );
 assert.equal(
-  perLotCards?.stacks?.[0]?.rows?.find((row) => row.label === "Applies To")?.value,
+  perLotCards?.stack?.sizing?.[0]?.find((row) => row.label === "Applies To")?.value,
   "Entire Position",
+);
+assert.equal(
+  perLotCards?.stack?.groups[0]?.flatMap((condition) => condition.rows).find(
+    (row) => row.label === "Activation %",
+  )?.value,
+  "1%",
 );
 const averageTrail = recipeParamSections(
   dcaWithExits({
@@ -756,7 +767,7 @@ const averageTrail = recipeParamSections(
   }),
 ).find((section) => section.title === "Long Exit Conditions");
 assert.equal(
-  averageTrail?.stacks?.[0]?.rows?.find((row) => row.label === "Execution")?.value,
+  averageTrail?.stack?.sizing?.[0]?.find((row) => row.label === "Execution")?.value,
   "Average",
 );
 const priceStopList = recipeParamSections(
@@ -779,7 +790,7 @@ const priceStopList = recipeParamSections(
   }),
 ).find((section) => section.title === "Long Exit Conditions");
 assert.equal(
-  priceStopList?.stacks?.[0]?.rows?.some((row) => row.label === "Execution"),
+  priceStopList?.stack?.sizing?.[0]?.some((row) => row.label === "Execution"),
   false,
 );
 assert.equal(
@@ -822,7 +833,7 @@ const pricedAction = recipeParamSections(
   }),
 ).find((section) => section.title === "Long Exit Conditions");
 const pricedRows =
-  pricedAction?.stacks?.[0]?.groups?.flat().flatMap((group) => group.rows) ?? [];
+  pricedAction?.stack?.groups?.flat().flatMap((group) => group.rows) ?? [];
 assert.equal(
   pricedRows.some((row) => row.label === "Condition Type"),
   false,
@@ -904,7 +915,7 @@ const divergenceExit = recipeParamSections({
 const exitRows =
   divergenceExit
     .find((section) => section.title === "Long Exit Conditions")
-    ?.stacks?.flatMap((stack) => stack.groups.flat().flatMap((condition) => condition.rows)) ??
+    ?.stack?.groups.flat().flatMap((condition) => condition.rows) ??
   [];
 assert.equal(exitRows.find((row) => row.label === "When")?.value, "Bullish");
 assert.equal(exitRows.find((row) => row.label === "Style")?.value, "Regular");
@@ -948,7 +959,7 @@ const retraceEntry = recipeParamSections({
 const retraceRows =
   retraceEntry
     .find((section) => section.title === "Long Entry Conditions")
-    ?.groups.flatMap((group) => group.rows) ?? [];
+    ?.stack?.groups.flat().flatMap((condition) => condition.rows) ?? [];
 assert.deepEqual(
   retraceRows.map((row) => `${row.label}: ${row.value}`),
   [
@@ -968,7 +979,7 @@ assert.equal(
 const trailRows =
   retraceEntry
     .find((section) => section.title === "Long Exit Conditions")
-    ?.stacks?.[0]?.groups.flat().flatMap((condition) => condition.rows) ?? [];
+    ?.stack?.groups.flat().flatMap((condition) => condition.rows) ?? [];
 assert.equal(trailRows.find((row) => row.label === "Activation %")?.value, "8%");
 assert.equal(trailRows.find((row) => row.label === "Trailing %")?.value, "5%");
 
@@ -1005,7 +1016,7 @@ const shortRetrace = recipeParamSections({
 const shortRows =
   shortRetrace
     .find((section) => section.title === "Short Entry Conditions")
-    ?.groups.flatMap((group) => group.rows) ?? [];
+    ?.stack?.groups.flat().flatMap((condition) => condition.rows) ?? [];
 assert.equal(shortRows.find((row) => row.label === "From")?.value, "Low");
 assert.equal(shortRows.find((row) => row.label === "Price source")?.value, "Mark");
 assert.equal(shortRows.find((row) => row.label === "Retrace %")?.value, "3");
@@ -1034,14 +1045,16 @@ const dcaRetrace = recipeParamSections({
 assert.equal(
   dcaRetrace
     .find((section) => section.title === "Long Entry Conditions")
-    ?.groups.flatMap((group) => group.rows)
+    ?.stack?.groups.flat()
+    .flatMap((condition) => condition.rows)
     .find((row) => row.label === "Retrace %")?.value,
   "4",
 );
 assert.equal(
   dcaRetrace
     .find((section) => section.title === "Short Entry Conditions")
-    ?.groups.flatMap((group) => group.rows)
+    ?.stack?.groups.flat()
+    .flatMap((condition) => condition.rows)
     .find((row) => row.label === "From")?.value,
   "Low",
 );
@@ -1152,7 +1165,7 @@ const closeRetrace = recipeParamSections({
 const closeRows =
   closeRetrace
     .find((section) => section.title === "Long Exit Conditions")
-    ?.stacks?.[0]?.groups.flat().flatMap((condition) => condition.rows) ?? [];
+    ?.stack?.groups.flat().flatMap((condition) => condition.rows) ?? [];
 assert.equal(closeRows.find((row) => row.label === "Condition Type")?.value, "Retrace");
 assert.equal(closeRows.find((row) => row.label === "Retrace %")?.value, "3");
 assert.equal(closeRows.find((row) => row.label === "Timeframe")?.value, "4h");
@@ -1168,7 +1181,8 @@ const divergenceEntry = recipeParamSections({
 const entryRows =
   divergenceEntry
     .find((section) => section.title === "Long Entry Conditions")
-    ?.groups.flatMap((group) => group.rows) ?? [];
+    ?.stack?.groups.flat()
+    .flatMap((condition) => condition.rows) ?? [];
 assert.equal(entryRows.find((row) => row.label === "When")?.value, "Bearish");
 assert.equal(entryRows.find((row) => row.label === "Style")?.value, "Hidden");
 assert.equal(

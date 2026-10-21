@@ -45,13 +45,13 @@ function ParamRows({
   );
 }
 
-function GroupSizing({ rows }: { rows: ParamRow[] }) {
+function GroupFooter({ title, rows }: { title: string; rows: ParamRow[] }) {
   if (rows.length === 0) {
     return null;
   }
   return (
     <div className="border-t border-line pt-4">
-      <p className="text-sm font-semibold text-ink">Position Sizing</p>
+      <p className="text-sm font-semibold text-ink">{title}</p>
       <ParamRows rows={rows} inset={false} />
     </div>
   );
@@ -81,7 +81,7 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
               {conditions.map((condition, conditionIndex) => (
                 <div key={`condition-${conditionIndex}`} className="space-y-3">
                   {condition.join === "none" || conditionIndex === 0 ? null : (
-                    <JoinWord label="And" />
+                    <JoinWord label={condition.join === "or" ? "Or" : "And"} />
                   )}
                   {condition.title ? (
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
@@ -91,7 +91,7 @@ function ConditionStackView({ stack }: { stack: ParamStack }) {
                   <ParamRows rows={condition.rows} inset={false} />
                 </div>
               ))}
-              <GroupSizing rows={sizing} />
+              <GroupFooter title={stack.sizingTitle ?? "Position Sizing"} rows={sizing} />
             </section>
           </div>
         );
