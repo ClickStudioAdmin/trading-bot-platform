@@ -521,6 +521,26 @@ export function replaySearchWithoutPlayback(search: string): string {
   return next ? `?${next}` : "";
 }
 
+/** Replay page with the optimize form open. */
+export function backtestReplayOptimizeHref(runId: string): string {
+  return `/account/backtests/${runId}/replay?optimize=1`;
+}
+
+export function replayRequestsOptimize(search: string): boolean {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(query).get("optimize") === "1";
+}
+
+/** Same search string with the one-shot optimize flag removed. */
+export function replaySearchWithoutOptimize(search: string): string {
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+  params.delete("optimize");
+  const next = params.toString();
+  return next ? `?${next}` : "";
+}
+
 const REPLAY_PLAYBACK_CONSUMED_KEY = "tbp-replay-playback";
 
 /** Run id when this replay URL asked to start playback. */

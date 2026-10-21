@@ -7,6 +7,7 @@ import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
   replayHrefAfterVariantDelete,
+  relatedRowActions,
   replayRelatedList,
   sameReplayVariantRows,
 } from "./variant-label";
@@ -325,5 +326,8 @@ assert.deepEqual(
     [0.5, 4],
   ],
 );
+
+assert.deepEqual(relatedRowActions("variation"), ["delete", "optimize"]);
+assert.deepEqual(relatedRowActions("comparable"), ["delete"]);
 
 console.log("backtest variant label checks passed");

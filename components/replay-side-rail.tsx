@@ -14,6 +14,7 @@ import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useModalPortalHost } from "@/components/portal-host";
 import { TableActions, TableCard, TableIconAction } from "@/components/table-chrome";
+import { TABLE_ICON_ACTION_CLASS } from "@/components/table-actions";
 import { TemplateParametersButton } from "@/components/template-parameters-tip";
 import { TokenIcon } from "@/components/token-icon";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
@@ -32,6 +33,7 @@ import {
   IconChevronDown,
   IconClose,
   IconCornerDownRight,
+  IconEllipsis,
   IconEye,
   IconLoader,
   IconPerformance,
@@ -48,7 +50,10 @@ import { backtestListedSections } from "@/lib/backtest/param-sections";
 import {
   backtestQueueSeedFromRun,
   backtestReplayHref,
+  backtestReplayOptimizeHref,
   backtestRunTitle,
+  replayRequestsOptimize,
+  replaySearchWithoutOptimize,
   formatBacktestReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
@@ -56,6 +61,7 @@ import { signedTone } from "@/lib/opportunities/format";
 import {
   completedBacktestVariantIds,
   mergeReplayVariantRows,
+  relatedRowActions,
   replayHrefAfterVariantDelete,
   replayRelatedList,
   sameReplayVariantRows,
@@ -282,6 +288,16 @@ export function ReplayRailBody({
   applyDesks: Array<{ id: string; name: string }>;
   onPlay?: () => void;
 }) {
+  useLayoutEffect(() => {
+    if (panel === "parameters") {
+      return;
+    }
+    if (!replayRequestsOptimize(window.location.search)) {
+      return;
+    }
+    writeRail("parameters");
+  }, [panel]);
+
   if (panel === "related") {
     return (
       <RelatedBody
@@ -348,6 +364,35 @@ function ParametersBody({
   });
 
   const showKeep = run.status === "done";
+  const optimizeButtonRef = useRef<HTMLButtonElement>(null);
+  const consumedOptimize = useRef(false);
+  const { show: showGate, hide: hideGate } = clickGate;
+
+  useLayoutEffect(() => {
+    if (consumedOptimize.current) {
+      return;
+    }
+    if (!replayRequestsOptimize(window.location.search)) {
+      return;
+    }
+    consumedOptimize.current = true;
+    const next = replaySearchWithoutOptimize(window.location.search);
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${next}${window.location.hash}`,
+    );
+    const denial = researchGate ? optimizeClickDenial(researchGate) : null;
+    if (denial) {
+      const anchor = optimizeButtonRef.current;
+      if (anchor) {
+        showGate(denial, anchor);
+      }
+      return;
+    }
+    hideGate();
+    queueMicrotask(() => setModifying(true));
+  }, [hideGate, researchGate, showGate]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -376,40 +421,40 @@ function ParametersBody({
                 resolveOptimisticVariant(pendingToken.current, runId);
                 pendingToken.current = null;
               }
-              setModifying(false);
               router.refresh();
             }}
           />
         </div>
       ) : (
         <>
+          <ClickGateNotice
+            access={clickGate.notice}
+            anchorRef={clickGate.anchorRef}
+            generation={clickGate.generation}
+            onDismiss={clickGate.hide}
+          />
+          <div className="sticky top-0 z-20 mb-3 flex shrink-0 items-center justify-between gap-3 bg-canvas pr-3">
+            <h2 className="text-lg font-semibold">Parameters</h2>
+            <button
+              ref={optimizeButtonRef}
+              type="button"
+              onClick={(event) => {
+                const denial = researchGate
+                  ? optimizeClickDenial(researchGate)
+                  : null;
+                if (denial) {
+                  clickGate.show(denial, event.currentTarget);
+                  return;
+                }
+                clickGate.hide();
+                setModifying(true);
+              }}
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
+            >
+              Optimize
+            </button>
+          </div>
           <div className="min-h-0 flex-1 overflow-auto pr-3">
-            <ClickGateNotice
-              access={clickGate.notice}
-              anchorRef={clickGate.anchorRef}
-              generation={clickGate.generation}
-              onDismiss={clickGate.hide}
-            />
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Parameters</h2>
-              <button
-                type="button"
-                onClick={(event) => {
-                  const denial = researchGate
-                    ? optimizeClickDenial(researchGate)
-                    : null;
-                  if (denial) {
-                    clickGate.show(denial, event.currentTarget);
-                    return;
-                  }
-                  clickGate.hide();
-                  setModifying(true);
-                }}
-                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent"
-              >
-                Optimize
-              </button>
-            </div>
             <BacktestParameterSections sections={paramSections} />
           </div>
           {showKeep ? (
@@ -474,12 +519,74 @@ function RelatedBody({
   );
   const showComparables = list.comparables.length > 0;
   const showVariations = list.variations.length > 0 || waiting.length > 0;
+  const router = useRouter();
+  const researchGate = useResearchGateAccess();
+  const clickGate = useClickGate();
+  const { confirm, dialog } = useConfirmDialog();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function removeRelated(entry: ReplayRelatedEntry) {
+    const ok = await confirm({
+      title: `Delete ${entry.name}?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+    setDeleteError(null);
+    const data = new FormData();
+    data.set("runId", entry.id);
+    const result = await deleteBacktestAction(data);
+    if (!result.ok) {
+      setDeleteError(result.error ?? "Could not delete that backtest.");
+      return;
+    }
+    const next = replayHrefAfterVariantDelete({
+      deletedId: entry.id,
+      viewingId: run.id,
+      rootId,
+    });
+    if (next) {
+      window.location.replace(next);
+      return;
+    }
+    router.refresh();
+  }
+
+  function openOptimize(entry: ReplayRelatedEntry, anchor: HTMLElement) {
+    const denial = researchGate ? optimizeClickDenial(researchGate) : null;
+    if (denial) {
+      clickGate.show(denial, anchor);
+      return;
+    }
+    clickGate.hide();
+    const href = backtestReplayOptimizeHref(entry.id);
+    if (entry.id === run.id) {
+      window.history.replaceState(window.history.state, "", href);
+      writeRail("parameters");
+      return;
+    }
+    writeRail("parameters");
+    window.location.assign(href);
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden pr-3">
+      {dialog}
+      <ClickGateNotice
+        access={clickGate.notice}
+        anchorRef={clickGate.anchorRef}
+        generation={clickGate.generation}
+        onDismiss={clickGate.hide}
+      />
       <h2 className="mb-3 shrink-0 text-lg font-semibold">
         Comparables and Variations
       </h2>
+      {deleteError ? (
+        <p className="mb-3 shrink-0 text-sm text-danger">{deleteError}</p>
+      ) : null}
       {showComparables || showVariations ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           {showComparables ? (
@@ -489,6 +596,8 @@ function RelatedBody({
                 byId={byId}
                 viewingId={run.id}
                 onPlay={onPlay}
+                onDelete={(entry) => void removeRelated(entry)}
+                onOptimize={openOptimize}
               />
             </RelatedSection>
           ) : null}
@@ -500,6 +609,8 @@ function RelatedBody({
                 byId={byId}
                 viewingId={run.id}
                 onPlay={onPlay}
+                onDelete={(entry) => void removeRelated(entry)}
+                onOptimize={openOptimize}
               />
             </RelatedSection>
           ) : null}
@@ -537,12 +648,16 @@ function RelatedTable({
   byId,
   viewingId,
   onPlay,
+  onDelete,
+  onOptimize,
 }: {
   rows: ReplayRelatedEntry[];
   pending?: OptimisticVariant[];
   byId: Map<string, BacktestRun>;
   viewingId: string;
   onPlay?: () => void;
+  onDelete: (entry: ReplayRelatedEntry) => void;
+  onOptimize: (entry: ReplayRelatedEntry, anchor: HTMLElement) => void;
 }) {
   return (
     <table className="w-full table-fixed text-left text-sm">
@@ -557,7 +672,7 @@ function RelatedTable({
           <th className="w-[6rem] bg-surface-raised px-3 py-3 text-left align-middle font-medium">
             ROE
           </th>
-          <th className="w-[7.25rem] bg-surface-raised px-3 py-3 text-right align-middle font-medium">
+          <th className="w-[9.5rem] bg-surface-raised px-3 py-3 text-right align-middle font-medium">
             Actions
           </th>
         </tr>
@@ -573,6 +688,8 @@ function RelatedTable({
             source={byId.get(entry.id) ?? null}
             viewing={entry.id === viewingId}
             onPlay={onPlay}
+            onDelete={() => onDelete(entry)}
+            onOptimize={(anchor) => onOptimize(entry, anchor)}
           />
         ))}
       </tbody>
@@ -629,16 +746,177 @@ function RelatedPendingRow() {
   );
 }
 
+function RelatedMoreMenu({
+  name,
+  actions,
+  onDelete,
+  onOptimize,
+}: {
+  name: string;
+  actions: Array<"delete" | "optimize">;
+  onDelete: () => void;
+  onOptimize: (anchor: HTMLElement) => void;
+}) {
+  const portalHost = useModalPortalHost();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<number | null>(null);
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<{ top: number; left: number } | null>(null);
+
+  function cancelClose() {
+    if (closeTimer.current != null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function scheduleClose() {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 160);
+  }
+
+  function show() {
+    cancelClose();
+    const node = buttonRef.current;
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      setBox({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 144),
+      });
+    }
+    setOpen(true);
+  }
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    function place() {
+      const node = buttonRef.current;
+      const menu = menuRef.current;
+      if (!node || !menu) {
+        return;
+      }
+      const rect = node.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const margin = 8;
+      let top = rect.bottom + 4;
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - 4 - menuRect.height);
+      }
+      let left = rect.right - menuRect.width;
+      left = Math.max(
+        margin,
+        Math.min(left, window.innerWidth - menuRect.width - margin),
+      );
+      setBox({ top, left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    return () => cancelClose();
+  }, []);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={`More actions for ${name}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={TABLE_ICON_ACTION_CLASS}
+        onMouseEnter={show}
+        onMouseLeave={scheduleClose}
+        onFocus={show}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          show();
+        }}
+      >
+        <IconEllipsis size={14} className="size-3.5" />
+      </button>
+      {open && portalHost
+        ? createPortal(
+            <div
+              ref={menuRef}
+              role="menu"
+              aria-label={`More actions for ${name}`}
+              onMouseEnter={show}
+              onMouseLeave={scheduleClose}
+              className="fixed z-[80] min-w-36 rounded-card border border-line bg-surface py-1"
+              style={
+                box
+                  ? { top: box.top, left: box.left }
+                  : { top: -9999, left: 0 }
+              }
+            >
+              {actions.map((action) =>
+                action === "delete" ? (
+                  <button
+                    key="delete"
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-sm text-danger hover:bg-surface-raised"
+                    onClick={() => {
+                      setOpen(false);
+                      onDelete();
+                    }}
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <button
+                    key="optimize"
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-surface-raised"
+                    onClick={() => {
+                      setOpen(false);
+                      const anchor = buttonRef.current;
+                      if (anchor) {
+                        onOptimize(anchor);
+                      }
+                    }}
+                  >
+                    Optimize
+                  </button>
+                ),
+              )}
+            </div>,
+            portalHost,
+          )
+        : null}
+    </>
+  );
+}
+
 function RelatedRunRow({
   entry,
   source,
   viewing,
   onPlay,
+  onDelete,
+  onOptimize,
 }: {
   entry: ReplayRelatedEntry;
   source: BacktestRun | null;
   viewing: boolean;
   onPlay?: () => void;
+  onDelete: () => void;
+  onOptimize: (anchor: HTMLElement) => void;
 }) {
   const pending = entry.status === "queued" || entry.status === "running";
   const done = entry.status === "done";
@@ -724,6 +1002,12 @@ function RelatedRunRow({
             >
               <IconPlay className="fill-current" />
             </TableIconAction>
+            <RelatedMoreMenu
+              name={entry.name}
+              actions={relatedRowActions(entry.role)}
+              onDelete={onDelete}
+              onOptimize={onOptimize}
+            />
           </TableActions>
         ) : pending ? (
           <PendingMark />
