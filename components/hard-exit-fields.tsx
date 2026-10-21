@@ -190,7 +190,13 @@ export function HardExitFields({
         <RetraceFields
           prefix={named ? prefix : ""}
           draft={value}
-          onChange={(next) => onChange({ trigger: "retrace", ...next })}
+          onChange={(next) =>
+            onChange({
+              trigger: "retrace",
+              ...next,
+              from: next.from === "low" ? "low" : "high",
+            })
+          }
           fieldClass={fieldClass}
           labelClass={labelClass}
           slots={seriesSlots}

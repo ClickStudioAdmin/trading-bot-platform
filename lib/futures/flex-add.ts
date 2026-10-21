@@ -11,6 +11,7 @@ import {
   type AddGroupOrder,
   type EntryStack,
 } from "@/lib/strategy/expr";
+import { formatRetraceLabel, type PositionRetraceContext } from "@/lib/strategy/retrace";
 import type { ProtectionReading } from "@/lib/strategy/protection";
 
 export type FlexAddDecision = {
@@ -20,6 +21,8 @@ export type FlexAddDecision = {
   nextTrue: boolean;
   because: string;
   order: AddGroupOrder | null;
+  /** First true Or group. Null when the stack is unmet. */
+  group: number | null;
 };
 
 /**
@@ -40,6 +43,8 @@ export function flexAddDecision(input: {
   open: boolean;
   protection?: ProtectionReading | null;
   firedWebhookId?: string | null;
+  /** Null keeps an additional-order retrace unmet until the position memory exists. */
+  positionRetrace?: PositionRetraceContext | null;
 }): FlexAddDecision {
   const idle: FlexAddDecision = {
     met: false,
@@ -47,10 +52,13 @@ export function flexAddDecision(input: {
     nextTrue: false,
     because: "",
     order: null,
+    group: null,
   };
   if (!input.open || !input.stack || input.stack.leaves.length === 0) {
     return idle;
   }
+  const positionRetrace =
+    input.positionRetrace === undefined ? null : input.positionRetrace;
   const flags = input.stack.leaves.map((leaf) =>
     entryLeafMet({
       leaf,
@@ -60,6 +68,7 @@ export function flexAddDecision(input: {
       barsByTimeframe: input.barsByTimeframe,
       firedWebhookId: input.firedWebhookId,
       protection: input.protection,
+      positionRetrace,
     }),
   );
   const met = addStackMet({ stack: input.stack, leaves: flags });
@@ -68,7 +77,11 @@ export function flexAddDecision(input: {
     group == null
       ? ""
       : (addStackGroups(input.stack)[group] ?? [])
-          .map((leaf) => formatStrategyLeafReason(leaf, input.side))
+          .map((leaf) =>
+            leaf.kind === "retrace"
+              ? formatRetraceLabel({ ...leaf, lookback: null, timeframe: null })
+              : formatStrategyLeafReason(leaf, input.side),
+          )
           .filter(Boolean)
           .join(", and ");
   const order = group == null ? null : addOrderForGroup(input.stack, group);
@@ -79,6 +92,7 @@ export function flexAddDecision(input: {
     nextTrue: met,
     because,
     order: sized ? order : null,
+    group,
   };
 }
 
@@ -103,4 +117,10 @@ export function flexAddLatchColumn(
   return latch === "short_condition_true"
     ? "short_add_condition_true"
     : "add_condition_true";
+}
+
+export function flexAddRetraceColumn(
+  latch: "condition_true" | "short_condition_true",
+): "add_retrace" | "short_add_retrace" {
+  return latch === "short_condition_true" ? "short_add_retrace" : "add_retrace";
 }

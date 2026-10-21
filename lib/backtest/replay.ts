@@ -60,13 +60,19 @@ import { fillSentence, skippedAddSentence, skippedEntrySentence } from "./events
 import { flexAddClipIndex, flexAddIntent, freshFlexAddLatch } from "./flex-add";
 import type { ReplayEvent } from "./model";
 import {
+  addStackGroups,
   entryStackIsLegacy,
   resolveEntryStack,
   strategyLeafTimeframe,
 } from "@/lib/strategy/expr";
 import { filterBecause, indicatorBecause, priceStartBecause } from "./explain";
-import { formatRetraceLabel } from "@/lib/strategy/retrace";
-import type { RetraceSpec } from "@/lib/strategy/retrace";
+import {
+  commitPositionRetraceFire,
+  formatRetraceLabel,
+  positionRetraceConsumed,
+  resumePositionRetrace,
+} from "@/lib/strategy/retrace";
+import type { PositionRetraceMemory, RetraceSpec } from "@/lib/strategy/retrace";
 
 export { canBacktestPerpsRecipe };
 
@@ -180,6 +186,9 @@ type OpenSim = {
   side: FuturesSide;
   qty: number;
   entry: number;
+  /** First fill. Later adds change `entry` and leave this in place. */
+  initial: number;
+  openedAtMs: number;
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
   breakevenDone: boolean;
@@ -192,6 +201,7 @@ function mergeSimPosition(
   price: number,
   tpsl: FuturesTpsl | null,
   trailing: FuturesTrailing | null,
+  openedAtMs: number,
 ): OpenSim {
   const priced =
     tpsl && tpslHasLevels(tpsl)
@@ -208,6 +218,8 @@ function mergeSimPosition(
       side,
       qty: nextQty,
       entry: (current.entry * current.qty + price * qty) / nextQty,
+      initial: current.initial,
+      openedAtMs: current.openedAtMs,
       tpsl: current.tpsl ?? nextTpsl,
       trailing: current.trailing ?? trailing,
       breakevenDone: current.breakevenDone,
@@ -217,10 +229,30 @@ function mergeSimPosition(
     side,
     qty,
     entry: price,
+    initial: price,
+    openedAtMs,
     tpsl: nextTpsl,
     trailing: trailing ? armTrailingAt(trailing, price) : null,
     breakevenDone: false,
   };
+}
+
+function nextOpenRetrace(
+  memory: PositionRetraceMemory | null,
+  open: OpenSim | null,
+  bar: CandleBar,
+): PositionRetraceMemory | null {
+  if (!open) {
+    return null;
+  }
+  return resumePositionRetrace({
+    stored: memory,
+    positionKey: String(open.openedAtMs),
+    initial: open.initial,
+    quotes: { last: bar.close, mark: bar.close, index: bar.close },
+    wick: { high: bar.high, low: bar.low },
+    wickSources: ["last", "mark", "index"],
+  });
 }
 
 function perpsSideActions(recipe: PerpsTemplateRecipe, side: FuturesSide) {
@@ -491,6 +523,7 @@ export async function replayPerpsPriceCross(input: {
   }
 
   const addLatch = freshFlexAddLatch();
+  let addRetrace: PositionRetraceMemory | null = null;
   let barIndex = 0;
   for (const bar of input.bars) {
     barIndex += 1;
@@ -744,6 +777,7 @@ export async function replayPerpsPriceCross(input: {
               price,
               openingActions ? null : input.recipe.tpsl,
               openingActions ? null : input.recipe.trailing,
+              bar.timeMs,
             );
             if (openingActions) {
               flexLots.push({ id: `entry-${orders.length}`, qty, price });
@@ -763,17 +797,20 @@ export async function replayPerpsPriceCross(input: {
     }
     if (action === "buy" || action === "sell") {
       const stack = input.recipe.addStack;
+      addRetrace = nextOpenRetrace(addRetrace, open, bar);
+      const detail =
+        open && stack && stack.leaves.length > 0 && addRetrace
+          ? series.addDetail(
+              stack,
+              open.side,
+              barIndex - 1,
+              protectionReading(open.qty, bookForOpen(open, bar.timeMs, price)),
+              { average: open.entry, memory: addRetrace },
+            )
+          : { met: false, group: null, because: "" };
       const intent = flexAddIntent({
         stack,
-        detail:
-          open && stack && stack.leaves.length > 0
-            ? series.addDetail(
-                stack,
-                open.side,
-                barIndex - 1,
-                protectionReading(open.qty, bookForOpen(open, bar.timeMs, price)),
-              )
-            : { met: false, group: null, because: "" },
+        detail,
         latch: addLatch,
         open: Boolean(open),
         bar,
@@ -814,6 +851,7 @@ export async function replayPerpsPriceCross(input: {
             intent.price,
             openingActions ? null : input.recipe.tpsl,
             openingActions ? null : input.recipe.trailing,
+            bar.timeMs,
           );
           if (openingActions) {
             flexLots.push({
@@ -821,6 +859,13 @@ export async function replayPerpsPriceCross(input: {
               qty: intent.qty,
               price: intent.price,
             });
+          }
+          if (addRetrace && stack && detail.group != null) {
+            const leaves = addStackGroups(stack)[detail.group] ?? [];
+            addRetrace = commitPositionRetraceFire(addRetrace, leaves);
+            if (positionRetraceConsumed(leaves)) {
+              addLatch.was = false;
+            }
           }
         } else if (!addLatch.skipNoted) {
           addLatch.skipNoted = true;
@@ -1118,6 +1163,10 @@ async function replayPerpsBoth(input: {
   const addLatches = {
     long: freshFlexAddLatch(),
     short: freshFlexAddLatch(),
+  };
+  const addRetrace: Record<FuturesSide, PositionRetraceMemory | null> = {
+    long: null,
+    short: null,
   };
   let barIndex = 0;
   for (const bar of input.bars) {
@@ -1418,6 +1467,7 @@ async function replayPerpsBoth(input: {
           : sideClassic
             ? sideClassic.trailing
             : input.recipe.trailing,
+        bar.timeMs,
       );
       if (openingActions) {
         bookLots[leg.side].push({ id: `entry-${orders.length}`, qty, price });
@@ -1427,20 +1477,23 @@ async function replayPerpsBoth(input: {
       const positioned = book[side];
       const stack = side === "short" ? short.addStack : input.recipe.addStack;
       const latch = addLatches[side];
+      addRetrace[side] = nextOpenRetrace(addRetrace[side], positioned, bar);
+      const detail =
+        positioned && stack && stack.leaves.length > 0 && addRetrace[side]
+          ? series.addDetail(
+              stack,
+              side,
+              barIndex - 1,
+              protectionReading(
+                positioned.qty,
+                bookForSide(positioned, bar.timeMs, price),
+              ),
+              { average: positioned.entry, memory: addRetrace[side] },
+            )
+          : { met: false, group: null, because: "" };
       const intent = flexAddIntent({
         stack,
-        detail:
-          positioned && stack && stack.leaves.length > 0
-            ? series.addDetail(
-                stack,
-                side,
-                barIndex - 1,
-                protectionReading(
-                  positioned.qty,
-                  bookForSide(positioned, bar.timeMs, price),
-                ),
-              )
-            : { met: false, group: null, because: "" },
+        detail,
         latch,
         open: Boolean(positioned),
         bar,
@@ -1495,6 +1548,7 @@ async function replayPerpsBoth(input: {
             : sideClassic
               ? sideClassic.trailing
               : input.recipe.trailing,
+          bar.timeMs,
         );
         if (openingActions) {
           bookLots[side].push({
@@ -1502,6 +1556,13 @@ async function replayPerpsBoth(input: {
             qty: intent.qty,
             price: intent.price,
           });
+        }
+        if (addRetrace[side] && stack && detail.group != null) {
+          const leaves = addStackGroups(stack)[detail.group] ?? [];
+          addRetrace[side] = commitPositionRetraceFire(addRetrace[side], leaves);
+          if (positionRetraceConsumed(leaves)) {
+            latch.was = false;
+          }
         }
       } else if (!latch.skipNoted) {
         latch.skipNoted = true;

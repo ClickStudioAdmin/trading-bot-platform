@@ -26,7 +26,7 @@ import {
   type HardExitSignal,
 } from "./hard-exit";
 import { indicatorStartMet, type DcaIndicatorTimeframe } from "./indicators";
-import { retraceClaim, retraceMet } from "@/lib/strategy/retrace";
+import { retraceClaim, retraceMet, windowRetraceSpec } from "@/lib/strategy/retrace";
 import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
 
 export type { EntryStack as ExitStack };
@@ -480,10 +480,14 @@ function exitLeafMet(input: {
     return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
   }
   if (leaf.kind === "retrace") {
+    const spec = windowRetraceSpec(leaf);
+    if (!spec) {
+      return false;
+    }
     const quoted = input.prices?.[leaf.source] ?? (leaf.source === "last" ? input.price : null);
-    const bars = input.barsByTimeframe.get(leaf.timeframe) ?? [];
+    const bars = input.barsByTimeframe.get(spec.timeframe) ?? [];
     return retraceMet({
-      spec: leaf,
+      spec,
       price: quoted != null && quoted > 0 ? quoted : null,
       bars,
     });

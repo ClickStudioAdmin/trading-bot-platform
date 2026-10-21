@@ -262,6 +262,18 @@ const ownSizedSecond = retraceGroup(
 const savedExpr = perpsAddGroupsExpr([andPrice, ownSizedSecond]);
 const savedStack = entryStackFromJson(JSON.parse(savedExpr));
 assert.equal(savedStack?.leaves.length, 3);
+const savedRetrace = savedStack?.leaves.find((leaf) => leaf.kind === "retrace");
+assert.equal(savedRetrace?.kind, "retrace");
+if (savedRetrace?.kind === "retrace") {
+  assert.equal(savedRetrace.from, "high");
+  assert.equal(savedRetrace.pct, 2);
+  assert.equal(savedRetrace.lookback ?? null, null);
+  assert.equal(savedRetrace.timeframe ?? null, null);
+}
+assert.equal(
+  perpsAddGroupsFromStack(savedStack, "long")[0]?.lead.draft.retraceFrom,
+  "high",
+);
 assert.equal(savedStack?.orders?.length, 2);
 assert.equal(savedStack?.orders?.[0]?.size, "1500");
 assert.equal(savedStack?.orders?.[0]?.limitPrice, "");
@@ -283,6 +295,52 @@ assert.equal(restored[1]?.order.size, "2");
 assert.equal(restored[1]?.order.sizeUnit, "qty");
 assert.equal(restored[1]?.order.orderType, "limit");
 assert.equal(restored[1]?.order.limitPrice, "1.25");
+
+const initialGroup = retraceGroup("short", {
+  size: "1",
+  sizeUnit: "qty",
+  orderType: "market",
+  limitPrice: "",
+});
+initialGroup.lead.draft.retraceFrom = "initial";
+initialGroup.lead.draft.retracePct = "1";
+const initialSaved = entryStackFromJson(
+  JSON.parse(perpsAddGroupsExpr([initialGroup])),
+);
+const initialLeaf = initialSaved?.leaves[0];
+assert.equal(initialLeaf?.kind, "retrace");
+if (initialLeaf?.kind === "retrace") {
+  assert.equal(initialLeaf.from, "initial");
+  assert.equal(initialLeaf.lookback ?? null, null);
+  assert.equal(initialLeaf.timeframe ?? null, null);
+}
+assert.equal(
+  perpsAddGroupsFromStack(initialSaved, "short")[0]?.lead.draft.retraceFrom,
+  "initial",
+);
+const legacyWindow = entryStackFromJson({
+  leaves: [
+    {
+      kind: "retrace",
+      source: "last",
+      from: "high",
+      pct: 1,
+      lookback: 20,
+      timeframe: "60",
+    },
+  ],
+  joins: ["and"],
+});
+assert.equal(legacyWindow?.leaves[0]?.kind, "retrace");
+assert.equal(
+  perpsAddGroupsFromStack(legacyWindow, "long")[0]?.lead.draft.retraceFrom,
+  "high",
+);
+const legacyExpr = perpsAddGroupsExpr(
+  perpsAddGroupsFromStack(legacyWindow, "long"),
+);
+assert.equal(JSON.parse(legacyExpr).leaves[0].lookback, undefined);
+assert.equal(JSON.parse(legacyExpr).leaves[0].timeframe, undefined);
 
 const sharedSizedSecond = retraceGroup("long", blankPerpsAddOrderValues(), {
   sameAsGroup1: true,

@@ -14,7 +14,10 @@ import {
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
 import { parseProtectionSpec } from "@/lib/strategy/protection";
-import { parseRetraceSpec } from "@/lib/strategy/retrace";
+import {
+  parsePositionRetraceSpec,
+  type PositionRetraceFrom,
+} from "@/lib/strategy/retrace";
 import { parseRsiDivergenceSettings } from "@/lib/strategy/rsi-divergence";
 
 export type PerpsAddConditionType =
@@ -38,7 +41,7 @@ export type PerpsAddConditionDraft = {
   triggerCompare: "gte" | "lte";
   triggerPrice: string;
   webhookId: string;
-  retraceFrom: "high" | "low";
+  retraceFrom: PositionRetraceFrom;
   retracePct: string;
   retraceLookback: string;
   protectionIs: "protected" | "no_loss";
@@ -280,14 +283,14 @@ export function blankPerpsAddOrderGroups(
 function leafFromAddCondition(condition: PerpsAddCondition): StrategyLeaf | null {
   const draft = condition.draft;
   if (condition.type === "retrace") {
-    const spec = parseRetraceSpec({
+    const spec = parsePositionRetraceSpec({
       source: draft.triggerBy,
       from: draft.retraceFrom,
       pct: draft.retracePct,
-      lookback: draft.retraceLookback,
-      timeframe: draft.timeframe,
     });
-    return spec ? { kind: "retrace", ...spec } : null;
+    return spec
+      ? { kind: "retrace", ...spec, lookback: null, timeframe: null }
+      : null;
   }
   if (condition.type === "protection") {
     const spec = parseProtectionSpec({
@@ -360,10 +363,10 @@ function conditionFromLeaf(
       draft: {
         ...draft,
         triggerBy: leaf.source,
-        timeframe: leaf.timeframe,
+        timeframe: leaf.timeframe ?? draft.timeframe,
         retraceFrom: leaf.from,
         retracePct: String(leaf.pct),
-        retraceLookback: String(leaf.lookback),
+        retraceLookback: String(leaf.lookback ?? 20),
       },
     };
   }

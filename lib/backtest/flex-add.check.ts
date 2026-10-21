@@ -112,6 +112,105 @@ assert.equal(
   1,
 );
 
+function positionRecipe(
+  from: "high" | "low" | "initial" | "average",
+  name: string,
+): PerpsTemplateRecipe {
+  return {
+    ...longRecipe,
+    name,
+    addStack: {
+      leaves: [
+        {
+          kind: "retrace",
+          source: "last",
+          from,
+          pct: 1,
+          lookback: 20,
+          timeframe: "60",
+        },
+      ],
+      joins: ["and"],
+      orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+    },
+  };
+}
+const highRun = await replayPerpsPriceCross({
+  bars: [
+    bar(0, 100),
+    bar(1, 99),
+    bar(2, 90),
+    bar(3, 102, 102, 102),
+    bar(4, 100.98),
+  ],
+  recipe: positionRecipe("high", "High since entry"),
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+const highClips = highRun.orders.filter((row) => row.reason === "clip");
+assert.deepEqual(
+  highClips.map((row) => row.price),
+  [99, 100.98],
+);
+assert.match(
+  highRun.events.find((row) => row.clipIndex === 2)?.text ?? "",
+  /from the high since entry/,
+);
+const wickRun = await replayPerpsPriceCross({
+  bars: [bar(0, 100), bar(1, 99), bar(2, 100.9, 100.9, 103)],
+  recipe: positionRecipe("high", "Same bar wick"),
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+assert.deepEqual(
+  wickRun.orders.filter((row) => row.reason === "clip").map((row) => row.price),
+  [99, 100.9],
+);
+const initialRun = await replayPerpsPriceCross({
+  bars: [bar(0, 100), bar(1, 99), bar(2, 110), bar(3, 98)],
+  recipe: positionRecipe("initial", "Initial once"),
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+assert.deepEqual(
+  initialRun.orders.filter((row) => row.reason === "clip").map((row) => row.price),
+  [99],
+);
+assert.match(
+  initialRun.events.find((row) => row.reason === "clip")?.text ?? "",
+  /initial entry price/,
+);
+const averageRun = await replayPerpsPriceCross({
+  bars: [bar(0, 100), bar(1, 99), bar(2, 99), bar(3, 98.5)],
+  recipe: positionRecipe("average", "Average again"),
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+assert.deepEqual(
+  averageRun.orders.filter((row) => row.reason === "clip").map((row) => row.price),
+  [99, 98.5],
+);
+const blockedRun = await replayPerpsPriceCross({
+  bars: [bar(0, 100), bar(1, 99), bar(2, 40)],
+  recipe: {
+    ...positionRecipe("high", "Blocked and"),
+    addStack: {
+      leaves: [
+        { kind: "retrace", source: "last", from: "high", pct: 1 },
+        { kind: "price", triggerBy: "last", compare: "lte", price: 50 },
+      ],
+      joins: ["and", "and"],
+      orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 100_000,
+});
+assert.deepEqual(
+  blockedRun.orders.filter((row) => row.reason === "clip").map((row) => row.price),
+  [40],
+);
+
 const limitRecipe: PerpsTemplateRecipe = {
   ...longRecipe,
   name: "Limit add",

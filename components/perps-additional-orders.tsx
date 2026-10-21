@@ -57,6 +57,7 @@ function entryDraftFromAdd(condition: PerpsAddCondition): EntryConditionDraft {
   if (condition.type === "retrace") {
     return {
       kind: "retrace",
+      position: true,
       source: condition.draft.triggerBy,
       from: condition.draft.retraceFrom,
       pct: condition.draft.retracePct,
@@ -533,6 +534,7 @@ function ConditionFields({
             labelClass="flex min-w-0 flex-col gap-1 text-sm text-ink"
             slots={slots}
             slotIndex={slotIndex}
+            position
           />
         </div>
       ) : null}

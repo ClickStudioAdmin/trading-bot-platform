@@ -1958,8 +1958,8 @@ export function writeDcaEntryStackFields(
       form.set(`${row}RetraceSource`, leaf.source);
       form.set(`${row}RetraceFrom`, leaf.from);
       form.set(`${row}RetracePct`, String(leaf.pct));
-      form.set(`${row}RetraceLookback`, String(leaf.lookback));
-      form.set(`${row}RetraceTimeframe`, leaf.timeframe);
+      form.set(`${row}RetraceLookback`, String(leaf.lookback ?? ""));
+      form.set(`${row}RetraceTimeframe`, leaf.timeframe ?? "");
       return;
     }
     if (leaf.kind === "protection") {
