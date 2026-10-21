@@ -24,6 +24,7 @@ import {
   type ExitRuntime,
 } from "@/lib/strategy/exit-actions";
 import { formatExitExpressionText } from "@/lib/dca/exit-stack";
+import { protectionReading } from "@/lib/strategy/protection";
 import { canBacktestPerpsRecipe } from "./eligibility";
 import { backtestTapeInterval } from "./model";
 import { ReplayBook } from "./replay-mask";
@@ -55,7 +56,8 @@ import {
   type SimulatedOrder,
   yieldBacktestReplay,
 } from "./model";
-import { fillSentence, skippedEntrySentence } from "./events";
+import { fillSentence, skippedAddSentence, skippedEntrySentence } from "./events";
+import { flexAddClipIndex, flexAddIntent, freshFlexAddLatch } from "./flex-add";
 import type { ReplayEvent } from "./model";
 import {
   entryStackIsLegacy,
@@ -405,7 +407,11 @@ export async function replayPerpsPriceCross(input: {
     });
   }
 
-  function remember(order: SimulatedOrder, because?: string) {
+  function remember(
+    order: SimulatedOrder,
+    because?: string,
+    fillAt?: "close" | "limit",
+  ) {
     const exitBook = open ? bookForOpen(open, order.atMs, order.price) : null;
     const orderIndex = orders.length;
     orders.push(order);
@@ -415,11 +421,14 @@ export async function replayPerpsPriceCross(input: {
       reason: order.reason ?? "close",
       orderIndex,
       side: order.side,
+      clipIndex: order.clipIndex,
       text: fillSentence({
         reason: order.reason ?? "close",
         side: order.side,
         price: order.price,
+        clipIndex: order.clipIndex,
         because,
+        fillAt,
       }),
       ...(exitBook ? { exitBook } : {}),
     });
@@ -481,6 +490,7 @@ export async function replayPerpsPriceCross(input: {
     }
   }
 
+  const addLatch = freshFlexAddLatch();
   let barIndex = 0;
   for (const bar of input.bars) {
     barIndex += 1;
@@ -751,6 +761,81 @@ export async function replayPerpsPriceCross(input: {
         }
       }
     }
+    if (action === "buy" || action === "sell") {
+      const stack = input.recipe.addStack;
+      const intent = flexAddIntent({
+        stack,
+        detail:
+          open && stack && stack.leaves.length > 0
+            ? series.addDetail(
+                stack,
+                open.side,
+                barIndex - 1,
+                protectionReading(open.qty, bookForOpen(open, bar.timeMs, price)),
+              )
+            : { met: false, group: null, because: "" },
+        latch: addLatch,
+        open: Boolean(open),
+        bar,
+      });
+      if (intent && open) {
+        const addFee = feeUsdt(intent.qty, intent.price, input.feeRate);
+        const leverage = normalizeBacktestLeverage(input.leverage);
+        const locked = backtestMarginUsdt(open.qty * open.entry, leverage);
+        const available = input.startingUsdt + realized - locked;
+        const clipIndex = flexAddClipIndex(orders, open.side);
+        if (
+          backtestMarginUsdt(intent.qty * intent.price, leverage) + addFee <=
+          available
+        ) {
+          realized -= addFee;
+          addLatch.limitArmed = false;
+          addLatch.skipNoted = false;
+          remember(
+            {
+              atMs: bar.timeMs,
+              action: open.side === "short" ? "sell" : "buy",
+              side: open.side,
+              qty: intent.qty,
+              price: intent.price,
+              feeUsdt: addFee,
+              realizedUsdt: -addFee,
+              reason: "clip",
+              clipIndex,
+            },
+            intent.because,
+            intent.limit ? "limit" : "close",
+          );
+          const openingActions = perpsSideActions(input.recipe, open.side);
+          open = mergeSimPosition(
+            open,
+            open.side,
+            intent.qty,
+            intent.price,
+            openingActions ? null : input.recipe.tpsl,
+            openingActions ? null : input.recipe.trailing,
+          );
+          if (openingActions) {
+            flexLots.push({
+              id: `add-${orders.length}`,
+              qty: intent.qty,
+              price: intent.price,
+            });
+          }
+        } else if (!addLatch.skipNoted) {
+          addLatch.skipNoted = true;
+          events.push({
+            atMs: bar.timeMs,
+            kind: "skipped",
+            reason: "clip",
+            orderIndex: null,
+            side: open.side,
+            clipIndex,
+            text: skippedAddSentence(open.side, intent.because),
+          });
+        }
+      }
+    }
     markEquity(price);
   }
 
@@ -940,7 +1025,11 @@ async function replayPerpsBoth(input: {
     });
   }
 
-  function remember(order: SimulatedOrder, because?: string) {
+  function remember(
+    order: SimulatedOrder,
+    because?: string,
+    fillAt?: "close" | "limit",
+  ) {
     const sim = book[order.side];
     const exitBook = sim ? bookForSide(sim, order.atMs, order.price) : null;
     const orderIndex = orders.length;
@@ -951,11 +1040,14 @@ async function replayPerpsBoth(input: {
       reason: order.reason ?? "close",
       orderIndex,
       side: order.side,
+      clipIndex: order.clipIndex,
       text: fillSentence({
         reason: order.reason ?? "close",
         side: order.side,
         price: order.price,
+        clipIndex: order.clipIndex,
         because,
+        fillAt,
       }),
       ...(exitBook ? { exitBook } : {}),
     });
@@ -1023,6 +1115,10 @@ async function replayPerpsBoth(input: {
     }
   }
 
+  const addLatches = {
+    long: freshFlexAddLatch(),
+    short: freshFlexAddLatch(),
+  };
   let barIndex = 0;
   for (const bar of input.bars) {
     barIndex += 1;
@@ -1325,6 +1421,99 @@ async function replayPerpsBoth(input: {
       );
       if (openingActions) {
         bookLots[leg.side].push({ id: `entry-${orders.length}`, qty, price });
+      }
+    }
+    for (const side of ["long", "short"] as const) {
+      const positioned = book[side];
+      const stack = side === "short" ? short.addStack : input.recipe.addStack;
+      const latch = addLatches[side];
+      const intent = flexAddIntent({
+        stack,
+        detail:
+          positioned && stack && stack.leaves.length > 0
+            ? series.addDetail(
+                stack,
+                side,
+                barIndex - 1,
+                protectionReading(
+                  positioned.qty,
+                  bookForSide(positioned, bar.timeMs, price),
+                ),
+              )
+            : { met: false, group: null, because: "" },
+        latch,
+        open: Boolean(positioned),
+        bar,
+      });
+      if (!intent || !positioned) {
+        continue;
+      }
+      const addFee = feeUsdt(intent.qty, intent.price, input.feeRate);
+      const leverage = normalizeBacktestLeverage(input.leverage);
+      const locked =
+        (book.long
+          ? backtestMarginUsdt(book.long.qty * book.long.entry, leverage)
+          : 0) +
+        (book.short
+          ? backtestMarginUsdt(book.short.qty * book.short.entry, leverage)
+          : 0);
+      const available = input.startingUsdt + realized - locked;
+      const clipIndex = flexAddClipIndex(orders, side);
+      if (
+        backtestMarginUsdt(intent.qty * intent.price, leverage) + addFee <=
+        available
+      ) {
+        realized -= addFee;
+        latch.limitArmed = false;
+        latch.skipNoted = false;
+        remember(
+          {
+            atMs: bar.timeMs,
+            action: side === "short" ? "sell" : "buy",
+            side,
+            qty: intent.qty,
+            price: intent.price,
+            feeUsdt: addFee,
+            realizedUsdt: -addFee,
+            reason: "clip",
+            clipIndex,
+          },
+          intent.because,
+          intent.limit ? "limit" : "close",
+        );
+        const openingActions = perpsSideActions(input.recipe, side);
+        const sideClassic =
+          side === "short" ? input.recipe.shortEntry?.classic : null;
+        book[side] = mergeSimPosition(
+          positioned,
+          side,
+          intent.qty,
+          intent.price,
+          openingActions ? null : sideClassic ? sideClassic.tpsl : input.recipe.tpsl,
+          openingActions
+            ? null
+            : sideClassic
+              ? sideClassic.trailing
+              : input.recipe.trailing,
+        );
+        if (openingActions) {
+          bookLots[side].push({
+            id: `add-${orders.length}`,
+            qty: intent.qty,
+            price: intent.price,
+          });
+        }
+      } else if (!latch.skipNoted) {
+        latch.skipNoted = true;
+        events.push({
+          atMs: bar.timeMs,
+          kind: "skipped",
+          reason: "clip",
+          orderIndex: null,
+          side,
+          clipIndex,
+          text: skippedAddSentence(side, intent.because),
+        });
       }
     }
     markEquity(price);

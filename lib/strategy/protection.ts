@@ -1,5 +1,14 @@
-export type ProtectionIs = "protected" | "unprotected";
+export type ProtectionIs = "protected" | "no_loss";
 export type ProtectionAmount = "entire" | "at_least";
+
+/** Open size and the two coverage percents the exit book already stores. */
+export type ProtectionReading = {
+  openQty: number | null;
+  /** Largest single protective stop, including one that would close at a loss. */
+  provenPct: number | null;
+  /** Largest single protective stop whose price is at or better than entry. */
+  noLossProvenPct: number | null;
+};
 
 export type ProtectionSpec = {
   is: ProtectionIs;
@@ -10,7 +19,7 @@ export type ProtectionSpec = {
 
 export function parseProtectionIs(value: unknown): ProtectionIs | null {
   const raw = String(value ?? "").trim();
-  if (raw === "protected" || raw === "unprotected") {
+  if (raw === "protected" || raw === "no_loss") {
     return raw;
   }
   return null;
@@ -64,13 +73,16 @@ export function parseProtectionSpec(raw: unknown): ProtectionSpec | null {
 }
 
 /**
- * Flat is never met. Entire position means the largest protective stop
+ * Flat is never met. Entire position means the largest qualifying stop
  * covers the open size. At least uses that same percent.
+ * Protected counts a stop that would close at a loss.
+ * Protected - No Loss counts only a stop at or better than entry.
  */
 export function protectionMet(input: {
   spec: ProtectionSpec;
   openQty: number | null;
   provenPct: number | null;
+  noLossProvenPct?: number | null;
 }): boolean {
   if (!(input.openQty != null && input.openQty > 0)) {
     return false;
@@ -79,12 +91,31 @@ export function protectionMet(input: {
   if (need == null || !(need > 0)) {
     return false;
   }
-  const covered = (input.provenPct ?? 0) + 1e-6 >= need;
-  return input.spec.is === "protected" ? covered : !covered;
+  const covered =
+    input.spec.is === "no_loss" ? (input.noLossProvenPct ?? 0) : (input.provenPct ?? 0);
+  return covered + 1e-6 >= need;
+}
+
+export function protectionReading(
+  openQty: number | null,
+  book: {
+    protective: { provenPct: number | null };
+    noLoss: { provenPct: number | null };
+  } | null | undefined,
+): ProtectionReading {
+  return {
+    openQty,
+    provenPct: book?.protective.provenPct ?? null,
+    noLossProvenPct: book?.noLoss.provenPct ?? null,
+  };
+}
+
+export function protectionIsLabel(is: ProtectionIs): string {
+  return is === "no_loss" ? "Protected - No Loss" : "Protected";
 }
 
 export function formatProtectionLabel(spec: ProtectionSpec): string {
-  const state = spec.is === "unprotected" ? "Not protected" : "Protected";
+  const state = protectionIsLabel(spec.is);
   if (spec.amount === "at_least" && spec.pct != null) {
     return `${state}, at least ${spec.pct}%`;
   }

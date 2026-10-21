@@ -213,6 +213,79 @@ export function addStackMet(input: {
   });
 }
 
+/** Or groups of an additional-order stack. The first leaf starts group 1. */
+export function addStackGroups(stack: EntryStack): StrategyLeaf[][] {
+  if (stack.leaves.length === 0) {
+    return [];
+  }
+  const groups: StrategyLeaf[][] = [[stack.leaves[0]!]];
+  const count = Math.min(
+    Math.max(stack.leaves.length - 1, 0),
+    Math.max(stack.joins.length - 1, 0),
+  );
+  for (let index = 0; index < count; index += 1) {
+    const leaf = stack.leaves[index + 1];
+    if (!leaf) {
+      break;
+    }
+    if (stack.joins[index + 1] === "or") {
+      groups.push([leaf]);
+    } else {
+      groups[groups.length - 1]?.push(leaf);
+    }
+  }
+  return groups;
+}
+
+/** First Or group that is fully true. Null when the stack is empty or unmet. */
+export function addStackGroupIndex(input: {
+  stack: EntryStack;
+  leaves: readonly boolean[];
+}): number | null {
+  if (input.stack.leaves.length === 0) {
+    return null;
+  }
+  const groups: boolean[][] = [[input.leaves[0] === true]];
+  const count = Math.min(
+    Math.max(input.leaves.length - 1, 0),
+    Math.max(input.stack.joins.length - 1, 0),
+  );
+  for (let index = 0; index < count; index += 1) {
+    const met = input.leaves[index + 1] === true;
+    if (input.stack.joins[index + 1] === "or") {
+      groups.push([met]);
+    } else {
+      groups[groups.length - 1]?.push(met);
+    }
+  }
+  const hit = groups.findIndex((group) => group.every(Boolean));
+  return hit >= 0 ? hit : null;
+}
+
+/** Group 2 and later use Group 1 until Same as Group 1 is cleared. */
+export function addOrderForGroup(
+  stack: EntryStack,
+  group: number,
+): AddGroupOrder | null {
+  const orders = stack.orders;
+  if (!orders || group < 0) {
+    return null;
+  }
+  const row = orders[group];
+  if (group > 0 && row?.sameAsGroup1 !== false) {
+    return orders[0] ?? null;
+  }
+  return row ?? null;
+}
+
+export function addOrderQty(order: AddGroupOrder, price: number): number {
+  const size = Number(String(order.size).replace(/,/g, "").trim());
+  if (!(size > 0) || !(price > 0)) {
+    return 0;
+  }
+  return order.sizeUnit === "usdt" ? size / price : size;
+}
+
 export function strategyLeafTimeframe(
   leaf: StrategyLeaf,
 ): DcaIndicatorTimeframe | null {
@@ -519,6 +592,19 @@ export function entryStackMatchesWebhook(
 ): boolean {
   if (entrySource === "webhook" && webhookId === firedId) {
     return true;
+  }
+  return stack.leaves.some(
+    (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,
+  );
+}
+
+/** True when this webhook can complete an additional-order group. */
+export function addStackMatchesWebhook(
+  stack: EntryStack | null | undefined,
+  firedId: string,
+): boolean {
+  if (!stack || !firedId) {
+    return false;
   }
   return stack.leaves.some(
     (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,

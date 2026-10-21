@@ -38,6 +38,7 @@ import {
   deskChartSeries,
   deskIndicatorCatalog,
   indicatorStyleTargets,
+  isTrendSidePlot,
   oscillatorPaneStretch,
   replayIndicatorLegend,
   visiblePriceBounds,
@@ -60,7 +61,11 @@ import {
 } from "@/lib/charts/desk-chart-view";
 import { indicatorAddDenial, researchTrialLine } from "@/lib/membership/entitlements";
 import { DESK_CANDLE_LIMIT, type CandleBar, type CandleVenue } from "@/lib/market/candles";
-import { DivergenceLinesPrimitive } from "@/lib/charts/divergence-lines";
+import {
+  DivergenceLinesPrimitive,
+  releaseDivergenceLines,
+} from "@/lib/charts/divergence-lines";
+import { GappedLinePrimitive, gappedLineRuns } from "@/lib/charts/gapped-line";
 import { rsiDivergenceSegments } from "@/lib/strategy/rsi-divergence";
 
 const EMPTY_CANDLES: CandleBar[] = [];
@@ -465,6 +470,7 @@ export function DeskTradeChart({
       type PlotSeries = { setData: (data: unknown) => void };
       type Drawn = {
         lines: PlotSeries[];
+        gaps: Array<GappedLinePrimitive | null>;
         oscillator: {
           rsi: PlotSeries | null;
           macd: PlotSeries | null;
@@ -520,6 +526,14 @@ export function DeskTradeChart({
       }
 
       function mountIndicators() {
+        for (const row of drawn) {
+          for (const gap of row.gaps) {
+            if (gap) {
+              candleSeries.detachPrimitive(gap);
+            }
+          }
+          releaseDivergenceLines(candleSeries, row.priceLines, row.rsiLines);
+        }
         for (const api of indicatorApis) {
           chart.removeSeries(api);
         }
@@ -537,7 +551,9 @@ export function DeskTradeChart({
             paneCursor += 1;
             pane = paneCursor;
           }
+          const gaps: Array<GappedLinePrimitive | null> = [];
           const lines = layer.price.map((plot) => {
+            const gapped = isTrendSidePlot(plot.id);
             const line = chart.addSeries(
               charts.LineSeries,
               {
@@ -545,12 +561,23 @@ export function DeskTradeChart({
                 lineWidth: 2,
                 priceLineVisible: false,
                 lastValueVisible: false,
+                // The library joins blank bars. Supertrend draws each run itself.
+                lineVisible: !gapped,
+                crosshairMarkerVisible: !gapped,
                 ...(pane === 0 ? { autoscaleInfoProvider: () => null } : {}),
               },
               pane,
             );
             rememberIndicator(layer.id, plot.id, "line", plot.color, line);
             indicatorApis.push(line);
+            if (!gapped) {
+              gaps.push(null);
+            } else {
+              const gap = new GappedLinePrimitive();
+              gap.setStyleSource(line);
+              candleSeries.attachPrimitive(gap);
+              gaps.push(gap);
+            }
             return plotSeries(line);
           });
           const oscillator: Drawn["oscillator"] = {
@@ -614,7 +641,7 @@ export function DeskTradeChart({
             candleSeries.attachPrimitive(priceLines);
             rsiSeries.attachPrimitive(rsiLines);
           }
-          drawn.push({ lines, oscillator, priceLines, rsiLines });
+          drawn.push({ lines, gaps, oscillator, priceLines, rsiLines });
         }
       }
 
@@ -626,6 +653,12 @@ export function DeskTradeChart({
             return;
           }
           layer.price.forEach((plot, plotIndex) => {
+            const gap = row.gaps[plotIndex];
+            if (gap) {
+              row.lines[plotIndex]?.setData([]);
+              gap.setRuns(gappedLineRuns(shown, plot.values));
+              return;
+            }
             row.lines[plotIndex]?.setData(lineData(shown, plot.values));
           });
           if (layer.oscillator?.rsi && row.oscillator.rsi) {

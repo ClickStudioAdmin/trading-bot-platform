@@ -996,13 +996,13 @@ assert.match(
 assert.deepEqual(
   additionalRows({
     kind: "protection",
-    is: "unprotected",
+    is: "no_loss",
     amount: "at_least",
     pct: 25,
   }),
   [
     "Condition Type: Position protection",
-    "Is: Not protected",
+    "Is: Protected - No Loss",
     "Amount: At least 25%",
   ],
 );

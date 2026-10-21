@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import {
+  botFormHasChanges,
+  botSavedNotice,
+  saveClosesOwnedRows,
   dcaSaveVerb,
   dcaStatusFromLegs,
   botCanTakeBulkAction,
@@ -24,6 +27,62 @@ assert.equal(
   "stop_adding",
 );
 assert.equal(dcaStatusFromLegs({ armed: false, stopAdding: false }), "disabled");
+
+assert.equal(
+  botFormHasChanges({ edited: false, status: "disabled", savedStatus: "disabled" }),
+  false,
+);
+assert.equal(
+  botFormHasChanges({ edited: false, status: "active", savedStatus: "disabled" }),
+  true,
+);
+assert.equal(
+  botFormHasChanges({ edited: true, status: "disabled", savedStatus: "disabled" }),
+  true,
+);
+assert.equal(
+  botFormHasChanges({ edited: true, status: "active", savedStatus: "disabled" }),
+  true,
+);
+
+assert.equal(
+  saveClosesOwnedRows({
+    previousMode: "disabled",
+    nextMode: "disabled",
+    ownedCount: 2,
+  }),
+  false,
+);
+assert.equal(
+  saveClosesOwnedRows({
+    previousMode: "active",
+    nextMode: "disabled",
+    ownedCount: 0,
+  }),
+  false,
+);
+assert.equal(
+  saveClosesOwnedRows({
+    previousMode: "active",
+    nextMode: "disabled",
+    ownedCount: 1,
+  }),
+  true,
+);
+assert.equal(
+  saveClosesOwnedRows({
+    previousMode: "reduce_only",
+    nextMode: "disabled",
+    ownedCount: 1,
+  }),
+  true,
+);
+assert.equal(botSavedNotice({}), "Bot saved.");
+assert.equal(botSavedNotice({ many: true }), "Bots saved.");
+assert.equal(
+  botSavedNotice({ closing: true }),
+  "Bot saved. Closing positions…",
+);
 
 assert.equal(
   dcaSaveVerb({
@@ -84,7 +143,7 @@ assert.equal(
     selected: "disabled",
     running: false,
     armed: false,
-    hasOpenPosition: false,
+    hasOpenPosition: true,
   }),
   "save",
 );

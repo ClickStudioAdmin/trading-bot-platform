@@ -1,3 +1,4 @@
+import { dcaBreakevenPrice, dcaStopLossPrice } from "@/lib/dca/grid";
 import {
   exitPriceRuleLabel,
   hardExitMet,
@@ -288,6 +289,11 @@ export type ExitBookSnapshot = {
   byKind: Record<ExitActionKind, ExitCoverageSnapshot>;
   /** Stop loss, trailing stop, and a latched breakeven. */
   protective: ExitCoverageSnapshot;
+  /**
+   * The same stops, counted only when the stop price is at or better than entry.
+   * A long stop is at or above entry. A short stop is at or below entry.
+   */
+  noLoss: ExitCoverageSnapshot;
   /** Trailing stops that are tracking, plus a breakeven move that has latched. */
   trailingOrBreakeven: ExitCoverageSnapshot;
 };
@@ -1695,6 +1701,61 @@ function leafSnapshot(
   };
 }
 
+/** Resting stop, tracking trail, or latched breakeven price. Null when that stop is not on. */
+function protectiveStopPrice(input: {
+  action: StoredExitAction;
+  side: FuturesSide;
+  entryPrice: number | null;
+  last: number;
+  peak: number | null;
+}): number | null {
+  const { action, side, entryPrice } = input;
+  if (action.kind === "stop_loss") {
+    if (action.stopLossPrice != null && action.stopLossPrice > 0) {
+      return action.stopLossPrice;
+    }
+    if (entryPrice == null) {
+      return null;
+    }
+    return dcaStopLossPrice({
+      side,
+      firstPrice: entryPrice,
+      averagePrice: entryPrice,
+      stopLossPct: action.stopLossPct,
+      stopLossBasis: "average",
+    });
+  }
+  if (action.kind === "trailing_stop") {
+    const distance = trailDistance(action, input.last);
+    if (input.peak == null || distance == null || !(distance > 0)) {
+      return null;
+    }
+    const stop = side === "long" ? input.peak - distance : input.peak + distance;
+    return stop > 0 ? stop : null;
+  }
+  if (action.kind === "breakeven" && entryPrice != null && entryPrice > 0) {
+    const price = dcaBreakevenPrice({
+      side,
+      basisPrice: entryPrice,
+      offsetPct: action.breakevenOffsetPct ?? 0,
+    });
+    return price > 0 ? price : null;
+  }
+  return null;
+}
+
+/** Long: stop at or above entry. Short: stop at or below entry. Equal is not a loss. */
+function stopAvoidsLoss(
+  side: FuturesSide,
+  entryPrice: number | null,
+  stop: number | null,
+): boolean {
+  if (entryPrice == null || !(entryPrice > 0) || stop == null || !(stop > 0)) {
+    return false;
+  }
+  return side === "long" ? stop + 1e-9 >= entryPrice : stop <= entryPrice + 1e-9;
+}
+
 /** Read-only picture of every exit action and the coverage they share. */
 export function describeExitBook(input: {
   source: ExitBookSnapshot["source"];
@@ -1720,6 +1781,7 @@ export function describeExitBook(input: {
     mark: input.mark,
     index: null,
   };
+  const noLossQtys: number[] = [];
   const actions = input.actions.map((action) => {
     const arm = armOf(input.runtime, action.id);
     const claimQty = input.claims
@@ -1792,6 +1854,22 @@ export function describeExitBook(input: {
     } else if (action.kind === "trailing_stop" && arm.armedAt != null) {
       status = "armed";
     }
+    if (
+      protectingQty > QTY_EPS &&
+      stopAvoidsLoss(
+        input.side,
+        input.entryPrice,
+        protectiveStopPrice({
+          action,
+          side: input.side,
+          entryPrice: input.entryPrice,
+          last: input.last,
+          peak: arm.peak,
+        }),
+      )
+    ) {
+      noLossQtys.push(protectingQty);
+    }
     return {
       id: action.id,
       kind: action.kind,
@@ -1821,6 +1899,7 @@ export function describeExitBook(input: {
     actions,
     byKind,
     protective: protecting(["stop_loss", "trailing_stop", "breakeven"]),
+    noLoss: coverageOf(openQty, noLossQtys),
     trailingOrBreakeven: protecting(["trailing_stop", "breakeven"]),
   };
 }
@@ -2104,6 +2183,7 @@ export function exitBookFromJson(value: unknown): ExitBookSnapshot | null {
     actions,
     byKind,
     protective: coverageFromJson(row.protective, openQty) ?? emptyCoverage(openQty),
+    noLoss: coverageFromJson(row.noLoss, openQty) ?? emptyCoverage(openQty),
     trailingOrBreakeven:
       coverageFromJson(row.trailingOrBreakeven, openQty) ?? emptyCoverage(openQty),
   };

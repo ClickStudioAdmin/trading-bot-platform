@@ -73,6 +73,34 @@ export class DivergenceLinesPrimitive implements ISeriesPrimitive<Time> {
   }
 }
 
+type PrimitiveHost = {
+  detachPrimitive: (primitive: ISeriesPrimitive<Time>) => void;
+};
+
+/** Drop divergence drawings. The price primitive lives on the candles, so removing the RSI series leaves it behind. */
+export function releaseDivergenceLines(
+  candleSeries: PrimitiveHost,
+  priceLines: DivergenceLinesPrimitive | null,
+  rsiLines: DivergenceLinesPrimitive | null,
+) {
+  releaseOne(candleSeries, priceLines);
+  if (!rsiLines) {
+    return;
+  }
+  const host = rsiLines.series();
+  if (host) {
+    releaseOne(host, rsiLines);
+  }
+}
+
+function releaseOne(host: PrimitiveHost, primitive: DivergenceLinesPrimitive | null) {
+  if (!primitive) {
+    return;
+  }
+  primitive.setSegments([]);
+  host.detachPrimitive(primitive);
+}
+
 class DivergenceLinesRenderer implements IPrimitivePaneRenderer {
   constructor(private readonly owner: DivergenceLinesPrimitive) {}
 

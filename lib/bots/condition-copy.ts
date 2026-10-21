@@ -254,6 +254,21 @@ export function futuresActionLabel(
   return action === "sell" ? "Sell" : "Buy";
 }
 
+export function futuresAddedMessage(input: {
+  name: string;
+  symbol: string;
+  side: FuturesSide;
+  reasons: string;
+}): string {
+  const name = input.name.trim() || "Bot";
+  const side = input.side === "short" ? "short" : "long";
+  const why = input.reasons.trim();
+  if (why) {
+    return `${name} added to the ${side} on ${input.symbol}. ${why}.`;
+  }
+  return `${name} added to the ${side} on ${input.symbol}.`;
+}
+
 export function futuresFiredMessage(input: {
   name: string;
   symbol: string;
