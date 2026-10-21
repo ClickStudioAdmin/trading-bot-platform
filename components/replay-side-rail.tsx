@@ -763,6 +763,41 @@ function RelatedMoreMenu({
   const closeTimer = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
   const [box, setBox] = useState<{ top: number; left: number } | null>(null);
+  const [slot, setSlot] = useState<HTMLDivElement | null>(null);
+  const slotRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      slotRef.current?.remove();
+      slotRef.current = null;
+    };
+  }, []);
+
+  function ensureSlot(): HTMLDivElement | null {
+    if (!portalHost) {
+      return null;
+    }
+    const existing = slotRef.current;
+    if (existing && portalHost.contains(existing)) {
+      return existing;
+    }
+    existing?.remove();
+    // The replay frame uses space-y. Appending the menu makes the block above
+    // it grow a bottom margin, which flashes the page scrollbar. A prepended
+    // fixed slot stays out of that flow, so opening the menu does not move the page.
+    const node = document.createElement("div");
+    node.dataset.replayRowMenu = "true";
+    node.style.setProperty("position", "fixed");
+    node.style.setProperty("margin", "0", "important");
+    node.style.setProperty("width", "0");
+    node.style.setProperty("height", "0");
+    node.style.setProperty("overflow", "visible");
+    node.style.setProperty("pointer-events", "none");
+    node.style.setProperty("z-index", "80");
+    portalHost.prepend(node);
+    slotRef.current = node;
+    return node;
+  }
 
   function cancelClose() {
     if (closeTimer.current != null) {
@@ -779,6 +814,7 @@ function RelatedMoreMenu({
   function show() {
     cancelClose();
     const node = buttonRef.current;
+    const menuSlot = ensureSlot();
     if (node) {
       const rect = node.getBoundingClientRect();
       setBox({
@@ -786,6 +822,7 @@ function RelatedMoreMenu({
         left: Math.max(8, rect.right - 144),
       });
     }
+    setSlot(menuSlot);
     setOpen(true);
   }
 
@@ -811,7 +848,11 @@ function RelatedMoreMenu({
         margin,
         Math.min(left, window.innerWidth - menuRect.width - margin),
       );
-      setBox({ top, left });
+      setBox((current) =>
+        current && current.top === top && current.left === left
+          ? current
+          : { top, left },
+      );
     }
     place();
     window.addEventListener("resize", place);
@@ -848,7 +889,7 @@ function RelatedMoreMenu({
       >
         <IconEllipsis size={14} className="size-3.5" />
       </button>
-      {open && portalHost
+      {open && box && slot
         ? createPortal(
             <div
               ref={menuRef}
@@ -856,12 +897,8 @@ function RelatedMoreMenu({
               aria-label={`More actions for ${name}`}
               onMouseEnter={show}
               onMouseLeave={scheduleClose}
-              className="fixed z-[80] min-w-36 rounded-card border border-line bg-surface py-1"
-              style={
-                box
-                  ? { top: box.top, left: box.left }
-                  : { top: -9999, left: 0 }
-              }
+              className="pointer-events-auto fixed z-[80] min-w-36 rounded-card border border-line bg-surface py-1"
+              style={{ top: box.top, left: box.left, margin: 0 }}
             >
               {actions.map((action) =>
                 action === "delete" ? (
@@ -896,7 +933,7 @@ function RelatedMoreMenu({
                 ),
               )}
             </div>,
-            portalHost,
+            slot,
           )
         : null}
     </>
