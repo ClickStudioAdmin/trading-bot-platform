@@ -1,10 +1,9 @@
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { AdminPlanVisibilityFields } from "@/components/admin-plan-visibility";
 import {
   adminPlanSections,
   affiliateRateFieldName,
   PLAN_NAME_MAX,
-  PLAN_VISIBILITIES,
-  PLAN_VISIBILITY_LABELS,
   type MembershipPlan,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
@@ -13,7 +12,6 @@ import {
   createMembershipPlanAction,
   updateMembershipPlanAction,
 } from "@/lib/membership/actions";
-import { AppSelect } from "@/components/app-select";
 import { AppCheck } from "@/components/app-check";
 
 const fieldClass =
@@ -84,50 +82,11 @@ export function AdminPlanForm({
             />
           </label>
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
-            Visibility
-            <AppSelect
-              name="visibility"
-              defaultValue={plan?.visibility ?? "draft"}
-              className={fieldClass}
-            >
-              {PLAN_VISIBILITIES.map((value) => (
-                <option key={value} value={value}>
-                  {PLAN_VISIBILITY_LABELS[value]}
-                </option>
-              ))}
-            </AppSelect>
-            <span className="mt-1 block text-hint text-ink-muted">
-              Public is on the Plans page. Private is assign-only. Draft is not
-              published.
-            </span>
-          </label>
-          <div className="space-y-3 self-end pb-1 text-sm text-ink">
-            <label className="inline-flex items-start gap-2">
-              <AppCheck
-                name="preview"
-                value="1"
-                defaultChecked={plan?.preview ?? false}
-              />
-              <span>
-                Show this draft on the Plans page for preview
-                <span className="mt-1 block text-hint text-ink-muted">
-                  Admins only. Ignored unless visibility is Draft.
-                </span>
-              </span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <AppCheck
-                name="isDefault"
-                value="1"
-                defaultChecked={plan?.isDefault ?? false}
-                className=""
-              />
-              Default for new members
-            </label>
-          </div>
-        </div>
+        <AdminPlanVisibilityFields
+          visibility={plan?.visibility}
+          preview={plan?.preview}
+          isDefault={plan?.isDefault}
+        />
       </section>
 
       {adminPlanSections().map((section) => {
