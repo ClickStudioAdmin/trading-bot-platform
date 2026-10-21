@@ -54,11 +54,11 @@ export type ParamRow = { label: string; value: string };
 
 export type ParamGroup = { title?: string; rows: ParamRow[] };
 
-/** One condition inside a form-style group. `join: "none"` stays in the group without an And. */
+/** One condition inside a form-style group. `join: "none"` stays in the group without a joiner. */
 export type ParamCondition = {
   rows: ParamRow[];
   title?: string;
-  join?: "and" | "none";
+  join?: "and" | "or" | "none";
 };
 
 /**
@@ -70,8 +70,10 @@ export type ParamStack = {
   title?: string;
   rows?: ParamRow[];
   groups: ParamCondition[][];
-  /** Order size for each condition group. Same index as `groups`. */
+  /** Rows at the bottom of each condition group. Same index as `groups`. */
   sizing?: Array<ParamRow[] | null>;
+  /** Title above `sizing`. Entries and additional orders use Position Sizing. */
+  sizingTitle?: string;
 };
 
 export type ParamSection = {
@@ -725,14 +727,25 @@ function dcaSideEntry(
       },
     };
   }
-  const groups: ParamGroup[] = [{ rows: lead.slice(0, 1) }];
-  if (lead.length > 1) {
-    groups.push({ rows: lead.slice(1) });
+  const rows = [...lead];
+  if (!showStack) {
+    return { groups: [], stack: { groups: [[{ rows }]] } };
   }
-  if (showStack) {
-    groups.push(secondaryGroup(confirm, side));
-  }
-  return { groups };
+  const secondary = secondaryGroup(confirm, side);
+  const off = secondary.rows.length === 1 && secondary.rows[0]?.value === "Off";
+  return {
+    groups: [],
+    stack: {
+      groups: [
+        off
+          ? [{ rows: [...rows, ...secondary.rows] }]
+          : [
+              { rows },
+              { rows: secondary.rows, join: "and", title: secondary.title },
+            ],
+      ],
+    },
+  };
 }
 
 function exposureRows(recipe: DcaTemplateRecipe, quote: string): ParamRow[] {
@@ -1043,51 +1056,76 @@ function withSeparateBreakeven(
   return listed;
 }
 
-function exitActionStacks(
+function exitScopeRows(action: StoredExitAction): ParamRow[] {
+  const execution = executionLabel(action);
+  return [
+    ...(execution ? [{ label: "Execution", value: execution }] : []),
+    { label: "Applies To", value: scopeLabel(action.scope) },
+  ];
+}
+
+function exitActionConditions(
+  action: StoredExitAction,
+  side: "long" | "short",
+): ParamCondition[] {
+  const lead: ParamRow[] = [{ label: "Action", value: actionKindLabel(action.kind) }];
+  const price = actionPriceRows(action);
+  const when: ParamRow[] =
+    action.groups.length === 0
+      ? [
+          {
+            label: action.kind === "close" ? "Fire when" : "Enable when",
+            value: action.kind === "close" ? "Fills in profit" : "Always on",
+          },
+        ]
+      : [];
+  if (action.groups.length === 0) {
+    return [{ rows: [...lead, ...price, ...when] }];
+  }
+  const conditions: ParamCondition[] = [];
+  let priced = false;
+  action.groups.forEach((group, groupIndex) => {
+    [group.anchor, ...group.rows].forEach((draft, draftIndex) => {
+      let rows = actionDraftRows(draft, side) ?? [];
+      if (isExitPriceRule(draft.trigger) && !priced) {
+        priced = true;
+        rows = [...rows, ...price];
+      }
+      if (rows.length === 0) {
+        return;
+      }
+      if (conditions.length === 0) {
+        rows = [...lead, ...rows];
+      }
+      conditions.push({
+        rows,
+        ...(groupIndex > 0 && draftIndex === 0 ? { join: "or" as const } : {}),
+      });
+    });
+  });
+  if (!priced && price.length > 0) {
+    const first = conditions[0];
+    if (first) {
+      first.rows = [...first.rows, ...price];
+    } else {
+      conditions.push({ rows: [...lead, ...price] });
+    }
+  }
+  return conditions.length > 0 ? conditions : [{ rows: [...lead, ...price, ...when] }];
+}
+
+/** One Group card per action, matching Additional Orders. */
+function exitActionStack(
   actions: readonly StoredExitAction[],
   side: "long" | "short",
-): ParamStack[] {
-  return withSeparateBreakeven(actions).map((action) => {
-    const when = action.kind === "close" ? "Fire when" : "Enable when";
-    const hasPriceRule = action.groups.some((group) =>
-      [group.anchor, ...group.rows].some((draft) => isExitPriceRule(draft.trigger)),
-    );
-    const execution = executionLabel(action);
-    const rows: ParamRow[] = [
-      { label: "Action", value: actionKindLabel(action.kind) },
-      ...(execution ? [{ label: "Execution", value: execution }] : []),
-      { label: "Applies To", value: scopeLabel(action.scope) },
-      ...(hasPriceRule ? [] : actionPriceRows(action)),
-    ];
-    if (action.groups.length === 0) {
-      rows.push({
-        label: when,
-        value: action.kind === "close" ? "Fills in profit" : "Always on",
-      });
-    }
-    return {
-      title: actionKindLabel(action.kind),
-      rows,
-      groups: (() => {
-        let priced = false;
-        return action.groups.flatMap((group) => {
-        const conditions = [group.anchor, ...group.rows].flatMap((draft) => {
-          const condition = actionDraftRows(draft, side);
-          if (!condition) {
-            return [];
-          }
-          if (isExitPriceRule(draft.trigger) && !priced) {
-            priced = true;
-            const pricedRows = [...condition, ...actionPriceRows(action)];
-            return pricedRows.length > 0 ? [{ rows: pricedRows }] : [];
-          }
-          return [{ rows: condition }];
-        });
-        return conditions.length > 0 ? [conditions] : [];
-        });
-      })(),
-    };
-  });
+): ParamStack {
+  const groups: ParamCondition[][] = [];
+  const sizing: Array<ParamRow[] | null> = [];
+  for (const action of withSeparateBreakeven(actions)) {
+    groups.push(exitActionConditions(action, side));
+    sizing.push(exitScopeRows(action));
+  }
+  return { groups, sizing, sizingTitle: "Execution and Scope" };
 }
 
 function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
@@ -1105,7 +1143,7 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
       return {
         title,
         groups: [],
-        stacks: exitActionStacks(actions, side),
+        stack: exitActionStack(actions, side),
       };
     }
     const custom = hardExitParts(
@@ -1414,14 +1452,28 @@ function perpsEntry(
       },
     };
   }
-  const groups: ParamGroup[] = [{ rows: lead.slice(0, 1) }];
-  if (lead.length > 1) {
-    groups.push({ rows: lead.slice(1) });
+  if (closing) {
+    const groups: ParamGroup[] = [{ rows: lead.slice(0, 1) }];
+    if (lead.length > 1) {
+      groups.push({ rows: lead.slice(1) });
+    }
+    return { groups };
   }
-  if (!closing) {
-    groups.push(secondaryGroup(recipe.confirm, side));
-  }
-  return { groups };
+  const secondary = secondaryGroup(recipe.confirm, side);
+  const off = secondary.rows.length === 1 && secondary.rows[0]?.value === "Off";
+  return {
+    groups: [],
+    stack: {
+      groups: [
+        off
+          ? [{ rows: [...lead, ...secondary.rows] }]
+          : [
+              { rows: lead },
+              { rows: secondary.rows, join: "and", title: secondary.title },
+            ],
+      ],
+    },
+  };
 }
 
 function flexSizeRows(
@@ -1699,7 +1751,7 @@ function perpsExitSections(
       return {
         title,
         groups: [],
-        stacks: exitActionStacks(actions, exitSide),
+        stack: exitActionStack(actions, exitSide),
       };
     }
     const custom = hardExitParts(

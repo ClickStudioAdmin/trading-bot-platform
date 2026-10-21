@@ -602,7 +602,10 @@ if (flexRule.ok) {
   const exit = templateParamSections(listed).find(
     (section) => section.title === "Long Exit Conditions",
   );
-  assert.equal(exit?.stacks?.[0]?.title, "Take profit");
+  assert.equal(
+    exit?.stack?.groups[0]?.[0]?.rows.find((row) => row.label === "Action")?.value,
+    "Take profit",
+  );
   assert.equal(
     templateParamSections(listed).some((section) =>
       section.groups.some((group) =>
