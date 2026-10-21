@@ -17,6 +17,7 @@ import {
   type StrategyLeaf,
 } from "@/lib/strategy/expr";
 import {
+  actionUsesLotReference,
   sideExitActions,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
@@ -27,6 +28,8 @@ import {
 } from "@/lib/strategy/retrace";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import type { BacktestRecipe, SimulatedOrder } from "./model";
+
+type ChartLot = { price: number; atMs: number };
 
 export type ConditionOrderLevel = {
   id: string;
@@ -63,6 +66,30 @@ export function conditionOrderTimeframes(
   return [...frames];
 }
 
+function chartLots(orders: readonly SimulatedOrder[], side: FuturesSide): ChartLot[] {
+  const entryAction = side === "long" ? "buy" : "sell";
+  const lots: { qty: number; price: number; atMs: number }[] = [];
+  for (const order of orders) {
+    if (order.action === entryAction && order.price > 0 && order.qty > 0) {
+      lots.push({ qty: order.qty, price: order.price, atMs: order.atMs });
+      continue;
+    }
+    if (order.action !== "flatten" || !(order.qty > 0)) {
+      continue;
+    }
+    let left = order.qty;
+    for (const lot of lots) {
+      if (!(left > 0)) {
+        break;
+      }
+      const used = Math.min(lot.qty, left);
+      lot.qty -= used;
+      left -= used;
+    }
+  }
+  return lots.filter((lot) => lot.qty > 0).map((lot) => ({ price: lot.price, atMs: lot.atMs }));
+}
+
 /** Horizontal prices for the open position at the replay head. */
 export function conditionOrderLevels(input: {
   recipe: BacktestRecipe;
@@ -82,6 +109,7 @@ export function conditionOrderLevels(input: {
     }
     const since = input.candles.filter((bar) => bar.timeMs >= cycle.openedAtMs);
     const recipe = input.recipe;
+    const lots = chartLots(cycle.orders, cycle.side);
     if (recipe.kind === "flex") {
       flexLevels(
         levels,
@@ -89,6 +117,7 @@ export function conditionOrderLevels(input: {
         cycle.side,
         cycle.entryPrice,
         since,
+        lots,
       );
     } else {
       dcaLevels(
@@ -98,6 +127,7 @@ export function conditionOrderLevels(input: {
         cycle.entryPrice,
         cycle.firstFillPrice,
         since,
+        lots,
       );
     }
   }
@@ -115,6 +145,7 @@ function flexLevels(
   side: FuturesSide,
   entry: number,
   since: readonly CandleBar[],
+  lots: readonly ChartLot[],
 ) {
   const recipe = input.recipe;
   const actions = sideExitActions(
@@ -134,7 +165,7 @@ function flexLevels(
         };
   if (actions && actions.length > 0) {
     for (const action of actions) {
-      exitActionLevels(levels, action, side, entry, since, input);
+      exitActionLevels(levels, action, side, entry, since, input, lots);
     }
   } else {
     tpslLevels(levels, classic.tpsl, side);
@@ -175,8 +206,18 @@ function dcaLevels(
   entry: number,
   first: number,
   since: readonly CandleBar[],
+  lots: readonly ChartLot[],
 ) {
   const recipe = input.recipe;
+  const actions =
+    side === "short" && recipe.direction === "both"
+      ? recipe.shortExitActions
+      : recipe.exitActions;
+  if (actions && actions.length > 0) {
+    for (const action of actions) {
+      exitActionLevels(levels, action, side, entry, since, input, lots);
+    }
+  } else {
   const classic =
     side === "short" && recipe.direction === "both" && recipe.shortClassic
       ? recipe.shortClassic
@@ -211,6 +252,7 @@ function dcaLevels(
     since,
     planned.stopLoss,
   );
+  }
   stackLevels(
     levels,
     side === "short" && recipe.direction === "both" ? recipe.shortExitStack : recipe.exitStack,
@@ -232,52 +274,65 @@ function exitActionLevels(
     tape: DcaIndicatorTimeframe;
     barsByTimeframe?: ReadonlyMap<string, readonly CandleBar[]>;
   },
+  lots: readonly ChartLot[],
 ) {
-  if (action.kind === "take_profit") {
-    push(
-      levels,
-      side,
-      "exit",
-      "TP",
-      action.takeProfitPrice ??
-        (action.takeProfitPct != null ? moved(side, entry, action.takeProfitPct, "profit") : null),
-    );
-  }
-  if (action.kind === "stop_loss") {
-    push(
-      levels,
-      side,
-      "exit",
-      "SL",
-      action.stopLossPrice ??
-        (action.stopLossPct != null ? moved(side, entry, action.stopLossPct, "loss") : null),
-    );
-  }
-  if (action.kind === "trailing_stop") {
-    const distance =
-      action.trailingDistance ??
-      (action.trailingPct != null && action.trailingPct > 0
-        ? (since[since.length - 1]?.close ?? entry) * (action.trailingPct / 100)
-        : null);
-    if (distance != null && distance > 0) {
-      const active =
-        action.trailingActivation ??
-        (action.trailingTriggerPct != null && action.trailingTriggerPct > 0
-          ? moved(side, entry, action.trailingTriggerPct, "profit")
-          : null);
-      push(levels, side, "exit", "Trail", trailedStop(side, distance, active, since));
+  const subjects =
+    actionUsesLotReference(action) && lots.length > 0
+      ? lots
+      : [{ price: entry, atMs: since[0]?.timeMs ?? 0 }];
+  for (const lot of subjects) {
+    const window = since.filter((bar) => bar.timeMs >= lot.atMs);
+    const bars = window.length > 0 ? window : since;
+    if (action.kind === "take_profit") {
+      push(
+        levels,
+        side,
+        "exit",
+        "TP",
+        action.takeProfitPrice ??
+          (action.takeProfitPct != null ? moved(side, entry, action.takeProfitPct, "profit") : null),
+      );
     }
-  }
-  if (action.kind === "breakeven") {
-    breakevenLevel(
-      levels,
-      side,
-      entry,
-      action.breakevenActivationPct ?? null,
-      action.breakevenOffsetPct ?? 0,
-      since,
-      null,
-    );
+    if (action.kind === "stop_loss") {
+      push(
+        levels,
+        side,
+        "exit",
+        "SL",
+        action.stopLossPrice ??
+          (action.stopLossPct != null
+            ? moved(side, actionUsesLotReference(action) ? lot.price : entry, action.stopLossPct, "loss")
+            : null),
+      );
+    }
+    if (action.kind === "trailing_stop") {
+      const mark = bars[bars.length - 1]?.close ?? lot.price;
+      const basis = actionUsesLotReference(action) ? lot.price : entry;
+      const distance =
+        action.trailingDistance ??
+        (action.trailingPct != null && action.trailingPct > 0
+          ? mark * (action.trailingPct / 100)
+          : null);
+      if (distance != null && distance > 0) {
+        const active =
+          action.trailingActivation ??
+          (action.trailingTriggerPct != null && action.trailingTriggerPct > 0
+            ? moved(side, basis, action.trailingTriggerPct, "profit")
+            : null);
+        push(levels, side, "exit", "Trail", trailedStop(side, distance, active, bars));
+      }
+    }
+    if (action.kind === "breakeven") {
+      breakevenLevel(
+        levels,
+        side,
+        actionUsesLotReference(action) ? lot.price : entry,
+        action.breakevenActivationPct ?? null,
+        action.breakevenOffsetPct ?? 0,
+        bars,
+        null,
+      );
+    }
   }
   for (const group of action.groups) {
     for (const draft of [group.anchor, ...group.rows]) {

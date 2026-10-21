@@ -988,6 +988,7 @@ async function commitOwnedExit(input: {
     return applied.applied && applied.remaining <= 1e-8 ? "flat" : "held";
   }
   if (!full) {
+    await saveExitRuntime(input.open.id, settled.runtime);
     return "held";
   }
   const closed = await runFuturesCommand({

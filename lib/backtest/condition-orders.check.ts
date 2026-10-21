@@ -88,4 +88,33 @@ assert.equal(after.some((row) => row.role === "add"), false);
 const wick = titles([bar(0, 100, 96, 104), bar(1, 111, 108, 112)]);
 assert.equal(wick.some((row) => row.title === "Long Trail" && row.price === 107), true);
 
+const perLotStops = conditionOrderLevels({
+  recipe: {
+    ...recipe,
+    exitActions: [
+      {
+        id: "sl",
+        kind: "stop_loss",
+        scope: { kind: "all" },
+        reference: "lot",
+        groups: [],
+        takeProfitPct: null,
+        takeProfitPrice: null,
+        stopLossPct: 10,
+        stopLossPrice: null,
+        trailingDistance: null,
+        trailingActivation: null,
+      },
+    ],
+  },
+  orders: [
+    order,
+    { ...order, atMs: bar(1, 80).timeMs, qty: 1, price: 80, clipIndex: 2 },
+  ],
+  candles: [bar(0, 100), bar(1, 90)],
+  tape: "5",
+});
+assert.equal(perLotStops.some((row) => row.title === "Long SL" && row.price === 90), true);
+assert.equal(perLotStops.some((row) => row.title === "Long SL" && row.price === 72), true);
+
 console.log("condition order level checks passed");

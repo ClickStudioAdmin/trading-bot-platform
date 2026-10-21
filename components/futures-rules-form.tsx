@@ -2356,6 +2356,7 @@ function RuleCard({
             renderTrailingStop={(slot) => perpsTrailingFields("primary", slot)}
             renderStopLoss={(slot) => perpsStopFields("primary", slot)}
             renderBreakeven={(slot) => perpsBreakevenFields("primary", slot)}
+            stopIsPercent={slKind === "percent"}
           />
         </BotFormStep>
         </BotFormSidePane>
@@ -2391,6 +2392,7 @@ function RuleCard({
             renderBreakeven={(slot) =>
               perpsBreakevenFields(direction === "both" ? "short" : "primary", slot)
             }
+            stopIsPercent={(direction === "both" ? shortClassic.slKind : slKind) === "percent"}
           />
         </BotFormStep>
         </BotFormSidePane>

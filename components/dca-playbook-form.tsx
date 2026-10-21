@@ -3717,6 +3717,7 @@ export function DcaPlaybookForm({
           renderTrailingStop={(slot) => dcaTrailingFields("primary", slot)}
           renderStopLoss={(slot) => dcaStopFields("primary", slot)}
           renderBreakeven={(slot) => dcaBreakevenFields("primary", slot)}
+          stopIsPercent
         />
       </BotFormStep>
       </BotFormSidePane>
@@ -3770,6 +3771,7 @@ export function DcaPlaybookForm({
           renderBreakeven={(slot) =>
             dcaBreakevenFields(direction === "both" ? "short" : "primary", slot)
           }
+          stopIsPercent
         />
       </BotFormStep>
       </BotFormSidePane>

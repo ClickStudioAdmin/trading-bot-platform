@@ -72,6 +72,7 @@ import { fillSentence, skippedEntrySentence } from "./events";
 import {
   emptyExitRuntime,
   evaluateExitActions,
+  reduceOpenLots,
   exitActionTimeframes,
   exitBookForClassic,
   sideExitActions,
@@ -275,7 +276,7 @@ export async function replayDcaPlaybook(input: {
     );
   }
   function claimFillReason(kind: ExitActionKind): BacktestFillReason {
-    if (kind === "stop_loss") {
+    if (kind === "stop_loss" || kind === "breakeven") {
       return "stop";
     }
     if (kind === "trailing_stop") {
@@ -364,6 +365,7 @@ export async function replayDcaPlaybook(input: {
       },
     );
     legs[side] = { ...leg, qty: leg.qty - take, slPrice: null, slQty: null };
+    exitLots[side] = reduceOpenLots(exitLots[side], take);
   }
 
   function cashUsdt() {

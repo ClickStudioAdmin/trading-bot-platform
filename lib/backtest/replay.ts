@@ -18,6 +18,7 @@ import {
   evaluateExitActions,
   exitActionTimeframes,
   exitBookForClassic,
+  reduceOpenLots,
   sideExitActions,
   type ExitActionKind,
   type ExitLot,
@@ -265,7 +266,7 @@ function perpsSideActions(recipe: PerpsTemplateRecipe, side: FuturesSide) {
 }
 
 function claimFillReason(kind: ExitActionKind): BacktestFillReason {
-  if (kind === "stop_loss") {
+  if (kind === "stop_loss" || kind === "breakeven") {
     return "stop";
   }
   if (kind === "trailing_stop") {
@@ -503,6 +504,51 @@ export async function replayPerpsPriceCross(input: {
     flexRuntime = emptyExitRuntime();
   }
 
+  function reduceOpen(
+    atMs: number,
+    fill: number,
+    qty: number,
+    reason: BacktestFillReason,
+  ) {
+    if (!open) {
+      return;
+    }
+    const take = Math.min(open.qty, qty);
+    if (!(take > 0) || take + 1e-8 >= open.qty) {
+      flattenOpen(atMs, fill, reason);
+      return;
+    }
+    const current = open;
+    const fee = feeUsdt(take, fill, input.feeRate);
+    const pnl = unrealized(current.side, take, current.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side: current.side,
+        qty: take,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+    );
+    open = {
+      ...current,
+      qty: current.qty - take,
+      tpsl: current.tpsl ? { ...current.tpsl, stopLoss: null, slQty: null } : null,
+    };
+    flexLots = reduceOpenLots(flexLots, take);
+  }
+
   function wipeOpen(atMs: number, fill: number) {
     flattenOpen(atMs, fill, "liquidation");
     liquidated = true;
@@ -547,14 +593,17 @@ export async function replayPerpsPriceCross(input: {
         index: adverse,
       };
       const actions = perpsSideActions(input.recipe, open.side);
+      const resting = open.tpsl;
+      const breakevenStop =
+        Boolean(actions) && open.breakevenDone && resting != null && tpslHasLevels(resting);
       const sl =
-        actions || !(open.tpsl && tpslHasLevels(open.tpsl))
-          ? null
-          : paperStopLossHit({
+        resting && tpslHasLevels(resting) && (!actions || breakevenStop)
+          ? paperStopLossHit({
               side: open.side,
-              tpsl: open.tpsl,
+              tpsl: resting,
               ...quotes,
-            });
+            })
+          : null;
       const liq = backtestLiquidationPrice({
         side: open.side,
         entry: open.entry,
@@ -569,6 +618,14 @@ export async function replayPerpsPriceCross(input: {
       if (firstHit) {
         if (firstHit.reason === "liquidation") {
           wipeOpen(bar.timeMs, firstHit.price);
+        } else if (
+          breakevenStop &&
+          resting?.slQty != null &&
+          resting.slQty > 0 &&
+          open &&
+          resting.slQty + 1e-8 < open.qty
+        ) {
+          reduceOpen(bar.timeMs, firstHit.price, resting.slQty, firstHit.reason);
         } else {
           flattenOpen(bar.timeMs, firstHit.price, firstHit.reason);
         }
@@ -1139,6 +1196,52 @@ async function replayPerpsBoth(input: {
     clearBookExit(side);
   }
 
+  function reduceSide(
+    side: FuturesSide,
+    atMs: number,
+    fill: number,
+    qty: number,
+    reason: BacktestFillReason,
+  ) {
+    const open = book[side];
+    if (!open) {
+      return;
+    }
+    const take = Math.min(open.qty, qty);
+    if (!(take > 0) || take + 1e-8 >= open.qty) {
+      flattenSide(side, atMs, fill, reason);
+      return;
+    }
+    const fee = feeUsdt(take, fill, input.feeRate);
+    const pnl = unrealized(side, take, open.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    remember(
+      {
+        atMs,
+        action: "flatten",
+        side,
+        qty: take,
+        price: fill,
+        feeUsdt: fee,
+        realizedUsdt: pnl,
+        reason,
+      },
+    );
+    book[side] = {
+      ...open,
+      qty: open.qty - take,
+      tpsl: open.tpsl ? { ...open.tpsl, stopLoss: null, slQty: null } : null,
+    };
+    bookLots[side] = reduceOpenLots(bookLots[side], take);
+  }
+
   function clearBookExit(side: FuturesSide) {
     bookLots[side] = [];
     bookArms[side] = emptyExitRuntime();
@@ -1195,10 +1298,13 @@ async function replayPerpsBoth(input: {
       const favorable = open.side === "long" ? bar.high : bar.low;
       const quotes = { last: adverse, mark: adverse, index: adverse };
       const actions = perpsSideActions(input.recipe, side);
+      const resting = open.tpsl;
+      const breakevenStop =
+        Boolean(actions) && open.breakevenDone && resting != null && tpslHasLevels(resting);
       const sl =
-        actions || !(open.tpsl && tpslHasLevels(open.tpsl))
-          ? null
-          : paperStopLossHit({ side: open.side, tpsl: open.tpsl, ...quotes });
+        resting && tpslHasLevels(resting) && (!actions || breakevenStop)
+          ? paperStopLossHit({ side: open.side, tpsl: resting, ...quotes })
+          : null;
       const liq = backtestLiquidationPrice({
         side: open.side,
         entry: open.entry,
@@ -1211,7 +1317,17 @@ async function replayPerpsBoth(input: {
         liq != null ? { price: liq, reason: "liquidation" } : null,
       ]);
       if (firstHit) {
-        flattenSide(side, bar.timeMs, firstHit.price, firstHit.reason);
+        if (
+          firstHit.reason !== "liquidation" &&
+          breakevenStop &&
+          resting?.slQty != null &&
+          resting.slQty > 0 &&
+          resting.slQty + 1e-8 < open.qty
+        ) {
+          reduceSide(side, bar.timeMs, firstHit.price, resting.slQty, firstHit.reason);
+        } else {
+          flattenSide(side, bar.timeMs, firstHit.price, firstHit.reason);
+        }
         if (firstHit.reason === "liquidation") {
           liquidated = true;
         }
