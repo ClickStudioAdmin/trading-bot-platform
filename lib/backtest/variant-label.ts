@@ -91,6 +91,16 @@ export type ReplayVariantRow = {
 
 export type ReplayRelatedRole = "comparable" | "variation";
 
+export type RelatedRowAction = "delete" | "optimize";
+
+/** Hover menu on a finished row. Variations list Delete, then Optimize. Comparables list Delete. */
+export function relatedRowActions(role: ReplayRelatedRole): RelatedRowAction[] {
+  if (role === "variation") {
+    return ["delete", "optimize"];
+  }
+  return ["delete"];
+}
+
 export type ReplayRelatedEntry = {
   id: string;
   role: ReplayRelatedRole;

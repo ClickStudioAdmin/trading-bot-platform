@@ -53,13 +53,16 @@ import {
   backtestListEntryHref,
   backtestNewHref,
   backtestReplayHref,
+  backtestReplayOptimizeHref,
   backtestRerunHref,
   backtestSavedListHref,
   markReplayPlaybackConsumed,
   replayAutoplayStep,
   replayPlaybackConsumed,
   replayPlaybackRunId,
+  replayRequestsOptimize,
   replayRequestsPlayback,
+  replaySearchWithoutOptimize,
   replaySearchWithoutPlayback,
   paginateBacktestList,
   parseBacktestListPage,
@@ -784,6 +787,17 @@ assert.equal(replayRequestsPlayback("?play=0"), false);
 assert.equal(replaySearchWithoutPlayback("?play=1"), "");
 assert.equal(replaySearchWithoutPlayback("?page=2&play=1"), "?page=2");
 assert.equal(replaySearchWithoutPlayback("?page=2"), "?page=2");
+assert.equal(
+  backtestReplayOptimizeHref("run-abc"),
+  "/account/backtests/run-abc/replay?optimize=1",
+);
+assert.equal(replayRequestsOptimize(""), false);
+assert.equal(replayRequestsOptimize("?optimize=1"), true);
+assert.equal(replayRequestsOptimize("?play=1&optimize=1"), true);
+assert.equal(replayRequestsOptimize("?optimize=0"), false);
+assert.equal(replaySearchWithoutOptimize("?optimize=1"), "");
+assert.equal(replaySearchWithoutOptimize("?play=1&optimize=1"), "?play=1");
+assert.equal(replaySearchWithoutOptimize("?play=1"), "?play=1");
 assert.equal(
   replayPlaybackRunId("/account/backtests/run-abc/replay", "?play=1"),
   "run-abc",
