@@ -563,7 +563,7 @@ export function ReplayPlayer({
     backtestVariantsStillRunning(variantRows, rootId) +
     useUnresolvedOptimisticCount(variantRows.map((row) => row.id));
   const [sideLanes, setSideLanes] = useState(true);
-  const [showConditionOrders, setShowConditionOrders] = useState(false);
+  const [showConditionOrders, setShowConditionOrders] = useState(true);
   const [laneFrame, setLaneFrame] = useState(0);
   const [placedLanes, setPlacedLanes] = useState<ReplayLaneDraw[]>([]);
   const sideLanesRef = useRef(true);
