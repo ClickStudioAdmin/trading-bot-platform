@@ -40,7 +40,7 @@ export function ReplayChartBar({
   onToggleReference,
   indicatorNotice = null,
   indicatorsIntro = "Strategy indicators stay on. Anything else is a visual reference only.",
-  showConditionOrders = false,
+  showConditionOrders = true,
   onShowConditionOrders,
   leading = null,
   trailing = null,
