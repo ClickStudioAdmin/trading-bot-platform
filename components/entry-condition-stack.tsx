@@ -88,7 +88,7 @@ export type EntryConditionDraft =
       compare: "gte" | "lte";
       price: string;
     }
-  | ({ kind: "retrace" } & RetraceDraft)
+  | ({ kind: "retrace"; position?: boolean } & RetraceDraft)
   | ({ kind: "indicator" } & IndicatorConditionDraft)
   | ({ kind: "trend" } & IndicatorConditionDraft)
   | { kind: "webhook"; webhookId: string };
@@ -115,6 +115,7 @@ export function claimFromEntryDraft(
       source: draft.source,
       from: draft.from,
       timeframe: draft.timeframe,
+      position: draft.position === true,
     });
   }
   if (draft.kind === "price") {
@@ -179,10 +180,10 @@ function draftFromLeaf(leaf: StrategyLeaf): EntryConditionDraft {
     return {
       kind: "retrace",
       source: leaf.source,
-      from: leaf.from,
+      from: leaf.from === "initial" || leaf.from === "average" ? "high" : leaf.from,
       pct: String(leaf.pct),
-      lookback: String(leaf.lookback),
-      timeframe: leaf.timeframe,
+      lookback: String(leaf.lookback ?? 20),
+      timeframe: leaf.timeframe ?? "15",
     };
   }
   if (leaf.kind === "protection") {

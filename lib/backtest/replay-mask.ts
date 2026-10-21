@@ -39,7 +39,14 @@ import {
 } from "@/lib/strategy/expr";
 import { protectionMet, type ProtectionReading } from "@/lib/strategy/protection";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
-import { retraceMet, type RetraceSpec } from "@/lib/strategy/retrace";
+import {
+  formatRetraceLabel,
+  positionRetraceMet,
+  retraceMet,
+  windowRetraceSpec,
+  type PositionRetraceContext,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
 import { rsiDivergenceMet } from "@/lib/strategy/rsi-divergence";
 import { intervalMs } from "./model";
 
@@ -149,6 +156,7 @@ export class ReplayBook {
     side: FuturesSide,
     index: number,
     protection?: ProtectionReading | null,
+    positionRetrace?: PositionRetraceContext | null,
   ): { met: boolean; group: number | null; because: string } {
     const price = this.tapeBars[index]?.close ?? 0;
     const flags = stack.leaves.map((leaf) => {
@@ -160,6 +168,18 @@ export class ReplayBook {
           noLossProvenPct: protection?.noLossProvenPct ?? null,
         });
       }
+      if (leaf.kind === "retrace") {
+        if (!positionRetrace) {
+          return false;
+        }
+        return positionRetraceMet({
+          spec: leaf,
+          side,
+          price,
+          average: positionRetrace.average,
+          memory: positionRetrace.memory,
+        });
+      }
       return this.entryLeafAt(leaf, side, index, price);
     });
     const group = addStackGroupIndex({ stack, leaves: flags });
@@ -167,7 +187,11 @@ export class ReplayBook {
       group == null
         ? ""
         : (addStackGroups(stack)[group] ?? [])
-            .map((leaf) => formatStrategyLeafReason(leaf, side))
+            .map((leaf) =>
+              leaf.kind === "retrace"
+                ? formatRetraceLabel({ ...leaf, lookback: null, timeframe: null })
+                : formatStrategyLeafReason(leaf, side),
+            )
             .filter(Boolean)
             .join(", and ");
     return {
@@ -249,7 +273,7 @@ export class ReplayBook {
       return false;
     }
     if (leaf.kind === "retrace") {
-      return this.retraceAt(leaf, index, price);
+      return this.retraceAt(windowRetraceSpec(leaf), index, price);
     }
     if (leaf.start.kind === "rsi_divergence") {
       return this.divergenceAt(leaf.start, index);
@@ -273,7 +297,7 @@ export class ReplayBook {
       return leaf.compare === "gte" ? price >= leaf.price : price <= leaf.price;
     }
     if (leaf.kind === "retrace") {
-      return this.retraceAt(leaf, index, price);
+      return this.retraceAt(windowRetraceSpec(leaf), index, price);
     }
     if (
       (leaf.kind === "indicator" || leaf.kind === "trend") &&

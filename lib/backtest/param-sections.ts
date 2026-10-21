@@ -245,17 +245,31 @@ function retraceFieldRows(
       }
     | null
     | undefined,
+  mode: "window" | "position" = "window",
 ): ParamRow[] {
-  return [
+  const from =
+    spec?.from === "low"
+      ? "Low"
+      : spec?.from === "initial"
+        ? "Initial Entry Price"
+        : spec?.from === "average"
+          ? "Average Entry Price"
+          : spec?.from === "high"
+            ? "High"
+            : "—";
+  const rows: ParamRow[] = [
     { label: "Price source", value: priceSourceLabel(spec?.source) },
-    {
-      label: "From",
-      value: spec?.from === "low" ? "Low" : spec?.from === "high" ? "High" : "—",
-    },
+    { label: "From", value: from },
     { label: "Retrace %", value: num(spec?.pct) },
+  ];
+  if (mode === "position") {
+    return rows;
+  }
+  rows.push(
     { label: "Lookback", value: num(spec?.lookback) },
     { label: "Timeframe", value: timeframeLabel(spec?.timeframe) },
-  ];
+  );
+  return rows;
 }
 
 function divergenceWhenLabel(when: string | null | undefined): string {
@@ -351,6 +365,7 @@ function leafConditionRows(
   side: "long" | "short",
   priceStyle: PriceListStyle,
   quote: string,
+  retraceMode: "window" | "position" = "window",
 ): ParamRow[] {
   if (leaf.kind === "price") {
     if (priceStyle === "dca") {
@@ -376,7 +391,7 @@ function leafConditionRows(
   if (leaf.kind === "retrace") {
     return [
       { label: "Condition Type", value: "Retrace" },
-      ...retraceFieldRows(leaf),
+      ...retraceFieldRows(leaf, retraceMode),
     ];
   }
   if (leaf.kind === "protection") {
@@ -432,6 +447,7 @@ function conditionStack(
   side: "long" | "short",
   priceStyle: PriceListStyle,
   quote: string,
+  retraceMode: "window" | "position" = "window",
 ): ParamCondition[][] {
   const groups: ParamCondition[][] = [];
   if (lead && lead.length > 0) {
@@ -443,7 +459,7 @@ function conditionStack(
       continue;
     }
     const condition = {
-      rows: leafConditionRows(leaf, side, priceStyle, quote),
+      rows: leafConditionRows(leaf, side, priceStyle, quote, retraceMode),
     };
     if (groups.length === 0 || joins[index] === "or") {
       groups.push([condition]);
@@ -1333,6 +1349,7 @@ function perpsAddSections(
     side,
     "flex",
     quote,
+    "position",
   );
   const sizing = groups.map((_, index) => {
     const order = orderForAddGroup(stack?.orders, index);

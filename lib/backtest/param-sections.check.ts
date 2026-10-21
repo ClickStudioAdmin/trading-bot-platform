@@ -256,8 +256,6 @@ assert.deepEqual(
     "Price source: Last",
     "From: High",
     "Retrace %: 2",
-    "Lookback: 20",
-    "Timeframe: 15m",
     "Condition Type: Position protection",
     "Is: Protected",
     "Amount: Entire position",
@@ -268,6 +266,43 @@ assert.deepEqual(
   sizedAdd?.stack?.sizing?.[0]?.map((row) => `${row.label}: ${row.value}`),
   ["Size: 500 USDT", "Unit: USDT", "Order: Market"],
 );
+const positionFrom = recipeParamSections({
+  ...perps,
+  addStack: {
+    leaves: [
+      {
+        kind: "retrace",
+        source: "mark",
+        from: "initial",
+        pct: 1,
+      },
+      {
+        kind: "retrace",
+        source: "last",
+        from: "average",
+        pct: 1.5,
+      },
+    ],
+    joins: ["and", "or"],
+  },
+});
+const positionFromRows = positionFrom
+  .find((section) => section.title === "Long Additional Orders")
+  ?.stack?.groups.flatMap((group) =>
+    group.flatMap((condition) =>
+      condition.rows.map((row) => `${row.label}: ${row.value}`),
+    ),
+  );
+assert.deepEqual(positionFromRows, [
+  "Condition Type: Retrace",
+  "Price source: Mark",
+  "From: Initial Entry Price",
+  "Retrace %: 1",
+  "Condition Type: Retrace",
+  "Price source: Last",
+  "From: Average Entry Price",
+  "Retrace %: 1.5",
+]);
 assert.deepEqual(
   perpsSections[0]?.groups[0]?.rows.map((row) => row.label),
   ["Name", "Contract", "Direction"],

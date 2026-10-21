@@ -80,7 +80,7 @@ export type PerpsEntryDraft = {
   minPricePct: string;
   minRsi: string;
   retraceSource: "last" | "mark" | "index";
-  retraceFrom: "high" | "low";
+  retraceFrom: "high" | "low" | "initial" | "average";
   retracePct: string;
   retraceLookback: string;
   retraceTimeframe: DcaIndicatorTimeframe;
@@ -307,7 +307,7 @@ export function perpsEntryLegFromDraft(
       !closing && entrySource === "retrace"
         ? {
             source: draft.retraceSource,
-            from: draft.retraceFrom,
+            from: draft.retraceFrom === "low" ? "low" : "high",
             pct: Number(draft.retracePct.replace(/,/g, "")) || 0,
             lookback: Number(draft.retraceLookback) || 20,
             timeframe: draft.retraceTimeframe,

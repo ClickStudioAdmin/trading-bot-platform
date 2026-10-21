@@ -27,7 +27,10 @@ import {
   parseRetracePct,
   parseRetraceSource,
   parseRetraceSpec,
+  positionRetraceMet,
   retraceMet,
+  windowRetraceSpec,
+  type PositionRetraceContext,
   type RetraceSpec,
 } from "@/lib/strategy/retrace";
 import {
@@ -519,8 +522,8 @@ export function writeEntryStackFormFields(
       form.set(`${row}RetraceSource`, leaf.source);
       form.set(`${row}RetraceFrom`, leaf.from);
       form.set(`${row}RetracePct`, String(leaf.pct));
-      form.set(`${row}RetraceLookback`, String(leaf.lookback));
-      form.set(`${row}RetraceTimeframe`, leaf.timeframe);
+      form.set(`${row}RetraceLookback`, String(leaf.lookback ?? ""));
+      form.set(`${row}RetraceTimeframe`, leaf.timeframe ?? "");
       return;
     }
     if (leaf.kind === "protection") {
@@ -1146,6 +1149,11 @@ export function entryLeafMet(input: {
   firedWebhookId?: string | null;
   /** Open size and protective coverage. Flat stays unmet. */
   protection?: ProtectionReading | null;
+  /**
+   * Additional orders test retrace against the open position.
+   * Without a memory the leaf stays unmet, including saved lookback rows.
+   */
+  positionRetrace?: PositionRetraceContext | null;
 }): boolean {
   const leaf = input.leaf;
   if (leaf.kind === "filter") {
@@ -1167,8 +1175,24 @@ export function entryLeafMet(input: {
   }
   if (leaf.kind === "retrace") {
     const price = quotedPrice(leaf.source, input.price, input.prices);
-    const bars = barsForTimeframe(input.barsByTimeframe, leaf.timeframe);
-    return retraceMet({ spec: leaf, price, bars });
+    if (input.positionRetrace) {
+      return positionRetraceMet({
+        spec: leaf,
+        side: input.side,
+        price,
+        average: input.positionRetrace.average,
+        memory: input.positionRetrace.memory,
+      });
+    }
+    if (input.positionRetrace === null) {
+      return false;
+    }
+    const spec = windowRetraceSpec(leaf);
+    if (!spec) {
+      return false;
+    }
+    const bars = barsForTimeframe(input.barsByTimeframe, spec.timeframe);
+    return retraceMet({ spec, price, bars });
   }
   if (leaf.kind === "protection") {
     return protectionMet({

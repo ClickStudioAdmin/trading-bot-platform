@@ -25,6 +25,7 @@ import {
   type ProtectionIs,
 } from "@/lib/strategy/protection";
 import {
+  parsePositionRetraceSpec,
   parseRetraceSpec,
   retraceClaim,
   type RetraceFrom,
@@ -72,8 +73,9 @@ export type StrategyRetraceLeaf = {
   source: RetraceSource;
   from: RetraceFrom;
   pct: number;
-  lookback: number;
-  timeframe: DcaIndicatorTimeframe;
+  /** Candle window. Omitted on an additional-order retrace. */
+  lookback?: number | null;
+  timeframe?: DcaIndicatorTimeframe | null;
 };
 
 export type StrategyProtectionLeaf = {
@@ -296,7 +298,7 @@ export function strategyLeafTimeframe(
     return leaf.start.timeframe;
   }
   if (leaf.kind === "retrace") {
-    return leaf.timeframe;
+    return leaf.timeframe ?? null;
   }
   return null;
 }
@@ -738,6 +740,19 @@ export function entryStackToJson(stack: EntryStack): {
         return { kind: "webhook", webhookId: leaf.webhookId };
       }
       if (leaf.kind === "retrace") {
+        if (
+          leaf.lookback == null ||
+          leaf.timeframe == null ||
+          leaf.from === "initial" ||
+          leaf.from === "average"
+        ) {
+          return {
+            kind: "retrace",
+            source: leaf.source,
+            from: leaf.from,
+            pct: leaf.pct,
+          };
+        }
         return {
           kind: "retrace",
           source: leaf.source,
@@ -927,8 +942,15 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
       const webhookId = String(record.webhookId ?? "").trim();
       parsed = webhookId ? { kind: "webhook", webhookId } : null;
     } else if (kind === "retrace") {
-      const spec = parseRetraceSpec(record);
-      parsed = spec ? { kind: "retrace", ...spec } : null;
+      const windowSpec = parseRetraceSpec(record);
+      if (windowSpec) {
+        parsed = { kind: "retrace", ...windowSpec };
+      } else {
+        const position = parsePositionRetraceSpec(record);
+        parsed = position
+          ? { kind: "retrace", ...position, lookback: null, timeframe: null }
+          : null;
+      }
     } else if (kind === "protection") {
       const spec = parseProtectionSpec(record);
       parsed = spec ? { kind: "protection", ...spec } : null;

@@ -70,7 +70,10 @@ import {
 } from "@/lib/exchanges/venues";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { loadDeskIndicatorBars } from "@/lib/market/desk-klines";
-import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import {
+  DCA_INDICATOR_TIMEFRAMES,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
 import {
   formatBreakevenReason,
@@ -80,8 +83,19 @@ import {
   futuresFiredMessage,
   futuresHardExitMessage,
 } from "@/lib/bots/condition-copy";
-import { flexAddDecision, flexAddLatchColumn } from "@/lib/futures/flex-add";
-import type { AddGroupOrder } from "@/lib/strategy/expr";
+import {
+  flexAddDecision,
+  flexAddLatchColumn,
+  flexAddRetraceColumn,
+} from "@/lib/futures/flex-add";
+import { addStackGroups, type AddGroupOrder } from "@/lib/strategy/expr";
+import {
+  commitPositionRetraceFire,
+  positionRetraceConsumed,
+  positionRetraceToJson,
+  resumePositionRetrace,
+  type PositionRetraceMemory,
+} from "@/lib/strategy/retrace";
 
 type DeskAccount = {
   userId: string;
@@ -332,6 +346,14 @@ export async function runFuturesAutomationTick(input?: {
             reason: reasons,
           },
         });
+        const addMemory = openOnSide
+          ? retraceForOpen({
+              stored: legRule.addRetrace,
+              open: openOnSide,
+              prices,
+              barsByTimeframe,
+            })
+          : null;
         const addNow = flexAddDecision({
           stack: legRule.addStack,
           side,
@@ -351,10 +373,20 @@ export async function runFuturesAutomationTick(input?: {
                 }),
               }
             : null,
+          positionRetrace:
+            addMemory && openOnSide
+              ? { average: openOnSide.entryPrice, memory: addMemory }
+              : null,
         });
         await patchRule(supabase, rule.id, {
           [leg.latch]: true,
           [flexAddLatchColumn(leg.latch)]: addNow.met,
+          ...(addMemory
+            ? {
+                [flexAddRetraceColumn(leg.latch)]:
+                  positionRetraceToJson(addMemory),
+              }
+            : {}),
           last_fired_at: new Date().toISOString(),
         });
         continue;
@@ -743,6 +775,14 @@ export async function fireWebhookAutomationEntries(input: {
             reason: reasons,
           },
         });
+        const addMemory = openOnSide
+          ? retraceForOpen({
+              stored: legRule.addRetrace,
+              open: openOnSide,
+              prices,
+              barsByTimeframe,
+            })
+          : null;
         const addNow = flexAddDecision({
           stack: legRule.addStack,
           side,
@@ -763,9 +803,19 @@ export async function fireWebhookAutomationEntries(input: {
                 }),
               }
             : null,
+          positionRetrace:
+            addMemory && openOnSide
+              ? { average: openOnSide.entryPrice, memory: addMemory }
+              : null,
         });
         await patchRule(supabase, rule.id, {
           [flexAddLatchColumn(leg.latch)]: addNow.met,
+          ...(addMemory
+            ? {
+                [flexAddRetraceColumn(leg.latch)]:
+                  positionRetraceToJson(addMemory),
+              }
+            : {}),
           last_fired_at: new Date().toISOString(),
         });
       } else if (
@@ -1431,9 +1481,45 @@ function flexAddCoverage(input: {
   };
 }
 
+function postEntryWick(
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+  openedAtMs: number,
+): { high: number; low: number } | null {
+  let chosen: CandleBar | null = null;
+  let rank = Number.POSITIVE_INFINITY;
+  for (const [timeframe, bars] of barsByTimeframe) {
+    const bar = bars[bars.length - 1];
+    if (!bar || !(bar.high > 0) || !(bar.low > 0) || bar.timeMs < openedAtMs) {
+      continue;
+    }
+    const index = DCA_INDICATOR_TIMEFRAMES.indexOf(timeframe);
+    if (index >= 0 && index < rank) {
+      rank = index;
+      chosen = bar;
+    }
+  }
+  return chosen ? { high: chosen.high, low: chosen.low } : null;
+}
+
+function retraceForOpen(input: {
+  stored: PositionRetraceMemory | null | undefined;
+  open: FuturesPosition;
+  prices: { last: number | null; mark: number | null; index: number | null } | null;
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
+}): PositionRetraceMemory | null {
+  return resumePositionRetrace({
+    stored: input.stored ?? null,
+    positionKey: input.open.id,
+    initial: input.open.entryPrice,
+    quotes: input.prices ?? {},
+    wick: postEntryWick(input.barsByTimeframe, input.open.openedAtMs),
+  });
+}
+
 /**
  * Place one Flex additional order on the rising edge, while the position is open.
  * A failed place leaves the latch clear so the next check tries again.
+ * Retrace arms update only after the order is placed.
  */
 async function placeFlexAdd(input: {
   supabase: NonNullable<ReturnType<typeof createServiceClient>>;
@@ -1462,13 +1548,23 @@ async function placeFlexAdd(input: {
     return 0;
   }
   const column = flexAddLatchColumn(input.latch);
+  const retraceColumn = flexAddRetraceColumn(input.latch);
   const wasTrue = input.legRule.addConditionTrue === true;
   if (!input.open || input.open.status !== "open") {
-    if (!input.open && wasTrue) {
-      await patchRule(input.supabase, input.rule.id, { [column]: false });
+    if (!input.open && (wasTrue || input.legRule.addRetrace)) {
+      await patchRule(input.supabase, input.rule.id, {
+        [column]: false,
+        [retraceColumn]: null,
+      });
     }
     return 0;
   }
+  const memory = retraceForOpen({
+    stored: input.legRule.addRetrace,
+    open: input.open,
+    prices: input.prices,
+    barsByTimeframe: input.barsByTimeframe,
+  });
   const decision = flexAddDecision({
     stack,
     side: input.side,
@@ -1487,11 +1583,22 @@ async function placeFlexAdd(input: {
         savedBook: input.savedBook,
       }),
     },
+    positionRetrace: memory
+      ? { average: input.open.entryPrice, memory }
+      : null,
   });
+  const previousRetrace = input.legRule.addRetrace
+    ? JSON.stringify(positionRetraceToJson(input.legRule.addRetrace))
+    : null;
+  const nextRetrace = memory ? JSON.stringify(positionRetraceToJson(memory)) : null;
+  const retraceChanged = nextRetrace !== previousRetrace;
   if (!decision.fire || !decision.order) {
-    if (decision.nextTrue !== wasTrue) {
+    if (decision.nextTrue !== wasTrue || retraceChanged) {
       await patchRule(input.supabase, input.rule.id, {
-        [column]: decision.nextTrue,
+        ...(decision.nextTrue !== wasTrue ? { [column]: decision.nextTrue } : {}),
+        ...(memory && retraceChanged
+          ? { [retraceColumn]: positionRetraceToJson(memory) }
+          : {}),
       });
     }
     return 0;
@@ -1525,6 +1632,11 @@ async function placeFlexAdd(input: {
         reason: decision.because,
       },
     });
+    if (memory && retraceChanged) {
+      await patchRule(input.supabase, input.rule.id, {
+        [retraceColumn]: positionRetraceToJson(memory),
+      });
+    }
     return 0;
   }
   await writeEventLog({
@@ -1548,8 +1660,15 @@ async function placeFlexAdd(input: {
       reason: decision.because,
     },
   });
+  const firedLeaves =
+    decision.group == null ? [] : (addStackGroups(stack)[decision.group] ?? []);
+  const armed = memory
+    ? commitPositionRetraceFire(memory, firedLeaves)
+    : null;
   await patchRule(input.supabase, input.rule.id, {
-    [column]: true,
+    [column]:
+      armed && positionRetraceConsumed(firedLeaves) ? false : true,
+    ...(armed ? { [retraceColumn]: positionRetraceToJson(armed) } : {}),
     last_fired_at: new Date().toISOString(),
   });
   return 1;
