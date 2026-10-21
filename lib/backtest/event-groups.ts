@@ -16,6 +16,8 @@ export type ReplayEventGroup = {
   side: FuturesSide | null;
   label: string;
   events: ReplayEvent[];
+  /** The position still has coins open. Absent for a skipped fill with no cycle. */
+  open?: boolean;
 };
 
 export function groupReplayEventsByPosition(
@@ -50,7 +52,13 @@ export function groupReplayEventsByPosition(
       previous.events.push(event);
       continue;
     }
-    groups.push({ id, side, label, events: [event] });
+    groups.push({
+      id,
+      side,
+      label,
+      events: [event],
+      ...(cycle ? { open: cycle.status === "open" } : {}),
+    });
   }
   return groups;
 }

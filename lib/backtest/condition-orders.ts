@@ -78,6 +78,17 @@ function chartLots(orders: readonly SimulatedOrder[], side: FuturesSide): ChartL
       continue;
     }
     let left = order.qty;
+    const basis = order.basisPrice;
+    if (basis != null && basis > 0) {
+      const match = lots.find(
+        (lot) => lot.qty > 0 && Math.abs(lot.price - basis) <= Math.max(1e-6, Math.abs(basis) * 1e-8),
+      );
+      if (match) {
+        const used = Math.min(match.qty, left);
+        match.qty -= used;
+        left -= used;
+      }
+    }
     for (const lot of lots) {
       if (!(left > 0)) {
         break;

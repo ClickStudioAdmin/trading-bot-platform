@@ -96,6 +96,8 @@ export type SimulatedOrder = {
   realizedUsdt: number | null;
   reason?: BacktestFillReason;
   clipIndex?: number;
+  /** Entry of the fill this exit closed. Set on a per-lot order. */
+  basisPrice?: number;
 };
 
 export function parseBacktestFillReason(
