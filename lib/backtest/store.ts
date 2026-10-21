@@ -87,6 +87,7 @@ function parseSimulatedOrders(raw: unknown): SimulatedOrder[] {
         row.realizedUsdt == null ? null : Number(row.realizedUsdt),
       reason: parseBacktestFillReason(row.reason),
       clipIndex: parseBacktestClipIndex(row.clipIndex),
+      ...(Number(row.basisPrice) > 0 ? { basisPrice: Number(row.basisPrice) } : {}),
     });
   }
   return rows;

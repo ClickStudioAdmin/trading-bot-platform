@@ -112,6 +112,57 @@ const recipe: BacktestRecipe = {
 const grouped = groupBacktestOrdersIntoCycles(fills);
 assert.equal(grouped.closed.length, 2);
 assert.equal(grouped.open.length, 0);
+const partial = groupBacktestOrdersIntoCycles([
+  fills[0]!,
+  fills[1]!,
+  {
+    atMs: 2_500,
+    action: "flatten",
+    side: "long",
+    qty: 1,
+    price: 95,
+    feeUsdt: 0,
+    realizedUsdt: 4,
+    reason: "trailing",
+    basisPrice: 100,
+  },
+]);
+assert.equal(partial.open.length, 1);
+assert.equal(partial.closed.length, 0);
+assert.equal(partial.open[0]?.qty, 2);
+assert.equal(partial.open[0]?.entryPrice, 90);
+assert.equal(partial.open[0]?.orders.length, 3);
+const bothExits = groupBacktestOrdersIntoCycles([
+  fills[0]!,
+  fills[1]!,
+  {
+    atMs: 2_500,
+    action: "flatten",
+    side: "long",
+    qty: 1,
+    price: 95,
+    feeUsdt: 0,
+    realizedUsdt: 4,
+    reason: "trailing",
+    basisPrice: 100,
+  },
+  {
+    atMs: 2_800,
+    action: "flatten",
+    side: "long",
+    qty: 2,
+    price: 92,
+    feeUsdt: 0,
+    realizedUsdt: 4,
+    reason: "trailing",
+    basisPrice: 90,
+  },
+]);
+assert.equal(bothExits.closed.length, 1);
+assert.equal(bothExits.open.length, 0);
+assert.equal(bothExits.closed[0]?.orders.length, 4);
+assert.equal(bothExits.closed[0]?.exitPrice, 92);
+assert.equal(bothExits.closed[0]?.realizedUsdt, 8);
 assert.equal(grouped.closed[0]?.side, "short");
 assert.equal(grouped.closed[0]?.closedAtMs, 5_000);
 assert.equal(grouped.closed[1]?.clipCount, 2);

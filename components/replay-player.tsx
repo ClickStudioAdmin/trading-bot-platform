@@ -3064,7 +3064,7 @@ function placeReplayLanes(
     if (!start) {
       continue;
     }
-    const open = replayLaneStillOpen(group.events);
+    const open = group.open ?? replayLaneStillOpen(group.events);
     const endMs = open ? throughMs : (group.events[group.events.length - 1]?.atMs ?? start.atMs);
     const xStart = xOf(candleIndexAt(candles, start.atMs));
     const xEnd = xOf(candleIndexAt(candles, endMs));
@@ -3360,7 +3360,7 @@ function positionGroupSpan(
       continue;
     }
     found = true;
-    if (replayLaneStillOpen(group.events)) {
+    if (group.open ?? replayLaneStillOpen(group.events)) {
       open = true;
     }
     for (const event of group.events) {

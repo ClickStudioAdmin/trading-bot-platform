@@ -15,6 +15,7 @@ import {
 import { hardExitSignalFromJson } from "@/lib/dca/hard-exit";
 import {
   emptyExitRuntime,
+  claimSlice,
   evaluateExitActions,
   exitActionTimeframes,
   exitBookForClassic,
@@ -661,20 +662,16 @@ export async function replayPerpsPriceCross(input: {
           moveSimBreakeven(open, settled.breakeven.offsetPct, settled.breakeven.qty);
         }
         for (const claim of settled.claims) {
-          if (!open) {
+          const current: OpenSim | null = open;
+          if (!current) {
             break;
           }
-          const take = Math.min(open.qty, claim.qty);
-          if (!open || !(take > 0)) {
+          const closed = claimSlice(current, claim, price);
+          if (!closed) {
             continue;
           }
-          const current: OpenSim = open;
-          if (take + 1e-8 >= current.qty) {
-            flattenOpen(bar.timeMs, price, claimFillReason(claim.kind));
-            break;
-          }
-          const fee = feeUsdt(take, price, input.feeRate);
-          const pnl = unrealized(current.side, take, current.entry, price) - fee;
+          const fee = feeUsdt(closed.take, closed.fill, input.feeRate);
+          const pnl = unrealized(current.side, closed.take, closed.basis, closed.fill) - fee;
           realized += pnl;
           trades += 1;
           if (pnl > 0) {
@@ -683,19 +680,33 @@ export async function replayPerpsPriceCross(input: {
           } else {
             grossLoss += Math.abs(pnl);
           }
-          remember(
-            {
-              atMs: bar.timeMs,
-              action: "flatten",
-              side: current.side,
-              qty: take,
-              price,
-              feeUsdt: fee,
-              realizedUsdt: pnl,
-              reason: claimFillReason(claim.kind),
-            },
-          );
-          open = { ...current, qty: current.qty - take };
+          remember({
+            atMs: bar.timeMs,
+            action: "flatten",
+            side: current.side,
+            qty: closed.take,
+            price: closed.fill,
+            feeUsdt: fee,
+            realizedUsdt: pnl,
+            reason: claimFillReason(claim.kind),
+            ...(claim.entry != null && claim.entry > 0 ? { basisPrice: claim.entry } : {}),
+          });
+          if (!(closed.left > 1e-8)) {
+            open = null;
+            flexLots = [];
+            flexRuntime = emptyExitRuntime();
+            break;
+          }
+          open = {
+            side: current.side,
+            qty: closed.left,
+            entry: closed.nextEntry,
+            initial: current.initial,
+            openedAtMs: current.openedAtMs,
+            tpsl: current.tpsl,
+            trailing: current.trailing,
+            breakevenDone: current.breakevenDone,
+          };
         }
       } else if (open?.trailing && trailingHasStop(open.trailing)) {
         const trail = advanceTrailingOnBar({
@@ -1370,16 +1381,12 @@ async function replayPerpsBoth(input: {
             if (!current) {
               break;
             }
-            const take = Math.min(current.qty, claim.qty);
-            if (!(take > 0)) {
+            const closed = claimSlice(current, claim, price);
+            if (!closed) {
               continue;
             }
-            if (take + 1e-8 >= current.qty) {
-              flattenSide(side, bar.timeMs, price, claimFillReason(claim.kind));
-              break;
-            }
-            const fee = feeUsdt(take, price, input.feeRate);
-            const pnl = unrealized(side, take, current.entry, price) - fee;
+            const fee = feeUsdt(closed.take, closed.fill, input.feeRate);
+            const pnl = unrealized(side, closed.take, closed.basis, closed.fill) - fee;
             realized += pnl;
             trades += 1;
             if (pnl > 0) {
@@ -1388,19 +1395,24 @@ async function replayPerpsBoth(input: {
             } else {
               grossLoss += Math.abs(pnl);
             }
-            remember(
-              {
-                atMs: bar.timeMs,
-                action: "flatten",
-                side,
-                qty: take,
-                price,
-                feeUsdt: fee,
-                realizedUsdt: pnl,
-                reason: claimFillReason(claim.kind),
-              },
-            );
-            book[side] = { ...current, qty: current.qty - take };
+            remember({
+              atMs: bar.timeMs,
+              action: "flatten",
+              side,
+              qty: closed.take,
+              price: closed.fill,
+              feeUsdt: fee,
+              realizedUsdt: pnl,
+              reason: claimFillReason(claim.kind),
+              ...(claim.entry != null && claim.entry > 0 ? { basisPrice: claim.entry } : {}),
+            });
+            if (!(closed.left > 1e-8)) {
+              book[side] = null;
+              bookLots[side] = [];
+              bookArms[side] = emptyExitRuntime();
+              break;
+            }
+            book[side] = { ...current, qty: closed.left, entry: closed.nextEntry };
           }
         }
         continue;

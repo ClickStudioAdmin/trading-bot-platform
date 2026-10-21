@@ -36,17 +36,13 @@ export function groupBacktestOrdersIntoCycles(
   };
   let index = 0;
 
-  function flush(side: FuturesSide, flatten: SimulatedOrder | null) {
-    const clips = pending[side];
-    if (clips.length === 0 && !flatten) {
-      return;
-    }
-    const fills = flatten ? [...clips, flatten] : clips;
+  function flush(side: FuturesSide) {
+    const fills = pending[side];
     pending[side] = [];
     if (fills.length === 0) {
       return;
     }
-    const cycle = cycleFromFills(`cycle-${index}`, fills, flatten);
+    const cycle = cycleFromFills(`cycle-${index}`, fills);
     index += 1;
     if (cycle.status === "open") {
       open.push(cycle);
@@ -56,14 +52,18 @@ export function groupBacktestOrdersIntoCycles(
   }
 
   for (const row of orders) {
-    if (row.action === "flatten") {
-      flush(row.side, row);
+    if (row.action !== "flatten") {
+      pending[row.side].push(row);
       continue;
     }
     pending[row.side].push(row);
+    const left = openQty(pending[row.side]);
+    if (!(left > 1e-8)) {
+      flush(row.side);
+    }
   }
-  flush("long", null);
-  flush("short", null);
+  flush("long");
+  flush("short");
   closed.sort(
     (left, right) =>
       (right.closedAtMs ?? 0) - (left.closedAtMs ?? 0) ||
@@ -122,12 +122,23 @@ export function backtestCycleSpanMs(cycle: BacktestPositionCycle): {
   };
 }
 
+function openQty(fills: readonly SimulatedOrder[]): number {
+  let qty = 0;
+  for (const row of fills) {
+    if (!(row.qty > 0)) {
+      continue;
+    }
+    qty += row.action === "flatten" ? -row.qty : row.qty;
+  }
+  return qty;
+}
+
 function cycleFromFills(
   id: string,
   fills: SimulatedOrder[],
-  flatten: SimulatedOrder | null,
 ): BacktestPositionCycle {
   const clips = fills.filter((row) => row.action !== "flatten");
+  const exits = fills.filter((row) => row.action === "flatten");
   const side = fills[0]?.side ?? "long";
   let qty = 0;
   let cost = 0;
@@ -142,23 +153,36 @@ function cycleFromFills(
     qty += clip.qty;
     cost += clip.qty * clip.price;
   }
-  const entryPrice = qty > 0 ? cost / qty : (flatten?.price ?? 0);
+  const openedAverage = qty > 0 ? cost / qty : (exits[0]?.price ?? 0);
+  for (const exit of exits) {
+    const used = Math.min(qty, exit.qty);
+    if (!(used > 0)) {
+      continue;
+    }
+    const basis = exit.basisPrice != null && exit.basisPrice > 0 ? exit.basisPrice : openedAverage;
+    cost -= basis * used;
+    qty -= used;
+  }
+  const closed = !(qty > 1e-8) && exits.length > 0;
+  const entryPrice = qty > 1e-8 ? cost / qty : openedAverage;
+  const lastExit = exits[exits.length - 1] ?? null;
   const openedAtMs = fills[0]?.atMs ?? 0;
+  const shownQty = closed ? exits.reduce((sum, row) => sum + row.qty, 0) : qty;
   return {
     id,
     side,
-    qty: flatten?.qty ?? qty,
+    qty: shownQty,
     entryPrice,
     firstFillPrice: firstFillPrice || entryPrice,
-    notionalUsdt: (flatten?.qty ?? qty) * entryPrice,
+    notionalUsdt: shownQty * entryPrice,
     openedAtMs,
-    closedAtMs: flatten?.atMs ?? null,
-    status: flatten ? "closed" : "open",
-    realizedUsdt: flatten?.realizedUsdt ?? 0,
+    closedAtMs: closed ? (lastExit?.atMs ?? null) : null,
+    status: closed ? "closed" : "open",
+    realizedUsdt: exits.reduce((sum, row) => sum + (row.realizedUsdt ?? 0), 0),
     orders: fills,
     clipCount: clips.length,
-    exitReason: flatten?.reason ?? null,
-    exitPrice: flatten?.price ?? null,
+    exitReason: closed ? (lastExit?.reason ?? null) : null,
+    exitPrice: closed ? (lastExit?.price ?? null) : null,
   };
 }
 
