@@ -233,7 +233,7 @@ export function ExitSideBuilder({
   prices?: ExitSidePrices;
   /** Later cards use this desk's price fields. */
   priceStyle?: ExitPriceStyle;
-  /** The first stop card is a percent stop, so it shows Execution. */
+  /** The first Flex stop card is a percent stop, so it shows Execution. */
   stopIsPercent?: boolean;
 }) {
   const normalized = useMemo(
@@ -341,6 +341,9 @@ export function ExitSideBuilder({
     }));
   }
   function showExecution(clause: ExitBuilderClause, firstOfKind: boolean): boolean {
+    if (priceStyle === "dca") {
+      return false;
+    }
     if (clause.kind === "trailing_stop" || clause.kind === "breakeven") {
       return true;
     }
@@ -348,16 +351,9 @@ export function ExitSideBuilder({
       return false;
     }
     if (!firstOfKind) {
-      const method = clause.levels?.method;
-      if (method === "price") {
-        return false;
-      }
-      if (method === "percent") {
-        return true;
-      }
-      return priceStyle === "dca";
+      return clause.levels?.method === "percent";
     }
-    return priceStyle === "dca" || stopIsPercent;
+    return stopIsPercent;
   }
 
   function setScope(clause: ExitBuilderClause, kind: ExitScope["kind"]) {
@@ -515,7 +511,7 @@ export function ExitSideBuilder({
                   ) : null}
                 </div>
               ) : null}
-              {clause.kind !== "" ? (
+              {clause.kind !== "" && priceStyle !== "dca" ? (
                 <div className={`${exitCardGrid} border-t border-line pt-4`}>
                   {showExecution(clause, firstOfKind) ? (
                     <label className={labelClass}>

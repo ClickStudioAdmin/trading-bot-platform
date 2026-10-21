@@ -71,6 +71,7 @@ import {
 import { fillSentence, skippedEntrySentence } from "./events";
 import {
   claimSlice,
+  dcaClassicActions,
   emptyExitRuntime,
   evaluateExitActions,
   reduceOpenLots,
@@ -269,11 +270,13 @@ export async function replayDcaPlaybook(input: {
     short: emptyExitRuntime(),
   };
   function actionsFor(side: FuturesSide) {
-    return sideExitActions(
-      config.exitActions,
-      config.shortExitActions,
-      config.direction,
-      side,
+    return dcaClassicActions(
+      sideExitActions(
+        config.exitActions,
+        config.shortExitActions,
+        config.direction,
+        side,
+      ),
     );
   }
   function claimFillReason(kind: ExitActionKind): BacktestFillReason {

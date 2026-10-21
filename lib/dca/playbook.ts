@@ -1,4 +1,5 @@
 import {
+  dcaClassicActions,
   exitActionsFromJson,
   parseExitActionsField,
   trailingGateError,
@@ -2713,9 +2714,9 @@ export function parseDcaPlaybookForm(
         direction === "both" && shortExitStack.present
           ? shortExitStack.stack
           : null,
-      exitActions: exitActions.actions,
+      exitActions: dcaClassicActions(exitActions.actions),
       shortExitActions:
-        direction === "both" ? shortExitActions.actions : null,
+        direction === "both" ? dcaClassicActions(shortExitActions.actions) : null,
     },
   };
 }
@@ -3288,8 +3289,8 @@ export function parseDcaPlaybookRow(
     shortExitHard: hardExitSignalFromJson(row.short_exit_hard),
     exitStack: entryStackFromJson(row.exit_expr),
     shortExitStack: entryStackFromJson(row.short_exit_expr),
-    exitActions: exitActionsFromJson(row.exit_actions),
-    shortExitActions: exitActionsFromJson(row.short_exit_actions),
+    exitActions: dcaClassicActions(exitActionsFromJson(row.exit_actions)),
+    shortExitActions: dcaClassicActions(exitActionsFromJson(row.short_exit_actions)),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;

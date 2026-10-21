@@ -64,7 +64,7 @@ import {
   resolveEntryStack,
   type EntryStack,
 } from "@/lib/strategy/expr";
-import { exitActionsFromJson } from "@/lib/strategy/exit-actions";
+import { dcaClassicActions, exitActionsFromJson } from "@/lib/strategy/exit-actions";
 import { parseRetraceSpec, type RetraceSpec } from "@/lib/strategy/retrace";
 import {
   parseRsiDivergenceSettings,
@@ -355,6 +355,9 @@ export function dcaFormMatchesPlaybook(
 }
 
 export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe {
+  const classicExits = dcaClassicActions(config.exitActions);
+  const classicShortExits =
+    config.direction === "both" ? dcaClassicActions(config.shortExitActions) : null;
   return {
     kind: "dca",
     name: config.name,
@@ -456,14 +459,8 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     ...(config.direction === "both" && templateExitStack(config.shortExitStack)
       ? { shortExitStack: templateExitStack(config.shortExitStack) }
       : {}),
-    ...(config.exitActions && config.exitActions.length > 0
-      ? { exitActions: config.exitActions }
-      : {}),
-    ...(config.direction === "both" &&
-    config.shortExitActions &&
-    config.shortExitActions.length > 0
-      ? { shortExitActions: config.shortExitActions }
-      : {}),
+    ...(classicExits ? { exitActions: classicExits } : {}),
+    ...(classicShortExits ? { shortExitActions: classicShortExits } : {}),
   };
 }
 
@@ -649,9 +646,9 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
     shortExitHard: hardExitSignalFromJson(recipe.shortExitHard),
     exitStack: exitStackForEditor(recipe.exitStack),
     shortExitStack: exitStackForEditor(recipe.shortExitStack),
-    exitActions: recipe.exitActions ?? null,
+    exitActions: dcaClassicActions(recipe.exitActions),
     shortExitActions:
-      recipe.direction === "both" ? (recipe.shortExitActions ?? null) : null,
+      recipe.direction === "both" ? dcaClassicActions(recipe.shortExitActions) : null,
     long: IDLE_DCA_LEG,
     short: IDLE_DCA_LEG,
     armConditionTrue: false,

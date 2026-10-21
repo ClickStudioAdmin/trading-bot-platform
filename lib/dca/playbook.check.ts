@@ -3586,4 +3586,48 @@ if (!blankShortStartParsed.ok) {
   assert.match(blankShortStartParsed.error, /Select a Short condition type/);
 }
 
+const dcaScoped = new FormData();
+dcaScoped.set("name", "Scoped");
+dcaScoped.set("symbol", "BTCUSDT");
+dcaScoped.set("direction", "both");
+dcaScoped.set("startKind", "immediate");
+dcaScoped.set("clipSize", "1");
+dcaScoped.set("sizeUnit", "qty");
+dcaScoped.set("takeProfitPct", "10");
+dcaScoped.set(
+  "exitActions",
+  JSON.stringify([
+    {
+      id: "trail",
+      kind: "trailing_stop",
+      scope: { kind: "fills", minProfitPct: 5 },
+      reference: "lot",
+      groups: [{ anchor: { trigger: "trail" }, rows: [] }],
+      trailingPct: 1,
+      trailingTriggerPct: 2,
+    },
+  ]),
+);
+dcaScoped.set(
+  "shortExitActions",
+  JSON.stringify([
+    {
+      id: "short",
+      kind: "close",
+      scope: { kind: "remainder" },
+      reference: "lot",
+      groups: [],
+    },
+  ]),
+);
+const dcaScopedParsed = parseDcaPlaybookForm(dcaScoped);
+assert.equal(dcaScopedParsed.ok, true);
+if (dcaScopedParsed.ok) {
+  assert.equal(dcaScopedParsed.config.exitActions?.[0]?.reference, undefined);
+  assert.equal(dcaScopedParsed.config.exitActions?.[0]?.scope.kind, "all");
+  assert.equal(dcaScopedParsed.config.exitActions?.[0]?.trailingPct, 1);
+  assert.equal(dcaScopedParsed.config.shortExitActions?.[0]?.scope.kind, "all");
+  assert.equal("reference" in (dcaScopedParsed.config.shortExitActions?.[0] ?? {}), false);
+}
+
 console.log("dca playbook checks passed");

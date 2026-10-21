@@ -54,7 +54,7 @@ export type StoredExitAction = {
   id: string;
   kind: ExitActionKind;
   scope: SavedExitScope;
-  /** Absent on a card saved before Execution existed. That card stays Average. */
+  /** Absent means Average. DCA never stores this. Flex Per lot sets "lot". */
   reference?: ExitReference;
   groups: ExitConditionGroup[];
   takeProfitPct: number | null;
@@ -909,24 +909,56 @@ function clauseSavesLotReference(
   return priced.stopLossPrice == null && priced.stopLossPct != null;
 }
 
+/**
+ * DCA exits are Average on the whole position.
+ * A saved Per lot, Fills in profit, Remainder, or sized scope is read that way.
+ */
+export function dcaClassicActions(
+  actions: readonly StoredExitAction[] | null | undefined,
+): StoredExitAction[] | null {
+  if (!actions || actions.length === 0) {
+    return null;
+  }
+  let changed = false;
+  const next = actions.map((action) => {
+    if (action.reference == null && action.scope.kind === "all") {
+      return action;
+    }
+    changed = true;
+    const next = { ...action, scope: { kind: "all" as const } };
+    delete next.reference;
+    return next;
+  });
+  return changed ? next : actions.slice();
+}
+
+function dcaClassicClauses(clauses: readonly ExitBuilderClause[]): ExitBuilderClause[] {
+  return clauses.map((clause) =>
+    clause.kind === ""
+      ? clause
+      : { ...clause, reference: "average" as const, scope: { kind: "all" as const } },
+  );
+}
+
 /** Null when the side still belongs on the classic columns. */
 export function exitActionsForSave(
   clauses: readonly ExitBuilderClause[],
   prices: ExitSidePrices,
   style?: "flex" | "dca" | null,
 ): StoredExitAction[] | null {
-  const trailingCard = clauses.some((clause) => clause.kind === "trailing_stop");
-  const lotReference = clauses.some((clause, index) => {
+  const saving = style === "dca" ? dcaClassicClauses(clauses) : clauses;
+  const trailingCard = saving.some((clause) => clause.kind === "trailing_stop");
+  const lotReference = saving.some((clause, index) => {
     if (clause.kind === "") {
       return false;
     }
-    const seenCount = clauses
+    const seenCount = saving
       .slice(0, index + 1)
       .filter((item) => item.kind === clause.kind).length;
     return clauseSavesLotReference(clause, pricesFor(clause, seenCount, prices));
   });
   if (
-    exitSideUsesColumns(clauses) &&
+    exitSideUsesColumns(saving) &&
     !lotReference &&
     (!trailingCard || trailFitsColumns(prices, style))
   ) {
@@ -934,7 +966,7 @@ export function exitActionsForSave(
   }
   const seen = new Map<string, number>();
   const actions: StoredExitAction[] = [];
-  for (const clause of clauses) {
+  for (const clause of saving) {
     if (clause.kind === "") {
       continue;
     }

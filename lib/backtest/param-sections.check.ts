@@ -708,7 +708,7 @@ assert.equal(
 );
 assert.equal(
   actionCards?.stack?.sizing?.[0]?.find((row) => row.label === "Applies To")?.value,
-  "Fills at least 20% in profit",
+  "Entire Position",
 );
 assert.equal(actionCards?.stack?.sizingTitle, "Execution and Scope");
 const perLotCards = recipeParamSections(
@@ -734,7 +734,7 @@ const perLotCards = recipeParamSections(
 ).find((section) => section.title === "Long Exit Conditions");
 assert.equal(
   perLotCards?.stack?.sizing?.[0]?.find((row) => row.label === "Execution")?.value,
-  "Per lot",
+  "Average",
 );
 assert.equal(
   perLotCards?.stack?.sizing?.[0]?.find((row) => row.label === "Applies To")?.value,
