@@ -421,7 +421,6 @@ function ParametersBody({
                 resolveOptimisticVariant(pendingToken.current, runId);
                 pendingToken.current = null;
               }
-              setModifying(false);
               router.refresh();
             }}
           />
