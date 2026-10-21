@@ -44,7 +44,7 @@ export function ProtectionFields({
           <option value="bot">This bot</option>
         </AppSelect>
       </label>
-      <label className={labelClass}>
+      <label className={`${labelClass} col-span-2`}>
         <HintLabel text="Is" required />
         <AppSelect
           name={prefix ? `${prefix}ProtectionIs` : undefined}
@@ -61,7 +61,11 @@ export function ProtectionFields({
           <option value="no_loss">{protectionIsLabel("no_loss")}</option>
         </AppSelect>
       </label>
-      <label className={labelClass}>
+      <label
+        className={
+          draft.amount === "entire" ? `${labelClass} col-span-2` : labelClass
+        }
+      >
         <HintLabel text="Amount" required />
         <AppSelect
           name={prefix ? `${prefix}ProtectionAmount` : undefined}
