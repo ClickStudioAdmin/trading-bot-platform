@@ -118,7 +118,7 @@ export function RetraceFields({
           ))}
         </AppSelect>
       </label>
-      <label className={labelClass}>
+      <label className={position ? `${labelClass} col-span-2` : labelClass}>
         <HintLabel text="From" required />
         <AppSelect
           name={prefix ? `${prefix}RetraceFrom` : undefined}
