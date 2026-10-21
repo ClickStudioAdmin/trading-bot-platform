@@ -20,7 +20,11 @@ import {
   sideExitActions,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
-import { retraceLevelPrice, type RetraceSpec } from "@/lib/strategy/retrace";
+import {
+  retraceLevelPrice,
+  windowRetraceSpec,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import type { BacktestRecipe, SimulatedOrder } from "./model";
 
@@ -323,7 +327,10 @@ function leafLevel(
     push(levels, side, role, title, leaf.price);
   }
   if (leaf.kind === "retrace") {
-    push(levels, side, role, title, retracePrice(leaf, input));
+    const spec = windowRetraceSpec(leaf);
+    if (spec) {
+      push(levels, side, role, title, retracePrice(spec, input));
+    }
   }
 }
 

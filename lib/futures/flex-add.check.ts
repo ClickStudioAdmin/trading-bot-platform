@@ -19,6 +19,13 @@ import {
   parseProtectionSpec,
   protectionMet,
 } from "@/lib/strategy/protection";
+import {
+  commitPositionRetraceFire,
+  emptyPositionRetraceMemory,
+  positionRetraceMet,
+  positionRetraceToJson,
+  resumePositionRetrace,
+} from "@/lib/strategy/retrace";
 
 const bars = new Map();
 
@@ -282,6 +289,18 @@ function perpsForm(fields: Record<string, string>): FormData {
   return form;
 }
 
+const longMemory = emptyPositionRetraceMemory(100, "pos-long");
+const shortMemory = resumePositionRetrace({
+  stored: null,
+  positionKey: "pos-short",
+  initial: 90,
+  quotes: { last: 80, mark: 80, index: 80 },
+  wick: { high: 91, low: 79 },
+})!;
+assert.equal(shortMemory.high.last, 91);
+assert.equal(shortMemory.low.last, 79);
+assert.equal(shortMemory.initial, 90);
+
 const saved = parseFuturesAutomationForm(
   perpsForm({
     r0_direction: "both",
@@ -301,17 +320,26 @@ if (saved.ok) {
   const row = futuresAutomationToRow("user", "account", rule);
   assert.equal(row.add_condition_true, false);
   assert.equal(row.short_add_condition_true, false);
+  assert.equal(row.add_retrace, null);
+  assert.equal(row.short_add_retrace, null);
   const loaded = parseFuturesAutomationRow({
     ...row,
     add_condition_true: true,
     short_add_condition_true: false,
+    add_retrace: positionRetraceToJson(longMemory),
+    short_add_retrace: positionRetraceToJson(shortMemory),
   });
   assert.equal(loaded.addConditionTrue, true);
   assert.equal(loaded.shortAddConditionTrue, false);
+  assert.equal(loaded.addRetrace?.initial, 100);
+  assert.equal(loaded.shortAddRetrace?.high.last, 91);
+  assert.equal(loaded.shortAddRetrace?.low.last, 79);
   assert.equal(loaded.addStack?.orders?.[0]?.size, "500");
   const legs = perpsAutomationLegs(loaded);
   assert.equal(legs[0]?.rule.addConditionTrue, true);
+  assert.equal(legs[0]?.rule.addRetrace?.positionKey, "pos-long");
   assert.equal(legs[1]?.rule.addConditionTrue, false);
+  assert.equal(legs[1]?.rule.addRetrace?.positionKey, "pos-short");
   assert.equal(legs[1]?.rule.addStack?.leaves[0]?.kind, "webhook");
   assert.equal(perpsRuleMatchesWebhook(loaded, "hook-1"), true);
   assert.equal(perpsRuleMatchesWebhook(loaded, "missing"), false);
@@ -320,5 +348,162 @@ if (saved.ok) {
     true,
   );
 }
+
+const highStack: EntryStack = {
+  leaves: [{ kind: "retrace", source: "last", from: "high", pct: 1 }],
+  joins: ["and"],
+  orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+};
+function highDecision(
+  memory: NonNullable<typeof longMemory>,
+  price: number,
+  wasTrue: boolean,
+) {
+  return flexAddDecision({
+    stack: highStack,
+    side: "long",
+    price,
+    prices: { last: price, mark: price, index: price },
+    barsByTimeframe: bars,
+    wasTrue,
+    open: true,
+    positionRetrace: { average: 100, memory },
+  });
+}
+const armedHigh = resumePositionRetrace({
+  stored: longMemory,
+  positionKey: "pos-long",
+  initial: 100,
+  quotes: { last: 99 },
+})!;
+assert.equal(armedHigh.high.last, 100);
+const firstHigh = highDecision(armedHigh, 99, false);
+assert.equal(firstHigh.fire, true);
+assert.match(firstHigh.because, /high since entry/);
+const heldHigh = commitPositionRetraceFire(armedHigh, highStack.leaves);
+assert.equal(highDecision(heldHigh, 90, false).met, false);
+const newHigh = resumePositionRetrace({
+  stored: heldHigh,
+  positionKey: "pos-long",
+  initial: 100,
+  quotes: { last: 102 },
+  wick: { high: 102, low: 102 },
+})!;
+assert.equal(highDecision(newHigh, 102, false).met, false);
+const pulled = resumePositionRetrace({
+  stored: newHigh,
+  positionKey: "pos-long",
+  initial: 100,
+  quotes: { last: 100.98 },
+})!;
+assert.equal(highDecision(pulled, 100.98, false).fire, true);
+const sameBar = resumePositionRetrace({
+  stored: heldHigh,
+  positionKey: "pos-long",
+  initial: 100,
+  quotes: { last: 100.9 },
+  wick: { high: 102, low: 100.9 },
+})!;
+assert.equal(positionRetraceMet({
+  spec: { source: "last", from: "high", pct: 1 },
+  side: "long",
+  price: 100.9,
+  average: 100,
+  memory: sameBar,
+}), true);
+
+const initialStack: EntryStack = {
+  leaves: [{ kind: "retrace", source: "last", from: "initial", pct: 1 }],
+  joins: ["and"],
+  orders: [{ size: "1", sizeUnit: "qty", orderType: "market", limitPrice: "" }],
+};
+let initialMemory = emptyPositionRetraceMemory(100, "pos-long");
+assert.equal(
+  flexAddDecision({
+    stack: initialStack,
+    side: "long",
+    price: 99,
+    prices: { last: 99, mark: 99, index: 99 },
+    barsByTimeframe: bars,
+    wasTrue: false,
+    open: true,
+    positionRetrace: { average: 100, memory: initialMemory },
+  }).fire,
+  true,
+);
+initialMemory = commitPositionRetraceFire(initialMemory, initialStack.leaves);
+assert.equal(
+  flexAddDecision({
+    stack: initialStack,
+    side: "short",
+    price: 110,
+    prices: { last: 98, mark: 98, index: 98 },
+    barsByTimeframe: bars,
+    wasTrue: false,
+    open: true,
+    positionRetrace: { average: 100, memory: initialMemory },
+  }).met,
+  false,
+);
+assert.equal(
+  positionRetraceMet({
+    spec: { source: "last", from: "initial", pct: 1 },
+    side: "short",
+    price: 101,
+    average: 100,
+    memory: emptyPositionRetraceMemory(100, "short"),
+  }),
+  true,
+);
+
+const averageStack: EntryStack = {
+  ...initialStack,
+  leaves: [{ kind: "retrace", source: "last", from: "average", pct: 1 }],
+};
+assert.equal(
+  positionRetraceMet({
+    spec: { source: "last", from: "average", pct: 1 },
+    side: "long",
+    price: 99,
+    average: 99.5,
+    memory: emptyPositionRetraceMemory(100, "pos-long"),
+  }),
+  false,
+);
+assert.equal(
+  flexAddDecision({
+    stack: averageStack,
+    side: "long",
+    price: 98.5,
+    prices: { last: 98.5, mark: 98.5, index: 98.5 },
+    barsByTimeframe: bars,
+    wasTrue: false,
+    open: true,
+    positionRetrace: {
+      average: 99.5,
+      memory: emptyPositionRetraceMemory(100, "pos-long"),
+    },
+  }).fire,
+  true,
+);
+const blocked = flexAddDecision({
+  stack: {
+    leaves: [
+      { kind: "retrace", source: "last", from: "high", pct: 1 },
+      { kind: "price", triggerBy: "last", compare: "lte", price: 50 },
+    ],
+    joins: ["and", "and"],
+    orders: highStack.orders,
+  },
+  side: "long",
+  price: 99,
+  prices: { last: 99, mark: 99, index: 99 },
+  barsByTimeframe: bars,
+  wasTrue: false,
+  open: true,
+  positionRetrace: { average: 100, memory: armedHigh },
+});
+assert.equal(blocked.fire, false);
+assert.equal(commitPositionRetraceFire(armedHigh, []).highAnchor.last, null);
 
 console.log("flex add engine checks passed");

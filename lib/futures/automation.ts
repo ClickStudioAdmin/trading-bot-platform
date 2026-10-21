@@ -54,7 +54,11 @@ import {
   addStackMatchesWebhook,
   entryStackMatchesWebhook,
 } from "@/lib/strategy/expr";
-import type { RetraceSpec } from "@/lib/strategy/retrace";
+import {
+  positionRetraceFromJson,
+  type PositionRetraceMemory,
+  type RetraceSpec,
+} from "@/lib/strategy/retrace";
 import {
   parsePerpsDirection,
   perpsDirectionFromAction,
@@ -105,6 +109,10 @@ export type FuturesAutomationRule = {
   addConditionTrue?: boolean;
   /** Rising-edge latch for the short additional-order stack on direction Both. */
   shortAddConditionTrue?: boolean;
+  /** High, low, and initial-entry arm for the long additional-order retrace. */
+  addRetrace?: PositionRetraceMemory | null;
+  /** The same arm for the short stack on direction Both. */
+  shortAddRetrace?: PositionRetraceMemory | null;
   lastFiredAtMs: number | null;
 };
 
@@ -1109,6 +1117,8 @@ function attachPerpsDirection(
   rule.shortConditionTrue = Boolean(row.short_condition_true);
   rule.addConditionTrue = Boolean(row.add_condition_true);
   rule.shortAddConditionTrue = Boolean(row.short_add_condition_true);
+  rule.addRetrace = positionRetraceFromJson(row.add_retrace);
+  rule.shortAddRetrace = positionRetraceFromJson(row.short_add_retrace);
   if (rule.action === "flatten") {
     rule.direction = perpsDirectionFromAction(rule.action, rule.closeSide);
     rule.shortEntry = null;
@@ -1245,6 +1255,8 @@ export function futuresAutomationToRow(
     short_condition_true: false,
     add_condition_true: false,
     short_add_condition_true: false,
+    add_retrace: null,
+    short_add_retrace: null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -1320,6 +1332,7 @@ export function perpsAutomationLegs(
     retrace: short.retrace ?? null,
     addStack: short.addStack ?? null,
     addConditionTrue: rule.shortAddConditionTrue === true,
+    addRetrace: rule.shortAddRetrace ?? null,
     confirm: short.confirm,
     entryStack: short.entryStack,
     exitActions: short.actions ?? null,

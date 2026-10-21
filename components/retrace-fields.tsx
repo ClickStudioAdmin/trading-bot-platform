@@ -11,7 +11,11 @@ import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
-import { retraceClaim } from "@/lib/strategy/retrace";
+import {
+  retraceClaim,
+  retraceFromLabel,
+  type PositionRetraceFrom,
+} from "@/lib/strategy/retrace";
 import {
   choiceConflicts,
   type EntryConflictSlot,
@@ -20,11 +24,18 @@ import type { FuturesSide } from "@/lib/futures/model";
 
 export type RetraceDraft = {
   source: "last" | "mark" | "index";
-  from: "high" | "low";
+  from: PositionRetraceFrom;
   pct: string;
   lookback: string;
   timeframe: DcaIndicatorTimeframe;
 };
+
+const POSITION_RETRACE_FROMS: readonly PositionRetraceFrom[] = [
+  "high",
+  "low",
+  "initial",
+  "average",
+];
 
 export function blankRetraceDraft(side: FuturesSide): RetraceDraft {
   return {
@@ -45,6 +56,7 @@ export function RetraceFields({
   slots,
   slotIndex,
   showErrors = false,
+  position = false,
 }: {
   prefix: string;
   draft: RetraceDraft;
@@ -54,6 +66,8 @@ export function RetraceFields({
   slots?: readonly EntryConflictSlot[];
   slotIndex?: number;
   showErrors?: boolean;
+  /** Additional orders use the position lifetime and hide lookback and timeframe. */
+  position?: boolean;
 }) {
   function disabled(
     next: Partial<Pick<RetraceDraft, "source" | "from" | "timeframe">>,
@@ -65,12 +79,16 @@ export function RetraceFields({
       retraceClaim({
         source: next.source ?? draft.source,
         from: next.from ?? draft.from,
-        timeframe: next.timeframe ?? draft.timeframe,
+        timeframe: position ? undefined : (next.timeframe ?? draft.timeframe),
+        position,
       }),
       selected,
     );
   }
   const pctMissing = !(Number(draft.pct.replace(/,/g, "").trim()) > 0);
+  const froms = position
+    ? POSITION_RETRACE_FROMS
+    : (["high", "low"] as const);
   return (
     <>
       <label className={labelClass}>
@@ -105,20 +123,26 @@ export function RetraceFields({
         <AppSelect
           name={prefix ? `${prefix}RetraceFrom` : undefined}
           value={draft.from}
-          onChange={(event) =>
+          onChange={(event) => {
+            const from = POSITION_RETRACE_FROMS.find(
+              (row) => row === event.target.value,
+            );
             onChange({
               ...draft,
-              from: event.target.value === "low" ? "low" : "high",
-            })
-          }
+              from: from && (position || from === "high" || from === "low") ? from : "high",
+            });
+          }}
           className={fieldClass}
         >
-          <option value="high" disabled={disabled({ from: "high" }, draft.from === "high")}>
-            High
-          </option>
-          <option value="low" disabled={disabled({ from: "low" }, draft.from === "low")}>
-            Low
-          </option>
+          {froms.map((from) => (
+            <option
+              key={from}
+              value={from}
+              disabled={disabled({ from }, from === draft.from)}
+            >
+              {retraceFromLabel(from)}
+            </option>
+          ))}
         </AppSelect>
       </label>
       <label className={labelClass}>
@@ -131,39 +155,43 @@ export function RetraceFields({
           className={showErrors && pctMissing ? botFieldInvalidClass : fieldClass}
         />
       </label>
-      <label className={labelClass}>
-        <HintLabel text="Lookback" required />
-        <GroupedNumberInput
-          name={prefix ? `${prefix}RetraceLookback` : undefined}
-          value={draft.lookback}
-          onChange={(lookback) => onChange({ ...draft, lookback })}
-          className={fieldClass}
-        />
-      </label>
-      <label className={labelClass}>
-        <HintLabel text="Timeframe" required />
-        <AppSelect
-          name={prefix ? `${prefix}RetraceTimeframe` : undefined}
-          value={draft.timeframe}
-          onChange={(event) =>
-            onChange({
-              ...draft,
-              timeframe: event.target.value as DcaIndicatorTimeframe,
-            })
-          }
-          className={fieldClass}
-        >
-          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option
-              key={interval}
-              value={interval}
-              disabled={disabled({ timeframe: interval }, interval === draft.timeframe)}
-            >
-              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-            </option>
-          ))}
-        </AppSelect>
-      </label>
+      {position ? null : (
+        <label className={labelClass}>
+          <HintLabel text="Lookback" required />
+          <GroupedNumberInput
+            name={prefix ? `${prefix}RetraceLookback` : undefined}
+            value={draft.lookback}
+            onChange={(lookback) => onChange({ ...draft, lookback })}
+            className={fieldClass}
+          />
+        </label>
+      )}
+      {position ? null : (
+        <label className={labelClass}>
+          <HintLabel text="Timeframe" required />
+          <AppSelect
+            name={prefix ? `${prefix}RetraceTimeframe` : undefined}
+            value={draft.timeframe}
+            onChange={(event) =>
+              onChange({
+                ...draft,
+                timeframe: event.target.value as DcaIndicatorTimeframe,
+              })
+            }
+            className={fieldClass}
+          >
+            {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+              <option
+                key={interval}
+                value={interval}
+                disabled={disabled({ timeframe: interval }, interval === draft.timeframe)}
+              >
+                {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+              </option>
+            ))}
+          </AppSelect>
+        </label>
+      )}
     </>
   );
 }
