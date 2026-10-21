@@ -85,4 +85,7 @@ assert.equal(after.some((row) => row.title === "Long Trail" && row.price === 107
 assert.equal(after.some((row) => row.title === "Long BE" && row.price === 100), true);
 assert.equal(after.some((row) => row.role === "add"), false);
 
+const wick = titles([bar(0, 100, 96, 104), bar(1, 111, 108, 112)]);
+assert.equal(wick.some((row) => row.title === "Long Trail" && row.price === 107), true);
+
 console.log("condition order level checks passed");

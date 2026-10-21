@@ -1132,6 +1132,8 @@ export function evaluateExitActions(input: {
   side: FuturesSide;
   mark: number;
   last: number;
+  favorable?: number;
+  adverse?: number;
   entryPrice: number | null;
   nowMs: number;
   barsByTimeframe: Map<string, CandleBar[]>;
@@ -1171,6 +1173,8 @@ export function evaluateExitActions(input: {
     side: input.side,
     mark: input.mark,
     last: input.last,
+    favorable: input.favorable,
+    adverse: input.adverse,
     entryPrice: input.entryPrice,
     nowMs: input.nowMs,
     conditionTrue,
@@ -1391,6 +1395,10 @@ function priceFires(input: {
   side: FuturesSide;
   mark: number;
   last: number;
+  /** Best price on the bar. Arms a trail and tracks its peak. Defaults to last. */
+  favorable?: number;
+  /** Worst price on the bar. Tests whether the trail filled. Defaults to last. */
+  adverse?: number;
   entryPrice: number | null;
   arm: ExitArmState;
   justArmed: boolean;
@@ -1427,24 +1435,25 @@ function priceFires(input: {
     const pnl = entry != null && pct != null ? pnlPct(side, entry, input.mark) : null;
     return { fire: pnl != null && pnl <= -pct!, peak: arm.peak };
   }
-  if (!trailReady({ action, side, last: input.last, entryPrice: input.entryPrice })) {
+  const peakRef = input.favorable ?? input.last;
+  const hitRef = input.adverse ?? input.last;
+  if (!trailReady({ action, side, last: peakRef, entryPrice: input.entryPrice })) {
     return { fire: false, peak: arm.peak };
   }
   const distance = trailDistance(action, input.last);
   if (distance == null) {
     return { fire: false, peak: arm.peak };
   }
-  const ref = input.last;
   const peak = arm.peak == null || input.justArmed
-    ? ref
+    ? peakRef
     : side === "long"
-      ? Math.max(arm.peak, ref)
-      : Math.min(arm.peak, ref);
+      ? Math.max(arm.peak, peakRef)
+      : Math.min(arm.peak, peakRef);
   if (arm.peak == null || input.justArmed) {
     return { fire: false, peak };
   }
   const stop = side === "long" ? peak - distance : peak + distance;
-  const fire = side === "long" ? ref <= stop : ref >= stop;
+  const fire = side === "long" ? hitRef <= stop : hitRef >= stop;
   return { fire, peak };
 }
 
@@ -1476,6 +1485,8 @@ export function planExitClaims(input: {
   side: FuturesSide;
   mark: number;
   last: number;
+  favorable?: number;
+  adverse?: number;
   entryPrice: number | null;
   nowMs: number;
   conditionTrue: Readonly<Record<string, boolean>>;
@@ -1532,6 +1543,8 @@ export function planExitClaims(input: {
         side: input.side,
         mark: input.mark,
         last: input.last,
+        favorable: input.favorable,
+        adverse: input.adverse,
         entryPrice: input.entryPrice,
         arm: { ...previous, peak: justArmed ? null : previous.peak },
         justArmed,

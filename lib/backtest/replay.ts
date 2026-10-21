@@ -37,8 +37,8 @@ import {
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
 import {
+  advanceTrailingOnBar,
   armTrailingAt,
-  paperTrailingAdvance,
   trailingHasStop,
   type FuturesTrailing,
 } from "@/lib/futures/trailing";
@@ -591,6 +591,8 @@ export async function replayPerpsPriceCross(input: {
           side: open.side,
           mark: price,
           last: price,
+          favorable,
+          adverse,
           entryPrice: open.entry,
           nowMs: bar.timeMs,
           barsByTimeframe: bars,
@@ -639,10 +641,11 @@ export async function replayPerpsPriceCross(input: {
           open = { ...current, qty: current.qty - take };
         }
       } else if (open?.trailing && trailingHasStop(open.trailing)) {
-        const trail = paperTrailingAdvance({
+        const trail = advanceTrailingOnBar({
           side: open.side,
           trailing: open.trailing,
-          last: adverse,
+          favorable,
+          adverse,
         });
         open.trailing = { ...open.trailing, peak: trail.peak };
         if (trail.hit && trail.fillPrice != null) {
@@ -1234,6 +1237,8 @@ async function replayPerpsBoth(input: {
             side,
             mark: price,
             last: price,
+            favorable,
+            adverse,
             entryPrice: row.entry,
             nowMs: bar.timeMs,
             barsByTimeframe: bars,
@@ -1285,10 +1290,11 @@ async function replayPerpsBoth(input: {
         continue;
       }
       if (open.trailing && trailingHasStop(open.trailing)) {
-        const trail = paperTrailingAdvance({
+        const trail = advanceTrailingOnBar({
           side: open.side,
           trailing: open.trailing,
-          last: adverse,
+          favorable,
+          adverse,
         });
         open.trailing = { ...open.trailing, peak: trail.peak };
         if (trail.hit && trail.fillPrice != null) {
