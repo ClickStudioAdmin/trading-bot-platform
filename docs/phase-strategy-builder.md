@@ -1,6 +1,6 @@
 # Strategy Builder
 
-Current V1 item. Started 14 Oct 2026. See [roadmap.md](roadmap.md).
+Started 14 Oct 2026. Click moved to the full system test (V1 item 8) on 21 Oct 2026. See [roadmap.md](roadmap.md).
 
 ## Purpose
 
@@ -117,4 +117,4 @@ Position Builder is a plan row under Max Bots. Admin can include it or give it a
 - Cash and Carry
 - A scripting language, nesting deeper than And-inside-Or, a general pattern scanner
 - Multi-pair or virtual lots
-- Create Platform Templates (V1 item 8)
+- Create Platform Templates (V2)

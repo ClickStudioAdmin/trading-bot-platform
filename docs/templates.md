@@ -1,6 +1,6 @@
 # Automation templates and folders
 
-Shipped. **Not Fly.io. Not scale-in.** See [roadmap.md](roadmap.md). Not backup market data. Writing the platform catalog is V1 item 8 (Create Platform Templates), after Strategy Builder.
+Shipped. **Not Fly.io. Not scale-in.** See [roadmap.md](roadmap.md). Not backup market data. Writing the platform catalog is V2 (Create Platform Templates).
 
 Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped template library** that stamps idle bots onto a desk of the matching type. Migrations: `supabase/migrations/20260828100000_automation_templates.sql`, `supabase/migrations/20260828110000_automation_template_shares.sql`, `supabase/migrations/20260828120000_template_starter_pack.sql` (apply on push to `develop`). Stored JSON is still called a `recipe` in code.
 
