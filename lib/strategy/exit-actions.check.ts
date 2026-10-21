@@ -1007,4 +1007,40 @@ assert.equal(
 );
 assert.equal(exitRuntimeFromJson({ arms: { a: { armedAt: 1, peak: 2, condition: false } } }).book, undefined);
 
+const wickTrail: StoredExitAction = {
+  id: "trail",
+  kind: "trailing_stop",
+  scope: { kind: "all" },
+  groups: [],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: 5,
+  trailingActivation: 110,
+  trailingPct: null,
+  trailingTriggerPct: null,
+  breakevenActivationPct: null,
+  breakevenOffsetPct: null,
+};
+function trailBar(input: { close: number; favorable?: number; adverse?: number }) {
+  return evaluateExitActions({
+    actions: [wickTrail],
+    runtime: emptyExitRuntime(),
+    lots: [{ id: "position", qty: 1, price: 100 }],
+    side: "long",
+    mark: input.close,
+    last: input.close,
+    favorable: input.favorable,
+    adverse: input.adverse,
+    entryPrice: 100,
+    nowMs: 4,
+    barsByTimeframe: new Map(),
+  });
+}
+assert.equal(trailBar({ close: 108 }).runtime.arms.trail?.peak ?? null, null);
+const armedOnHigh = trailBar({ close: 108, favorable: 112, adverse: 108 });
+assert.equal(armedOnHigh.claims.length, 0);
+assert.equal(armedOnHigh.runtime.arms.trail?.peak, 112);
+
 console.log("exit-actions.check ok");

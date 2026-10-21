@@ -7,7 +7,7 @@ import { dcaPlannedExits } from "@/lib/dca/grid";
 import type { HardExitDraft } from "@/lib/dca/hard-exit";
 import { futuresBreakevenStop } from "@/lib/futures/conditions";
 import type { FuturesSide } from "@/lib/futures/model";
-import { paperTrailingAdvance, type FuturesTrailing } from "@/lib/futures/trailing";
+import { advanceTrailingOnBar, type FuturesTrailing } from "@/lib/futures/trailing";
 import type { FuturesTpsl } from "@/lib/futures/tpsl";
 import type { CandleBar } from "@/lib/market/candles";
 import {
@@ -489,18 +489,15 @@ function trailedStop(
   let peak: number | null = null;
   let stop: number | null = null;
   for (const bar of candles) {
-    const last = side === "long" ? bar.low : bar.high;
-    const step = paperTrailingAdvance({
+    const step = advanceTrailingOnBar({
       side,
       trailing: { distance, activePrice, peak },
-      last,
+      favorable: side === "long" ? bar.high : bar.low,
+      adverse: side === "long" ? bar.low : bar.high,
     });
     peak = step.peak;
-    if (peak != null) {
-      const next = side === "long" ? peak - distance : peak + distance;
-      if (next > 0) {
-        stop = next;
-      }
+    if (step.stop != null) {
+      stop = step.stop;
     }
   }
   return stop;

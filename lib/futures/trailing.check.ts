@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  advanceTrailingOnBar,
   armTrailingAt,
   paperTrailingAdvance,
   parseFuturesTrailingForm,
@@ -194,5 +195,35 @@ assert.equal(venue.takeProfit, "0");
 
 const clearedVenue = combinedVenueTradingStop(null, null);
 assert.equal(clearedVenue.trailingStop, "0");
+
+const longWick = advanceTrailingOnBar({
+  side: "long",
+  trailing: { distance: 5, activePrice: 110, peak: null },
+  favorable: 118,
+  adverse: 103,
+});
+assert.equal(longWick.peak, 118);
+assert.equal(longWick.stop, 113);
+assert.equal(longWick.hit, true);
+
+const longHold = advanceTrailingOnBar({
+  side: "long",
+  trailing: { distance: 5, activePrice: 110, peak: null },
+  favorable: 118,
+  adverse: 114,
+});
+assert.equal(longHold.peak, 118);
+assert.equal(longHold.stop, 113);
+assert.equal(longHold.hit, false);
+
+const shortWick = advanceTrailingOnBar({
+  side: "short",
+  trailing: { distance: 5, activePrice: 90, peak: null },
+  favorable: 82,
+  adverse: 97,
+});
+assert.equal(shortWick.peak, 82);
+assert.equal(shortWick.stop, 87);
+assert.equal(shortWick.hit, true);
 
 console.log("futures trailing checks passed");

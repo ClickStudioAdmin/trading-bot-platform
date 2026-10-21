@@ -194,6 +194,41 @@ export function paperTrailingAdvance(input: {
   };
 }
 
+/**
+ * A candle's favorable extreme arms the trail and tracks the peak.
+ * The adverse extreme is what can fill it. A long uses the high, then the low.
+ */
+export function advanceTrailingOnBar(input: {
+  side: FuturesSide;
+  trailing: FuturesTrailing;
+  favorable: number;
+  adverse: number;
+}): { peak: number | null; hit: boolean; fillPrice: number | null; stop: number | null } {
+  const armed = paperTrailingAdvance({
+    side: input.side,
+    trailing: input.trailing,
+    last: input.favorable,
+  });
+  const checked = paperTrailingAdvance({
+    side: input.side,
+    trailing: { ...input.trailing, peak: armed.peak },
+    last: input.adverse,
+  });
+  const peak = checked.peak;
+  const raw =
+    peak == null
+      ? null
+      : input.side === "long"
+        ? peak - input.trailing.distance
+        : peak + input.trailing.distance;
+  return {
+    peak,
+    hit: checked.hit,
+    fillPrice: checked.fillPrice,
+    stop: raw != null && raw > 0 ? raw : null,
+  };
+}
+
 export function trailingColumns(trailing: FuturesTrailing | null | undefined) {
   if (!trailing || !(trailing.distance > 0)) {
     return {

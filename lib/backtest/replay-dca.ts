@@ -50,8 +50,8 @@ import { canBacktestDcaRecipe } from "./eligibility";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
 import {
+  advanceTrailingOnBar,
   armTrailingAt,
-  paperTrailingAdvance,
   type FuturesTrailing,
 } from "@/lib/futures/trailing";
 import type { CandleBar } from "@/lib/market/candles";
@@ -696,10 +696,11 @@ export async function replayDcaPlaybook(input: {
           continue;
         }
         if (!actionBook && leg.trailing) {
-          const trail = paperTrailingAdvance({
+          const trail = advanceTrailingOnBar({
             side,
             trailing: leg.trailing,
-            last: adverse,
+            favorable: side === "long" ? bar.high : bar.low,
+            adverse,
           });
           legs[side] = { ...leg, trailing: { ...leg.trailing, peak: trail.peak } };
           if (trail.hit && trail.fillPrice != null) {
@@ -1081,6 +1082,8 @@ export async function replayDcaPlaybook(input: {
           side,
           mark: price,
           last: price,
+          favorable: side === "long" ? bar.high : bar.low,
+          adverse: side === "long" ? bar.low : bar.high,
           entryPrice: heldLeg.entry,
           nowMs: bar.timeMs,
           barsByTimeframe: bars,
