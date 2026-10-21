@@ -17,6 +17,7 @@ import {
   exitBookForClassic,
   exitRuntimeFromJson,
   exitActionGate,
+  dcaClassicActions,
   exitActionsForSave,
   exitActionsFromJson,
   exitCardsBlockReason,
@@ -1304,5 +1305,60 @@ percentStop.anchor = { trigger: "stop" };
 assert.equal(exitActionsForSave([percentStop], prices)?.[0]?.reference, "lot");
 const opened = clausesFromExitActions(exitActionsForSave([freshLot], prices));
 assert.equal(opened?.[0]?.reference, "lot");
+
+const dcaLot = emptyExitClause();
+dcaLot.kind = "trailing_stop";
+dcaLot.anchor = { trigger: "trail" };
+dcaLot.scope = { kind: "fills", minProfitPct: 5 };
+assert.equal(exitActionsForSave([dcaLot], prices, "dca"), null);
+assert.equal(exitActionsForSave([dcaLot], prices, "flex")?.[0]?.reference, "lot");
+assert.equal(exitActionsForSave([dcaLot], prices, "flex")?.[0]?.scope.kind, "fills");
+const dcaAnd = emptyExitClause();
+dcaAnd.kind = "trailing_stop";
+dcaAnd.anchor = { trigger: "trail" };
+dcaAnd.rows = [
+  {
+    key: "rsi",
+    join: "and",
+    draft: {
+      trigger: "indicator",
+      spec: {
+        kind: "rsi",
+        timeframe: "15",
+        compare: "gte",
+        level: 70,
+        levelTo: null,
+        period: 14,
+        slowPeriod: null,
+        multiplier: null,
+      },
+    },
+  },
+];
+const dcaSaved = exitActionsForSave([dcaAnd], prices, "dca");
+assert.equal(dcaSaved?.[0]?.reference, undefined);
+assert.equal(dcaSaved?.[0]?.scope.kind, "all");
+assert.equal(exitActionsForSave([dcaAnd], prices, "flex")?.[0]?.reference, "lot");
+const coerced = dcaClassicActions([
+  {
+    id: "trail",
+    kind: "trailing_stop",
+    scope: { kind: "remainder" },
+    reference: "lot",
+    groups: [],
+    takeProfitPct: null,
+    takeProfitPrice: null,
+    stopLossPct: null,
+    stopLossPrice: null,
+    trailingDistance: null,
+    trailingActivation: null,
+    trailingPct: 1,
+    trailingTriggerPct: 2,
+  },
+]);
+assert.equal(coerced?.[0]?.reference, undefined);
+assert.equal(coerced?.[0]?.scope.kind, "all");
+assert.equal(coerced?.[0]?.trailingPct, 1);
+assert.equal(dcaClassicActions(null), null);
 
 console.log("exit-actions.check ok");

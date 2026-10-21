@@ -18,6 +18,7 @@ import {
 } from "@/lib/strategy/expr";
 import {
   actionUsesLotReference,
+  dcaClassicActions,
   sideExitActions,
   type StoredExitAction,
 } from "@/lib/strategy/exit-actions";
@@ -209,10 +210,11 @@ function dcaLevels(
   lots: readonly ChartLot[],
 ) {
   const recipe = input.recipe;
-  const actions =
+  const actions = dcaClassicActions(
     side === "short" && recipe.direction === "both"
       ? recipe.shortExitActions
-      : recipe.exitActions;
+      : recipe.exitActions,
+  );
   if (actions && actions.length > 0) {
     for (const action of actions) {
       exitActionLevels(levels, action, side, entry, since, input, lots);

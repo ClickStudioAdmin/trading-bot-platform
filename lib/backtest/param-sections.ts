@@ -29,6 +29,7 @@ import {
 } from "@/lib/dca/hard-exit";
 import {
   actionKindLabel,
+  dcaClassicActions,
   executionLabel,
   scopeLabel,
   type StoredExitAction,
@@ -1137,7 +1138,9 @@ function dcaExitSections(recipe: DcaTemplateRecipe): ParamSection[] {
         : ["long"];
   return sides.map((side) => {
     const ownShort = side === "short" && recipe.direction === "both";
-    const actions = ownShort ? recipe.shortExitActions : recipe.exitActions;
+    const actions = dcaClassicActions(
+      ownShort ? recipe.shortExitActions : recipe.exitActions,
+    );
     const title = side === "short" ? "Short Exit Conditions" : "Long Exit Conditions";
     if (actions && actions.length > 0) {
       return {
