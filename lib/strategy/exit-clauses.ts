@@ -376,6 +376,17 @@ export function customExitClause(
   };
 }
 
+/** Action menu value. A Close whose first condition is a webhook is Signal Webhook. */
+export function exitBuilderActionValue(clause: ExitBuilderClause): string {
+  if (isClassicExitKind(clause.kind) || clause.kind === "breakeven") {
+    return clause.kind;
+  }
+  if (clause.kind === "custom") {
+    return clause.anchor.trigger === "webhook" ? "webhook" : "close";
+  }
+  return "";
+}
+
 export function clauseScope(clause: ExitBuilderClause): ExitScope {
   return clause.scope ?? EXIT_SCOPE_ALL;
 }
