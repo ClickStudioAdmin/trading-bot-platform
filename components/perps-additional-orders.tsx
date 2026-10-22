@@ -269,6 +269,8 @@ export function PerpsAdditionalOrders({
                 gridClass={gridClass}
                 conditionGrid={conditionGrid}
                 column={column}
+                showErrors={showErrors}
+                invalidFieldClass={invalidFieldClass}
                 onType={(next) => chooseType(group, group.lead, next)}
                 onDraft={(partial) => patchDraft(group, group.lead, partial)}
               />
@@ -289,6 +291,8 @@ export function PerpsAdditionalOrders({
                         gridClass={gridClass}
                         conditionGrid={conditionGrid}
                         column={column}
+                        showErrors={showErrors}
+                        invalidFieldClass={invalidFieldClass}
                         onType={(next) => chooseType(group, condition, next)}
                         onDraft={(partial) => patchDraft(group, condition, partial)}
                       />
@@ -366,6 +370,8 @@ function ConditionFields({
   gridClass,
   conditionGrid,
   column,
+  showErrors = false,
+  invalidFieldClass,
   onType,
   onDraft,
 }: {
@@ -380,6 +386,8 @@ function ConditionFields({
   gridClass: string;
   conditionGrid: string;
   column: boolean;
+  showErrors?: boolean;
+  invalidFieldClass?: string;
   onType: (next: PerpsAddConditionType) => void;
   onDraft: (partial: Partial<PerpsAddConditionDraft>) => void;
 }) {
@@ -624,7 +632,11 @@ function ConditionFields({
             <AppSelect
               value={draft.webhookId}
               onChange={(event) => onDraft({ webhookId: event.target.value })}
-              className={conditionFieldClass(fieldClass, column)}
+              className={
+                showErrors && draft.webhookId.trim() === ""
+                  ? conditionFieldClass(invalidFieldClass ?? fieldClass, column)
+                  : conditionFieldClass(fieldClass, column)
+              }
             >
               <option value="">
                 {webhooks.length === 0

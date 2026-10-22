@@ -196,6 +196,17 @@ export function perpsAddGroupsFieldIssue(
   return null;
 }
 
+export function perpsAddGroupsWebhookUnbound(
+  groups: readonly PerpsAddOrderGroup[],
+): boolean {
+  return groups.some((group) =>
+    [group.lead, ...group.conditions].some(
+      (condition) =>
+        condition.type === "webhook" && condition.draft.webhookId.trim() === "",
+    ),
+  );
+}
+
 /** A group's own size is required only while that group's fields are on screen. */
 export function perpsAddGroupsSizingMissing(
   groups: readonly PerpsAddOrderGroup[],

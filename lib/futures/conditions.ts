@@ -37,7 +37,9 @@ import {
   hardExitDraftFromStored,
   hardExitSignalFromJson,
   hardExitSignalToJson,
+  isTemplateParseWebhookId,
   parseHardExitForm,
+  TEMPLATE_EXIT_WEBHOOK_ID,
   writeHardExitFormFields,
   type HardExitDraft,
   type HardExitSignal,
@@ -1446,10 +1448,13 @@ export function shortEntryFromJson(raw: unknown): PerpsEntryLeg | null {
   ) {
     return null;
   }
-  const webhookId = String(row.webhookId ?? "").trim() || null;
-  if (source === "webhook" && !webhookId) {
-    return null;
-  }
+  const storedWebhookId = String(row.webhookId ?? "").trim();
+  const webhookId =
+    !storedWebhookId ||
+    storedWebhookId === TEMPLATE_EXIT_WEBHOOK_ID ||
+    isTemplateParseWebhookId(storedWebhookId)
+      ? null
+      : storedWebhookId;
   const triggerBy = row.triggerBy;
   if (triggerBy !== "last" && triggerBy !== "mark" && triggerBy !== "index") {
     return null;

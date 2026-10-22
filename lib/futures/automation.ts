@@ -713,6 +713,8 @@ export function parseFuturesAutomationFields(input: {
   sortOrder?: number;
   conditionTrue?: unknown;
   lastFiredAt?: unknown;
+  /** A saved bot can keep Signal structure before a webhook is chosen. */
+  allowUnboundWebhook?: boolean;
 }): { ok: true; rule: FuturesAutomationRule } | { ok: false; error: string } {
   const name = String(input.name ?? "").trim() || `Rule ${(input.sortOrder ?? 0) + 1}`;
   if (name.length > BOT_NAME_MAX) {
@@ -767,7 +769,7 @@ export function parseFuturesAutomationFields(input: {
     entrySource = "price";
   }
   const webhookId = String(input.webhookId ?? "").trim() || null;
-  if (entrySource === "webhook" && !webhookId) {
+  if (entrySource === "webhook" && !webhookId && !input.allowUnboundWebhook) {
     return { ok: false, error: "Pick a Signal webhook." };
   }
   const triggerBy = parseFuturesTrigger(input.triggerBy);
@@ -1063,6 +1065,7 @@ export function parseFuturesAutomationRow(
   const preferred = parseFuturesAutomationFields({
     ...fields,
     venue: venue ?? "bybit",
+    allowUnboundWebhook: true,
   });
   if (preferred.ok) {
     const tpBy = parseFuturesTrigger(row.tp_trigger);
@@ -1101,6 +1104,7 @@ export function parseFuturesAutomationRow(
   const hyperliquid = parseFuturesAutomationFields({
     ...fields,
     venue: "hyperliquid",
+    allowUnboundWebhook: true,
   });
   if (!hyperliquid.ok) {
     return emptyParsedRule();
