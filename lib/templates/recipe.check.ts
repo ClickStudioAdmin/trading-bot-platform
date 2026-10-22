@@ -3,6 +3,7 @@ import { entryRowsFromSources } from "@/components/entry-condition-stack";
 import { exitRowsFromStack } from "@/components/exit-condition-stack";
 import { initialPerpsEntryDrafts } from "@/components/perps-entry-panel";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
+import { parseFuturesAutomationForm } from "@/lib/futures/automation";
 import { defaultPaperLayer } from "@/lib/engine/rules";
 import {
   dcaFormToSnapshotSource,
@@ -39,7 +40,7 @@ form.set("direction", "both");
 form.set("clipSize", "0.01");
 form.set("sizeUnit", "qty");
 form.set("startKind", "webhook");
-form.set("webhookId", "11111111-1111-4111-8111-111111111111");
+form.set("webhookId", "33333333-3333-4333-8333-333333333333");
 form.set("dipPct", "1.5");
 const parsed = parseDcaPlaybookForm(form);
 assert.equal(parsed.ok, true);
@@ -75,8 +76,8 @@ assert.equal(oldRecipe.ok, true);
 if (oldRecipe.ok && oldRecipe.recipe.kind === "dca") {
   assert.equal(oldRecipe.recipe.maxValueKind, "usdt");
 }
-assert.equal("webhookId" in snapshot, false);
-assert.equal("shortWebhookId" in snapshot, false);
+assert.equal(snapshot.webhookId, "33333333-3333-4333-8333-333333333333");
+assert.equal(snapshot.shortWebhookId, "33333333-3333-4333-8333-333333333333");
 assert.equal(snapshot.shortStartKind, "webhook");
 assert.equal(recipeHasRuntimeKeys(snapshot), false);
 
@@ -89,15 +90,15 @@ if (roundTrip.ok && roundTrip.recipe.kind === "dca") {
 const applied = dcaRecipeToConfig(snapshot, {});
 assert.equal(applied.ok, true);
 if (applied.ok) {
-  assert.equal(applied.config.startKind, "indicator");
-  assert.equal(applied.config.shortStartKind, "indicator");
-  assert.equal(applied.config.indicatorKind, "rsi");
-  assert.equal(applied.config.shortIndicatorKind, "rsi");
-  assert.equal(applied.config.webhookId, null);
-  assert.equal(applied.config.shortWebhookId, null);
+  assert.equal(applied.config.startKind, "webhook");
+  assert.equal(applied.config.shortStartKind, "webhook");
+  assert.equal(applied.config.webhookId, "33333333-3333-4333-8333-333333333333");
+  assert.equal(
+    applied.config.shortWebhookId,
+    "33333333-3333-4333-8333-333333333333",
+  );
   assert.equal(applied.config.symbol, "ETHUSDT");
-  assert.ok(applied.notes[0]?.includes("Signal"));
-  assert.ok(applied.notes.some((note) => note.includes("Short signal")));
+  assert.equal(applied.notes.length, 0);
 }
 
 const appliedHook = dcaRecipeToConfig(snapshot, {
@@ -109,10 +110,40 @@ if (appliedHook.ok) {
   assert.equal(appliedHook.config.shortStartKind, "webhook");
   assert.equal(
     appliedHook.config.webhookId,
-    "22222222-2222-4222-8222-222222222222",
+    "33333333-3333-4333-8333-333333333333",
   );
   assert.equal(
     appliedHook.config.shortWebhookId,
+    "33333333-3333-4333-8333-333333333333",
+  );
+}
+
+const legacySignal = { ...snapshot };
+delete legacySignal.webhookId;
+delete legacySignal.shortWebhookId;
+const legacyApplied = dcaRecipeToConfig(legacySignal, {});
+assert.equal(legacyApplied.ok, true);
+if (legacyApplied.ok) {
+  assert.equal(legacyApplied.config.startKind, "indicator");
+  assert.equal(legacyApplied.config.shortStartKind, "indicator");
+  assert.equal(legacyApplied.config.webhookId, null);
+  assert.equal(legacyApplied.config.shortWebhookId, null);
+  assert.ok(legacyApplied.notes[0]?.includes("Signal"));
+  assert.ok(legacyApplied.notes.some((note) => note.includes("Short signal")));
+}
+const legacyBound = dcaRecipeToConfig(legacySignal, {
+  webhookId: "22222222-2222-4222-8222-222222222222",
+});
+assert.equal(legacyBound.ok, true);
+if (legacyBound.ok) {
+  assert.equal(legacyBound.config.startKind, "webhook");
+  assert.equal(legacyBound.config.shortStartKind, "webhook");
+  assert.equal(
+    legacyBound.config.webhookId,
+    "22222222-2222-4222-8222-222222222222",
+  );
+  assert.equal(
+    legacyBound.config.shortWebhookId,
     "22222222-2222-4222-8222-222222222222",
   );
 }
@@ -218,6 +249,9 @@ const oldBothRsi = dcaRecipeToConfig(
   {
     ...snapshot,
     startKind: "indicator",
+    shortStartKind: "indicator",
+    webhookId: null,
+    shortWebhookId: null,
     indicatorKind: "rsi",
     indicatorTimeframe: "15",
     indicatorCompare: "cross_lte",
@@ -1072,5 +1106,240 @@ assert.equal(
   entryRowsFromSources(dcaSeed.shortEntryStack, dcaSeed.shortConfirm)[0]?.join,
   "or",
 );
+
+const longHook = "22222222-2222-4222-8222-222222222222";
+const shortHook = "55555555-5555-4555-8555-555555555555";
+const addHook = "66666666-6666-4666-8666-666666666666";
+const marketGod = new FormData();
+marketGod.set("deskVenue", "bybit");
+marketGod.set("ruleCount", "1");
+marketGod.set("r0_name", "Market God BTC 30m");
+marketGod.set("r0_symbol", "BTCUSDT");
+marketGod.set("r0_action", "buy");
+marketGod.set("r0_direction", "both");
+marketGod.set("r0_orderType", "market");
+marketGod.set("r0_sizeUnit", "usdt");
+marketGod.set("r0_size", "1");
+marketGod.set("r0_entrySource", "webhook");
+marketGod.set("r0_webhookId", longHook);
+marketGod.set("r0_exitIfTrigger", "webhook");
+marketGod.set("r0_exitIfWebhookId", longHook);
+marketGod.set("r0_entryCount", "1");
+marketGod.set("r0_entry0Join", "or");
+marketGod.set("r0_entry0Source", "price");
+marketGod.set("r0_entry0TriggerBy", "last");
+marketGod.set("r0_entry0TriggerCompare", "gte");
+marketGod.set("r0_entry0TriggerPrice", "100");
+marketGod.set(
+  "r0_addExpr",
+  JSON.stringify({
+    leaves: [{ kind: "webhook", webhookId: addHook }],
+    joins: ["and"],
+  }),
+);
+marketGod.set("r0_short_entrySource", "webhook");
+marketGod.set("r0_short_webhookId", shortHook);
+marketGod.set("r0_short_size", "1");
+marketGod.set("r0_short_sizeUnit", "usdt");
+marketGod.set("r0_short_orderType", "market");
+marketGod.set("r0_short_exitIfTrigger", "webhook");
+marketGod.set("r0_short_exitIfWebhookId", shortHook);
+const marketParsed = parseFuturesAutomationForm(marketGod);
+assert.equal(marketParsed.ok, true, marketParsed.ok ? "" : marketParsed.error);
+if (!marketParsed.ok) {
+  throw new Error("expected the webhook bot to parse");
+}
+const marketSnap = snapshotPerpsRecipe(marketParsed.rules[0]);
+assert.equal(marketSnap.entrySource, "webhook");
+assert.equal(marketSnap.webhookId, longHook);
+assert.equal(marketSnap.exitHard?.trigger, "webhook");
+if (marketSnap.exitHard?.trigger === "webhook") {
+  assert.equal(marketSnap.exitHard.webhookId, longHook);
+}
+assert.equal(marketSnap.shortEntry?.entrySource, "webhook");
+assert.equal(marketSnap.shortEntry?.webhookId, shortHook);
+assert.equal(marketSnap.shortEntry?.exitHard?.trigger, "webhook");
+if (marketSnap.shortEntry?.exitHard?.trigger === "webhook") {
+  assert.equal(marketSnap.shortEntry.exitHard.webhookId, shortHook);
+}
+const addLeaf = marketSnap.addStack?.leaves[0];
+assert.equal(addLeaf?.kind, "webhook");
+if (addLeaf?.kind === "webhook") {
+  assert.equal(addLeaf.webhookId, addHook);
+}
+assert.equal(recipeHasRuntimeKeys(marketSnap), false);
+assert.equal(JSON.stringify(marketSnap).includes("11111111-1111-4111-8111-111111111111"), false);
+const marketLoaded = parseTemplateRecipe(marketSnap, "flex", TEMPLATE_RECIPE_VERSION);
+assert.equal(marketLoaded.ok, true, marketLoaded.ok ? "" : marketLoaded.error);
+if (!marketLoaded.ok || marketLoaded.recipe.kind !== "flex") {
+  throw new Error("expected the webhook template to load");
+}
+assert.equal(marketLoaded.recipe.webhookId, longHook);
+assert.equal(marketLoaded.recipe.entrySource, "webhook");
+if (marketLoaded.recipe.exitHard?.trigger === "webhook") {
+  assert.equal(marketLoaded.recipe.exitHard.webhookId, longHook);
+}
+const marketApplied = perpsRecipeToRule(marketLoaded.recipe, { sortOrder: 0 });
+assert.equal(marketApplied.ok, true, marketApplied.ok ? "" : marketApplied.error);
+if (marketApplied.ok) {
+  assert.equal(marketApplied.rule.entrySource, "webhook");
+  assert.equal(marketApplied.rule.webhookId, longHook);
+  assert.equal(marketApplied.rule.triggerPrice, 1);
+  assert.equal(marketApplied.rule.exitHard?.trigger, "webhook");
+  if (marketApplied.rule.exitHard?.trigger === "webhook") {
+    assert.equal(marketApplied.rule.exitHard.webhookId, longHook);
+  }
+  assert.equal(marketApplied.rule.shortEntry?.entrySource, "webhook");
+  assert.equal(marketApplied.rule.shortEntry?.webhookId, shortHook);
+  assert.equal(marketApplied.rule.shortEntry?.exitHard?.trigger, "webhook");
+  if (marketApplied.rule.shortEntry?.exitHard?.trigger === "webhook") {
+    assert.equal(marketApplied.rule.shortEntry.exitHard.webhookId, shortHook);
+  }
+  const appliedAdd = marketApplied.rule.addStack?.leaves[0];
+  assert.equal(appliedAdd?.kind, "webhook");
+  if (appliedAdd?.kind === "webhook") {
+    assert.equal(appliedAdd.webhookId, addHook);
+  }
+  const appliedOr = marketApplied.rule.entryStack.leaves.find(
+    (leaf) => leaf.kind === "price",
+  );
+  assert.equal(appliedOr?.kind, "price");
+  assert.equal(marketApplied.notes.length, 0);
+}
+const marketSeed = perpsRecipeFormSeed(marketLoaded.recipe);
+assert.equal(marketSeed.entrySource, "webhook");
+assert.equal(marketSeed.webhookId, longHook);
+assert.equal(marketSeed.exitDraft?.trigger, "webhook");
+if (marketSeed.exitDraft?.trigger === "webhook") {
+  assert.equal(marketSeed.exitDraft.webhookId, longHook);
+}
+assert.equal(marketSeed.shortEntry?.webhookId, shortHook);
+
+function conditionBot(fields: { [key: string]: string | undefined }) {
+  const bot = new FormData();
+  bot.set("deskVenue", "bybit");
+  bot.set("ruleCount", "1");
+  bot.set("r0_name", "Condition");
+  bot.set("r0_symbol", "BTCUSDT");
+  bot.set("r0_action", "buy");
+  bot.set("r0_orderType", "market");
+  bot.set("r0_sizeUnit", "usdt");
+  bot.set("r0_size", "1");
+  for (const [key, value] of Object.entries(fields)) {
+    if (value != null) {
+      bot.set(key, value);
+    }
+  }
+  return bot;
+}
+
+for (const fields of [
+  {
+    r0_entrySource: "price",
+    r0_triggerBy: "last",
+    r0_triggerCompare: "gte",
+    r0_triggerPrice: "100",
+    r0_exitIfTrigger: "price",
+    r0_exitIfTriggerBy: "last",
+    r0_exitIfTriggerCompare: "lte",
+    r0_exitIfTriggerPrice: "90",
+  },
+  {
+    r0_entrySource: "indicator",
+    r0_indicatorKind: "rsi",
+    r0_indicatorTimeframe: "15",
+    r0_indicatorCompare: "cross_lte",
+    r0_indicatorLevel: "30",
+    r0_indicatorPeriod: "14",
+  },
+  {
+    r0_entrySource: "trend",
+    r0_indicatorKind: "supertrend",
+    r0_indicatorTimeframe: "60",
+    r0_indicatorCompare: "gte",
+    r0_indicatorPeriod: "10",
+    r0_indicatorMultiplier: "3",
+  },
+  {
+    r0_entrySource: "retrace",
+    r0_RetraceSource: "last",
+    r0_RetraceFrom: "high",
+    r0_RetracePct: "5",
+    r0_RetraceLookback: "20",
+    r0_RetraceTimeframe: "60",
+  },
+]) {
+  const parsedKind = parseFuturesAutomationForm(conditionBot(fields));
+  assert.equal(parsedKind.ok, true, parsedKind.ok ? "" : parsedKind.error);
+  if (!parsedKind.ok) {
+    continue;
+  }
+  const kindSnap = snapshotPerpsRecipe(parsedKind.rules[0]);
+  const kindLoaded = parseTemplateRecipe(kindSnap, "flex", TEMPLATE_RECIPE_VERSION);
+  assert.equal(kindLoaded.ok, true, kindLoaded.ok ? "" : kindLoaded.error);
+  if (!kindLoaded.ok || kindLoaded.recipe.kind !== "flex") {
+    continue;
+  }
+  const kindApplied = perpsRecipeToRule(kindLoaded.recipe, { sortOrder: 0 });
+  assert.equal(kindApplied.ok, true, kindApplied.ok ? "" : kindApplied.error);
+  if (kindApplied.ok) {
+    assert.equal(kindApplied.rule.entrySource, parsedKind.rules[0].entrySource);
+    assert.deepEqual(kindApplied.rule.indicator, parsedKind.rules[0].indicator);
+    assert.deepEqual(kindApplied.rule.retrace ?? null, parsedKind.rules[0].retrace ?? null);
+    assert.equal(kindApplied.rule.exitHard?.trigger ?? null, parsedKind.rules[0].exitHard?.trigger ?? null);
+  }
+}
+
+const dcaHooks = new FormData();
+dcaHooks.set("name", "DCA signals");
+dcaHooks.set("symbol", "BTCUSDT");
+dcaHooks.set("direction", "both");
+dcaHooks.set("clipSize", "1");
+dcaHooks.set("sizeUnit", "usdt");
+dcaHooks.set("startKind", "webhook");
+dcaHooks.set("webhookId", longHook);
+dcaHooks.set("shortStartKind", "webhook");
+dcaHooks.set("shortWebhookId", shortHook);
+dcaHooks.set("exitIfTrigger", "webhook");
+dcaHooks.set("exitIfWebhookId", longHook);
+dcaHooks.set("shortExitIfTrigger", "webhook");
+dcaHooks.set("shortExitIfWebhookId", shortHook);
+dcaHooks.set("exitIfStackCount", "1");
+dcaHooks.set("exitIfStack0Join", "or");
+dcaHooks.set("exitIfStack0Trigger", "webhook");
+dcaHooks.set("exitIfStack0WebhookId", addHook);
+const dcaHookParsed = parseDcaPlaybookForm(dcaHooks);
+assert.equal(dcaHookParsed.ok, true, dcaHookParsed.ok ? "" : dcaHookParsed.error);
+if (dcaHookParsed.ok) {
+  const dcaHookSnap = snapshotDcaRecipe(dcaHookParsed.config);
+  assert.equal(dcaHookSnap.webhookId, longHook);
+  assert.equal(dcaHookSnap.shortWebhookId, shortHook);
+  assert.equal(recipeHasRuntimeKeys(dcaHookSnap), false);
+  const dcaHookLoaded = parseTemplateRecipe(dcaHookSnap, "dca", TEMPLATE_RECIPE_VERSION);
+  assert.equal(dcaHookLoaded.ok, true, dcaHookLoaded.ok ? "" : dcaHookLoaded.error);
+  if (dcaHookLoaded.ok && dcaHookLoaded.recipe.kind === "dca") {
+    const dcaHookApplied = dcaRecipeToConfig(dcaHookLoaded.recipe, {});
+    assert.equal(dcaHookApplied.ok, true, dcaHookApplied.ok ? "" : dcaHookApplied.error);
+    if (dcaHookApplied.ok) {
+      assert.equal(dcaHookApplied.config.startKind, "webhook");
+      assert.equal(dcaHookApplied.config.webhookId, longHook);
+      assert.equal(dcaHookApplied.config.shortStartKind, "webhook");
+      assert.equal(dcaHookApplied.config.shortWebhookId, shortHook);
+      assert.equal(dcaHookApplied.config.exitHard?.trigger, "webhook");
+      if (dcaHookApplied.config.exitHard?.trigger === "webhook") {
+        assert.equal(dcaHookApplied.config.exitHard.webhookId, longHook);
+      }
+      assert.equal(dcaHookApplied.config.shortExitHard?.trigger, "webhook");
+      if (dcaHookApplied.config.shortExitHard?.trigger === "webhook") {
+        assert.equal(dcaHookApplied.config.shortExitHard.webhookId, shortHook);
+      }
+      const dcaStackLeaf = dcaHookApplied.config.exitStack?.leaves[0];
+      assert.equal(dcaStackLeaf?.kind, "webhook");
+      if (dcaStackLeaf?.kind === "webhook") {
+        assert.equal(dcaStackLeaf.webhookId, addHook);
+      }
+    }
+  }
+}
 
 console.log("templates recipe ok");

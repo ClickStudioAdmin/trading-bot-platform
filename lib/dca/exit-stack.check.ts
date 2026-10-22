@@ -10,6 +10,7 @@ import { defaultHardExit, parseHardExitForm } from "./hard-exit";
 import { parseDcaPlaybookForm } from "./playbook";
 import {
   TEMPLATE_EXIT_WEBHOOK_ID,
+  persistWebhookId,
   exitExpressionMet,
   exitStackError,
   exitStackMet,
@@ -138,7 +139,7 @@ assert.equal(
   "Use at most 12 Hard Exit conditions.",
 );
 
-const webhookId = "11111111-1111-4111-8111-111111111111";
+const webhookId = "22222222-2222-4222-8222-222222222222";
 const webhookStack = {
   leaves: [{ kind: "webhook" as const, webhookId }],
   joins: ["and" as const],
@@ -169,10 +170,22 @@ assert.equal(
 const templated = templateExitStack(webhookStack);
 assert.equal(templated?.leaves[0]?.kind, "webhook");
 if (templated?.leaves[0]?.kind === "webhook") {
-  assert.equal(templated.leaves[0].webhookId, TEMPLATE_EXIT_WEBHOOK_ID);
+  assert.equal(templated.leaves[0].webhookId, webhookId);
 }
-assert.equal(JSON.stringify(templated).includes(webhookId), false);
-assert.equal(exitStackNeedsWebhook(templated), true);
+assert.equal(JSON.stringify(templated).includes(webhookId), true);
+assert.equal(exitStackNeedsWebhook(templated), false);
+const blankWebhook = templateExitStack({
+  leaves: [{ kind: "webhook", webhookId: "" }],
+  joins: ["and"],
+});
+assert.equal(blankWebhook?.leaves[0]?.kind, "webhook");
+if (blankWebhook?.leaves[0]?.kind === "webhook") {
+  assert.equal(blankWebhook.leaves[0].webhookId, TEMPLATE_EXIT_WEBHOOK_ID);
+}
+assert.equal(exitStackNeedsWebhook(blankWebhook), true);
+assert.equal(persistWebhookId("11111111-1111-4111-8111-111111111111"), null);
+assert.equal(persistWebhookId(TEMPLATE_EXIT_WEBHOOK_ID), null);
+assert.equal(persistWebhookId(webhookId), webhookId);
 assert.equal(entryStackFromJson(templated)?.leaves.length, 1);
 
 function crossExit(slowPeriod: number, compare: "cross_gte" | "cross_lte") {
