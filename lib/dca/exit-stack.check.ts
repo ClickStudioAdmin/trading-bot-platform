@@ -170,10 +170,10 @@ assert.equal(
 const templated = templateExitStack(webhookStack);
 assert.equal(templated?.leaves[0]?.kind, "webhook");
 if (templated?.leaves[0]?.kind === "webhook") {
-  assert.equal(templated.leaves[0].webhookId, webhookId);
+  assert.equal(templated.leaves[0].webhookId, TEMPLATE_EXIT_WEBHOOK_ID);
 }
-assert.equal(JSON.stringify(templated).includes(webhookId), true);
-assert.equal(exitStackNeedsWebhook(templated), false);
+assert.equal(JSON.stringify(templated).includes(webhookId), false);
+assert.equal(exitStackNeedsWebhook(templated), true);
 const blankWebhook = templateExitStack({
   leaves: [{ kind: "webhook", webhookId: "" }],
   joins: ["and"],

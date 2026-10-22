@@ -411,6 +411,25 @@ export function blankExitClauses(): ExitBuilderClause[] {
   return [emptyExitClause()];
 }
 
+/** A Signal webhook on this side still has no desk webhook chosen. */
+export function exitClausesNeedWebhook(
+  clauses: readonly ExitBuilderClause[],
+): boolean {
+  return clauses.some((clause) => {
+    const drafts = [
+      clause.anchor,
+      ...clause.rows.map((row) => row.draft),
+      ...clauseOrGroups(clause).flatMap((group) => [
+        group.anchor,
+        ...group.rows.map((row) => row.draft),
+      ]),
+    ];
+    return drafts.some(
+      (draft) => draft.trigger === "webhook" && draft.webhookId.trim() === "",
+    );
+  });
+}
+
 /** A list that already has a condition still shows Select Condition Type. */
 export function exitClauseListMissing(
   clauses: readonly ExitBuilderClause[],

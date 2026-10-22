@@ -3,7 +3,11 @@ import { entryRowsFromSources } from "@/components/entry-condition-stack";
 import { exitRowsFromStack } from "@/components/exit-condition-stack";
 import { initialPerpsEntryDrafts } from "@/components/perps-entry-panel";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
-import { parseFuturesAutomationForm } from "@/lib/futures/automation";
+import {
+  futuresAutomationToRow,
+  parseFuturesAutomationForm,
+  parseFuturesAutomationRow,
+} from "@/lib/futures/automation";
 import { defaultPaperLayer } from "@/lib/engine/rules";
 import {
   dcaFormToSnapshotSource,
@@ -76,10 +80,14 @@ assert.equal(oldRecipe.ok, true);
 if (oldRecipe.ok && oldRecipe.recipe.kind === "dca") {
   assert.equal(oldRecipe.recipe.maxValueKind, "usdt");
 }
-assert.equal(snapshot.webhookId, "33333333-3333-4333-8333-333333333333");
-assert.equal(snapshot.shortWebhookId, "33333333-3333-4333-8333-333333333333");
+assert.equal("webhookId" in snapshot, false);
+assert.equal("shortWebhookId" in snapshot, false);
 assert.equal(snapshot.shortStartKind, "webhook");
 assert.equal(recipeHasRuntimeKeys(snapshot), false);
+assert.equal(
+  JSON.stringify(snapshot).includes("33333333-3333-4333-8333-333333333333"),
+  false,
+);
 
 const roundTrip = parseTemplateRecipe(snapshot, "dca", 1);
 assert.equal(roundTrip.ok, true);
@@ -92,11 +100,8 @@ assert.equal(applied.ok, true);
 if (applied.ok) {
   assert.equal(applied.config.startKind, "webhook");
   assert.equal(applied.config.shortStartKind, "webhook");
-  assert.equal(applied.config.webhookId, "33333333-3333-4333-8333-333333333333");
-  assert.equal(
-    applied.config.shortWebhookId,
-    "33333333-3333-4333-8333-333333333333",
-  );
+  assert.equal(applied.config.webhookId, null);
+  assert.equal(applied.config.shortWebhookId, null);
   assert.equal(applied.config.symbol, "ETHUSDT");
   assert.equal(applied.notes.length, 0);
 }
@@ -108,28 +113,26 @@ assert.equal(appliedHook.ok, true);
 if (appliedHook.ok) {
   assert.equal(appliedHook.config.startKind, "webhook");
   assert.equal(appliedHook.config.shortStartKind, "webhook");
-  assert.equal(
-    appliedHook.config.webhookId,
-    "33333333-3333-4333-8333-333333333333",
-  );
-  assert.equal(
-    appliedHook.config.shortWebhookId,
-    "33333333-3333-4333-8333-333333333333",
-  );
+  assert.equal(appliedHook.config.webhookId, null);
+  assert.equal(appliedHook.config.shortWebhookId, null);
 }
 
-const legacySignal = { ...snapshot };
-delete legacySignal.webhookId;
-delete legacySignal.shortWebhookId;
+const legacySignal = {
+  ...snapshot,
+  webhookId: "33333333-3333-4333-8333-333333333333",
+  shortWebhookId: "55555555-5555-4555-8555-555555555555",
+};
 const legacyApplied = dcaRecipeToConfig(legacySignal, {});
 assert.equal(legacyApplied.ok, true);
 if (legacyApplied.ok) {
-  assert.equal(legacyApplied.config.startKind, "indicator");
-  assert.equal(legacyApplied.config.shortStartKind, "indicator");
+  assert.equal(legacyApplied.config.startKind, "webhook");
+  assert.equal(legacyApplied.config.shortStartKind, "webhook");
   assert.equal(legacyApplied.config.webhookId, null);
   assert.equal(legacyApplied.config.shortWebhookId, null);
-  assert.ok(legacyApplied.notes[0]?.includes("Signal"));
-  assert.ok(legacyApplied.notes.some((note) => note.includes("Short signal")));
+  assert.equal(
+    legacyApplied.notes.some((note) => note.includes("Signal")),
+    false,
+  );
 }
 const legacyBound = dcaRecipeToConfig(legacySignal, {
   webhookId: "22222222-2222-4222-8222-222222222222",
@@ -138,14 +141,8 @@ assert.equal(legacyBound.ok, true);
 if (legacyBound.ok) {
   assert.equal(legacyBound.config.startKind, "webhook");
   assert.equal(legacyBound.config.shortStartKind, "webhook");
-  assert.equal(
-    legacyBound.config.webhookId,
-    "22222222-2222-4222-8222-222222222222",
-  );
-  assert.equal(
-    legacyBound.config.shortWebhookId,
-    "22222222-2222-4222-8222-222222222222",
-  );
+  assert.equal(legacyBound.config.webhookId, null);
+  assert.equal(legacyBound.config.shortWebhookId, null);
 }
 
 const splitSnap = snapshotDcaRecipe({
@@ -661,9 +658,10 @@ const webhookPerps = snapshotPerpsRecipe({
 const coerced = perpsRecipeToRule(webhookPerps, { sortOrder: 0 });
 assert.equal(coerced.ok, true);
 if (coerced.ok) {
-  assert.equal(coerced.rule.entrySource, "price");
+  assert.equal(coerced.rule.entrySource, "webhook");
+  assert.equal(coerced.rule.webhookId, null);
   assert.equal(coerced.rule.mode, "disabled");
-  assert.ok(coerced.notes[0]?.includes("Signal"));
+  assert.equal(coerced.notes.length, 0);
 }
 
 const paper = snapshotPaperRecipe({
@@ -1151,69 +1149,103 @@ if (!marketParsed.ok) {
 }
 const marketSnap = snapshotPerpsRecipe(marketParsed.rules[0]);
 assert.equal(marketSnap.entrySource, "webhook");
-assert.equal(marketSnap.webhookId, longHook);
+assert.equal(marketSnap.webhookId ?? null, null);
 assert.equal(marketSnap.exitHard?.trigger, "webhook");
 if (marketSnap.exitHard?.trigger === "webhook") {
-  assert.equal(marketSnap.exitHard.webhookId, longHook);
+  assert.equal(marketSnap.exitHard.webhookId, undefined);
 }
 assert.equal(marketSnap.shortEntry?.entrySource, "webhook");
-assert.equal(marketSnap.shortEntry?.webhookId, shortHook);
+assert.equal(marketSnap.shortEntry?.webhookId ?? null, null);
 assert.equal(marketSnap.shortEntry?.exitHard?.trigger, "webhook");
 if (marketSnap.shortEntry?.exitHard?.trigger === "webhook") {
-  assert.equal(marketSnap.shortEntry.exitHard.webhookId, shortHook);
+  assert.equal(marketSnap.shortEntry.exitHard.webhookId, "");
 }
 const addLeaf = marketSnap.addStack?.leaves[0];
 assert.equal(addLeaf?.kind, "webhook");
 if (addLeaf?.kind === "webhook") {
-  assert.equal(addLeaf.webhookId, addHook);
+  assert.equal(addLeaf.webhookId, "template-webhook");
 }
 assert.equal(recipeHasRuntimeKeys(marketSnap), false);
-assert.equal(JSON.stringify(marketSnap).includes("11111111-1111-4111-8111-111111111111"), false);
+assert.equal(JSON.stringify(marketSnap).includes(longHook), false);
+assert.equal(JSON.stringify(marketSnap).includes(shortHook), false);
+assert.equal(JSON.stringify(marketSnap).includes(addHook), false);
 const marketLoaded = parseTemplateRecipe(marketSnap, "flex", TEMPLATE_RECIPE_VERSION);
 assert.equal(marketLoaded.ok, true, marketLoaded.ok ? "" : marketLoaded.error);
 if (!marketLoaded.ok || marketLoaded.recipe.kind !== "flex") {
   throw new Error("expected the webhook template to load");
 }
-assert.equal(marketLoaded.recipe.webhookId, longHook);
+assert.equal(marketLoaded.recipe.webhookId ?? null, null);
 assert.equal(marketLoaded.recipe.entrySource, "webhook");
 if (marketLoaded.recipe.exitHard?.trigger === "webhook") {
-  assert.equal(marketLoaded.recipe.exitHard.webhookId, longHook);
+  assert.equal(marketLoaded.recipe.exitHard.webhookId ?? null, null);
 }
-const marketApplied = perpsRecipeToRule(marketLoaded.recipe, { sortOrder: 0 });
+const storedHooks = {
+  ...marketLoaded.recipe,
+  webhookId: longHook,
+  shortEntry: marketLoaded.recipe.shortEntry
+    ? { ...marketLoaded.recipe.shortEntry, webhookId: shortHook }
+    : marketLoaded.recipe.shortEntry,
+};
+const marketApplied = perpsRecipeToRule(storedHooks, {
+  sortOrder: 0,
+  webhookId: "44444444-4444-4444-8444-444444444444",
+});
 assert.equal(marketApplied.ok, true, marketApplied.ok ? "" : marketApplied.error);
 if (marketApplied.ok) {
   assert.equal(marketApplied.rule.entrySource, "webhook");
-  assert.equal(marketApplied.rule.webhookId, longHook);
+  assert.equal(marketApplied.rule.webhookId, null);
   assert.equal(marketApplied.rule.triggerPrice, 1);
   assert.equal(marketApplied.rule.exitHard?.trigger, "webhook");
   if (marketApplied.rule.exitHard?.trigger === "webhook") {
-    assert.equal(marketApplied.rule.exitHard.webhookId, longHook);
+    assert.equal(marketApplied.rule.exitHard.webhookId, "");
   }
   assert.equal(marketApplied.rule.shortEntry?.entrySource, "webhook");
-  assert.equal(marketApplied.rule.shortEntry?.webhookId, shortHook);
+  assert.equal(marketApplied.rule.shortEntry?.webhookId, null);
   assert.equal(marketApplied.rule.shortEntry?.exitHard?.trigger, "webhook");
   if (marketApplied.rule.shortEntry?.exitHard?.trigger === "webhook") {
-    assert.equal(marketApplied.rule.shortEntry.exitHard.webhookId, shortHook);
+    assert.equal(marketApplied.rule.shortEntry.exitHard.webhookId, "");
   }
   const appliedAdd = marketApplied.rule.addStack?.leaves[0];
   assert.equal(appliedAdd?.kind, "webhook");
   if (appliedAdd?.kind === "webhook") {
-    assert.equal(appliedAdd.webhookId, addHook);
+    assert.equal(appliedAdd.webhookId, "");
   }
   const appliedOr = marketApplied.rule.entryStack.leaves.find(
     (leaf) => leaf.kind === "price",
   );
   assert.equal(appliedOr?.kind, "price");
   assert.equal(marketApplied.notes.length, 0);
+  assert.equal(JSON.stringify(marketApplied.rule).includes(longHook), false);
+  assert.equal(JSON.stringify(marketApplied.rule).includes(shortHook), false);
+  const marketRow = futuresAutomationToRow(
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+    marketApplied.rule,
+  );
+  const marketReloaded = parseFuturesAutomationRow(marketRow, "bybit");
+  assert.equal(marketReloaded.entrySource, "webhook");
+  assert.equal(marketReloaded.webhookId, null);
+  assert.equal(marketReloaded.name, "Market God BTC 30m");
+  assert.equal(marketReloaded.exitHard?.trigger, "webhook");
+  if (marketReloaded.exitHard?.trigger === "webhook") {
+    assert.equal(marketReloaded.exitHard.webhookId, "");
+  }
+  assert.equal(marketReloaded.shortEntry?.entrySource, "webhook");
+  assert.equal(marketReloaded.shortEntry?.webhookId, null);
+  const reloadedAdd = marketReloaded.addStack?.leaves[0];
+  assert.equal(reloadedAdd?.kind, "webhook");
+  if (reloadedAdd?.kind === "webhook") {
+    assert.equal(reloadedAdd.webhookId, "");
+  }
 }
 const marketSeed = perpsRecipeFormSeed(marketLoaded.recipe);
 assert.equal(marketSeed.entrySource, "webhook");
-assert.equal(marketSeed.webhookId, longHook);
+assert.equal(marketSeed.webhookId, "");
 assert.equal(marketSeed.exitDraft?.trigger, "webhook");
 if (marketSeed.exitDraft?.trigger === "webhook") {
-  assert.equal(marketSeed.exitDraft.webhookId, longHook);
+  assert.equal(marketSeed.exitDraft.webhookId, "");
 }
-assert.equal(marketSeed.shortEntry?.webhookId, shortHook);
+assert.equal(marketSeed.shortEntry?.webhookId ?? null, null);
 
 function conditionBot(fields: { [key: string]: string | undefined }) {
   const bot = new FormData();
@@ -1312,32 +1344,45 @@ const dcaHookParsed = parseDcaPlaybookForm(dcaHooks);
 assert.equal(dcaHookParsed.ok, true, dcaHookParsed.ok ? "" : dcaHookParsed.error);
 if (dcaHookParsed.ok) {
   const dcaHookSnap = snapshotDcaRecipe(dcaHookParsed.config);
-  assert.equal(dcaHookSnap.webhookId, longHook);
-  assert.equal(dcaHookSnap.shortWebhookId, shortHook);
+  assert.equal(dcaHookSnap.webhookId ?? null, null);
+  assert.equal(dcaHookSnap.shortWebhookId ?? null, null);
+  assert.equal(dcaHookSnap.startKind, "webhook");
   assert.equal(recipeHasRuntimeKeys(dcaHookSnap), false);
+  assert.equal(JSON.stringify(dcaHookSnap).includes(longHook), false);
+  assert.equal(JSON.stringify(dcaHookSnap).includes(shortHook), false);
+  assert.equal(JSON.stringify(dcaHookSnap).includes(addHook), false);
   const dcaHookLoaded = parseTemplateRecipe(dcaHookSnap, "dca", TEMPLATE_RECIPE_VERSION);
   assert.equal(dcaHookLoaded.ok, true, dcaHookLoaded.ok ? "" : dcaHookLoaded.error);
   if (dcaHookLoaded.ok && dcaHookLoaded.recipe.kind === "dca") {
-    const dcaHookApplied = dcaRecipeToConfig(dcaHookLoaded.recipe, {});
+    const dcaHookApplied = dcaRecipeToConfig(
+      {
+        ...dcaHookLoaded.recipe,
+        webhookId: longHook,
+        shortWebhookId: shortHook,
+      },
+      { webhookId: "44444444-4444-4444-8444-444444444444" },
+    );
     assert.equal(dcaHookApplied.ok, true, dcaHookApplied.ok ? "" : dcaHookApplied.error);
     if (dcaHookApplied.ok) {
       assert.equal(dcaHookApplied.config.startKind, "webhook");
-      assert.equal(dcaHookApplied.config.webhookId, longHook);
+      assert.equal(dcaHookApplied.config.webhookId, null);
       assert.equal(dcaHookApplied.config.shortStartKind, "webhook");
-      assert.equal(dcaHookApplied.config.shortWebhookId, shortHook);
+      assert.equal(dcaHookApplied.config.shortWebhookId, null);
       assert.equal(dcaHookApplied.config.exitHard?.trigger, "webhook");
       if (dcaHookApplied.config.exitHard?.trigger === "webhook") {
-        assert.equal(dcaHookApplied.config.exitHard.webhookId, longHook);
+        assert.equal(dcaHookApplied.config.exitHard.webhookId, "");
       }
       assert.equal(dcaHookApplied.config.shortExitHard?.trigger, "webhook");
       if (dcaHookApplied.config.shortExitHard?.trigger === "webhook") {
-        assert.equal(dcaHookApplied.config.shortExitHard.webhookId, shortHook);
+        assert.equal(dcaHookApplied.config.shortExitHard.webhookId, "");
       }
       const dcaStackLeaf = dcaHookApplied.config.exitStack?.leaves[0];
       assert.equal(dcaStackLeaf?.kind, "webhook");
       if (dcaStackLeaf?.kind === "webhook") {
-        assert.equal(dcaStackLeaf.webhookId, addHook);
+        assert.equal(dcaStackLeaf.webhookId, "");
       }
+      assert.equal(JSON.stringify(dcaHookApplied.config).includes(longHook), false);
+      assert.equal(JSON.stringify(dcaHookApplied.config).includes(addHook), false);
     }
   }
 }

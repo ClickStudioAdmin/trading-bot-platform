@@ -313,14 +313,14 @@ export function templateExitStack(
   }
   return {
     joins: [...stack.joins],
+    ...(stack.orders ? { orders: stack.orders } : {}),
     leaves: stack.leaves.map((leaf) => {
       if (leaf.kind !== "webhook") {
         return leaf;
       }
-      const webhookId = persistWebhookId(leaf.webhookId);
       return {
         kind: "webhook" as const,
-        webhookId: webhookId ?? TEMPLATE_EXIT_WEBHOOK_ID,
+        webhookId: TEMPLATE_EXIT_WEBHOOK_ID,
       };
     }),
   };
@@ -335,10 +335,9 @@ export function exitStackForEditor(
   }
   return {
     joins: [...stack.joins],
+    ...(stack.orders ? { orders: stack.orders } : {}),
     leaves: stack.leaves.map((leaf) =>
-      leaf.kind === "webhook" && leaf.webhookId === TEMPLATE_EXIT_WEBHOOK_ID
-        ? { kind: "webhook", webhookId: "" }
-        : leaf,
+      leaf.kind === "webhook" ? { kind: "webhook", webhookId: "" } : leaf,
     ),
   };
 }

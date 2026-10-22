@@ -64,8 +64,8 @@ export type HardExitWebhook = {
 export type HardExitSignal = HardExitPrice | HardExitWebhook;
 
 /**
- * Template copy of a hard exit. A webhook keeps its id so the same signal
- * imports. Empty and placeholder ids stay unbound.
+ * Template copy of a hard exit. A Signal webhook keeps its kind and drops the
+ * id. The new bot asks for one of the desk's webhooks.
  */
 export type TemplateHardExitSignal =
   | HardExitPrice
@@ -77,13 +77,20 @@ export const TEMPLATE_PARSE_WEBHOOK_ID = "11111111-1111-4111-8111-111111111111";
 /** Exit-stack placeholder for a webhook row that has no desk id yet. */
 export const TEMPLATE_EXIT_WEBHOOK_ID = "template-webhook";
 
+/** True for the ids injected only while a recipe is validated. */
+export function isTemplateParseWebhookId(
+  id: string | null | undefined,
+): boolean {
+  return (id ?? "").trim().startsWith("11111111-1111-4111-8111-");
+}
+
 /** A webhook id worth storing on a template. Placeholders are not. */
 export function persistWebhookId(id: string | null | undefined): string | null {
   const value = (id ?? "").trim();
   if (
     !value ||
     value === TEMPLATE_EXIT_WEBHOOK_ID ||
-    value === TEMPLATE_PARSE_WEBHOOK_ID
+    isTemplateParseWebhookId(value)
   ) {
     return null;
   }
@@ -91,22 +98,15 @@ export function persistWebhookId(id: string | null | undefined): string | null {
 }
 
 /**
- * Id to write onto an unbound signal. A stored id wins. The parse placeholder
- * only keeps the condition alive while the recipe is validated.
+ * Id used only while a recipe is validated. A stored id and a desk override
+ * never bind the new bot.
  */
 export function templateWebhookFill(
-  stored: string | null | undefined,
+  _stored: string | null | undefined,
   override?: string | null,
 ): string {
-  const kept = persistWebhookId(stored);
-  if (kept) {
-    return kept;
-  }
   const next = (override ?? "").trim();
-  if (persistWebhookId(next) || next === TEMPLATE_PARSE_WEBHOOK_ID) {
-    return next;
-  }
-  return "";
+  return isTemplateParseWebhookId(next) ? next : "";
 }
 
 export type HardExitDraft =
@@ -307,8 +307,7 @@ export function templateHardExit(
     return null;
   }
   if (signal.trigger === "webhook") {
-    const webhookId = persistWebhookId(signal.webhookId);
-    return webhookId ? { trigger: "webhook", webhookId } : { trigger: "webhook" };
+    return { trigger: "webhook" };
   }
   return signal;
 }
@@ -512,7 +511,14 @@ export function hardExitSignalFromJson(value: unknown): HardExitSignal | null {
   }
   if (row.trigger === "webhook") {
     const webhookId = String(row.webhookId ?? "").trim();
-    return webhookId ? { trigger: "webhook", webhookId } : null;
+    if (
+      !webhookId ||
+      webhookId === TEMPLATE_EXIT_WEBHOOK_ID ||
+      isTemplateParseWebhookId(webhookId)
+    ) {
+      return { trigger: "webhook", webhookId: "" };
+    }
+    return { trigger: "webhook", webhookId };
   }
   if (row.trigger !== "price") {
     return null;

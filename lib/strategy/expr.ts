@@ -974,7 +974,11 @@ export function entryStackFromJson(raw: unknown): EntryStack | null {
       parsed = priceLeafFromRaw(record);
     } else if (kind === "webhook") {
       const webhookId = String(record.webhookId ?? "").trim();
-      parsed = webhookId ? { kind: "webhook", webhookId } : null;
+      const unbound =
+        webhookId === "" ||
+        webhookId === "template-webhook" ||
+        webhookId.startsWith("11111111-1111-4111-8111-");
+      parsed = { kind: "webhook", webhookId: unbound ? "" : webhookId };
     } else if (kind === "retrace") {
       const windowSpec = parseRetraceSpec(record);
       if (windowSpec) {

@@ -168,13 +168,14 @@ const webhookSnap = snapshotDcaRecipe(webhookParsed.config);
 assert.equal(webhookSnap.exitHard?.trigger, "webhook");
 assert.equal("webhookId" in webhookSnap, false);
 if (webhookSnap.exitHard?.trigger === "webhook") {
-  assert.equal(webhookSnap.exitHard.webhookId, webhookId);
+  assert.equal(webhookSnap.exitHard.webhookId, undefined);
 }
+assert.equal(JSON.stringify(webhookSnap).includes(webhookId), false);
 assert.equal(recipeHasRuntimeKeys(webhookSnap), false);
 const webhookOff = dcaRecipeToConfig(webhookSnap, { venue: "bybit" });
 assert.equal(webhookOff.ok, true);
 if (webhookOff.ok && webhookOff.config.exitHard?.trigger === "webhook") {
-  assert.equal(webhookOff.config.exitHard.webhookId, webhookId);
+  assert.equal(webhookOff.config.exitHard.webhookId, "");
   assert.equal(
     webhookOff.notes.some((note) => note.includes("Hard Exit")),
     false,
@@ -186,14 +187,20 @@ const webhookOn = dcaRecipeToConfig(webhookSnap, {
 });
 assert.equal(webhookOn.ok, true);
 if (webhookOn.ok && webhookOn.config.exitHard?.trigger === "webhook") {
-  assert.equal(webhookOn.config.exitHard.webhookId, webhookId);
+  assert.equal(webhookOn.config.exitHard.webhookId, "");
 }
-const unboundExit = { ...webhookSnap, exitHard: { trigger: "webhook" as const } };
+const unboundExit = {
+  ...webhookSnap,
+  exitHard: { trigger: "webhook" as const, webhookId },
+};
 const unboundApplied = dcaRecipeToConfig(unboundExit, { venue: "bybit" });
 assert.equal(unboundApplied.ok, true);
-if (unboundApplied.ok) {
-  assert.equal(unboundApplied.config.exitHard ?? null, null);
-  assert.match(unboundApplied.notes.join(" "), /Hard Exit signal needs a webhook/);
+if (unboundApplied.ok && unboundApplied.config.exitHard?.trigger === "webhook") {
+  assert.equal(unboundApplied.config.exitHard.webhookId, "");
+  assert.equal(
+    unboundApplied.notes.some((note) => note.includes("Hard Exit")),
+    false,
+  );
 }
 
 const missingHook = baseForm();
