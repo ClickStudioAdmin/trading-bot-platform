@@ -45,33 +45,15 @@ const STRATEGY_PAYLOADS = [
 
 const SIGNAL_PAYLOADS = [
   {
-    label: "Arm",
-    text: `{
-  "action": "arm"
-}`,
-  },
-  {
-    label: "Buy (arm long)",
+    label: "Buy",
     text: `{
   "action": "buy"
 }`,
   },
   {
-    label: "Sell (arm short)",
+    label: "Sell",
     text: `{
   "action": "sell"
-}`,
-  },
-  {
-    label: "Disarm",
-    text: `{
-  "action": "disarm"
-}`,
-  },
-  {
-    label: "Close bot",
-    text: `{
-  "action": "close-playbook"
 }`,
   },
 ] as const;
@@ -211,11 +193,11 @@ export function FuturesWebhooksDesk({
             {hook.kind === "signal" ? (
               <>
                 <p className="text-hint text-ink-muted">
-                  Signal only arms, disarms, or closes the bot. It does
-                  not send buy, sell, or close. Buy fires long entries and
-                  short exits. Sell fires short entries and long exits.
+                  Buy fires long entries and short exits. Sell fires short
+                  entries and long exits. The bot places the order from its
+                  own size. The same payloads work on Flex and DCA.
                 </p>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   {SIGNAL_PAYLOADS.map((sample) => (
                     <PayloadSample
                       key={sample.label}

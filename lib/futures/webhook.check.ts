@@ -46,21 +46,12 @@ if (closeLong.ok && closeLong.parsed.kind === "order") {
   assert.fail("close_long should parse as flatten long");
 }
 
-const arm = parseFuturesWebhook({ action: "arm" });
-assert.equal(arm.ok, true);
-if (arm.ok) {
-  assert.equal(arm.parsed.kind, "arm");
-  if (arm.parsed.kind === "arm") {
-    assert.equal(arm.parsed.verb, "arm");
-    assert.equal(arm.parsed.side, null);
-  }
-}
-
-const armLong = parseFuturesWebhook({ action: "arm", side: "long" });
-assert.equal(armLong.ok, true);
-if (armLong.ok && armLong.parsed.kind === "arm") {
-  assert.equal(armLong.parsed.side, "long");
-}
+const retiredArm = parseFuturesWebhook({ action: "arm" });
+assert.equal(retiredArm.ok, false);
+const retiredDisarm = parseFuturesWebhook({ action: "disarm" });
+assert.equal(retiredDisarm.ok, false);
+const retiredClose = parseFuturesWebhook({ action: "close-playbook" });
+assert.equal(retiredClose.ok, false);
 
 const signalBuy = parseFuturesWebhook({ action: "buy" });
 assert.equal(signalBuy.ok, true);
@@ -72,12 +63,6 @@ const signalSell = parseFuturesWebhook({ action: "sell" });
 assert.equal(signalSell.ok, true);
 if (signalSell.ok && signalSell.parsed.kind === "arm") {
   assert.equal(signalSell.parsed.side, "short");
-}
-
-const closePlaybook = parseFuturesWebhook({ action: "close-playbook" });
-assert.equal(closePlaybook.ok, true);
-if (closePlaybook.ok && closePlaybook.parsed.kind === "arm") {
-  assert.equal(closePlaybook.parsed.verb, "close-playbook");
 }
 
 assert.equal(parseWebhookName("BTC scalp").ok, true);
@@ -183,11 +168,14 @@ if (previousBypass === undefined) {
   process.env.VERCEL_AUTOMATION_BYPASS_SECRET = previousBypass;
 }
 
-const fromText = parseWebhookJson('{"action":"disarm"}');
+const fromText = parseWebhookJson('{"action":"buy"}');
 assert.equal(fromText.ok, true);
 if (fromText.ok) {
   const parsed = parseFuturesWebhook(fromText.body);
   assert.equal(parsed.ok, true);
+  if (parsed.ok && parsed.parsed.kind === "arm") {
+    assert.equal(parsed.parsed.side, "long");
+  }
 }
 
 const token = generateWebhookToken();

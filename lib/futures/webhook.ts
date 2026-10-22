@@ -21,7 +21,7 @@ export const WEBHOOK_NAME_IN_USE =
   "A webhook on this book already uses that name.";
 export type WebhookKind = "order" | "signal";
 
-export type WebhookArmVerb = "arm" | "disarm" | "close-playbook";
+export type WebhookArmVerb = "arm";
 
 export type ParsedWebhookOrder = {
   kind: "order";
@@ -281,14 +281,11 @@ function parseWebhookVerb(
     .trim()
     .toLowerCase()
     .replace(/[\s_]+/g, "-");
-  if (value === "arm") {
-    return { ok: true, kind: "arm", verb: "arm" };
-  }
-  if (value === "disarm") {
-    return { ok: true, kind: "arm", verb: "disarm" };
-  }
-  if (value === "close-playbook") {
-    return { ok: true, kind: "arm", verb: "close-playbook" };
+  if (value === "arm" || value === "disarm" || value === "close-playbook") {
+    return {
+      ok: false,
+      error: "Send buy or sell. A signal does not use arm, disarm, or close-playbook.",
+    };
   }
   if (value === "close-long") {
     return { ok: true, kind: "order", action: "flatten" };
@@ -300,7 +297,7 @@ function parseWebhookVerb(
   if (!action.ok) {
     return {
       ok: false,
-      error: "Use buy, sell, close, arm, disarm, or close-playbook.",
+      error: "Use buy, sell, or close.",
     };
   }
   return { ok: true, kind: "order", action: action.action };

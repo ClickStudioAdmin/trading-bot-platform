@@ -139,7 +139,7 @@ export async function handleFuturesWebhook(input: {
         body: {
           ok: false,
           error:
-            "This webhook is a Signal. Send arm, disarm, or close-playbook.",
+            "This webhook is a Signal. Send buy or sell.",
         },
       };
     }
