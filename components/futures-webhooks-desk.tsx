@@ -212,7 +212,8 @@ export function FuturesWebhooksDesk({
               <>
                 <p className="text-hint text-ink-muted">
                   Signal only arms, disarms, or closes the bot. It does
-                  not send buy, sell, or close.
+                  not send buy, sell, or close. Buy fires long entries and
+                  short exits. Sell fires short entries and long exits.
                 </p>
                 <div className="grid gap-4 md:grid-cols-3">
                   {SIGNAL_PAYLOADS.map((sample) => (

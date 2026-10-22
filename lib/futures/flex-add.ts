@@ -43,6 +43,8 @@ export function flexAddDecision(input: {
   open: boolean;
   protection?: ProtectionReading | null;
   firedWebhookId?: string | null;
+  /** Buy is long, sell is short. Undefined keeps an id match. */
+  signalSide?: FuturesSide | null;
   /** Null keeps an additional-order retrace unmet until the position memory exists. */
   positionRetrace?: PositionRetraceContext | null;
 }): FlexAddDecision {
@@ -67,6 +69,7 @@ export function flexAddDecision(input: {
       prices: input.prices,
       barsByTimeframe: input.barsByTimeframe,
       firedWebhookId: input.firedWebhookId,
+      signalSide: input.signalSide,
       protection: input.protection,
       positionRetrace,
     }),

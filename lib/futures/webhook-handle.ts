@@ -252,6 +252,7 @@ export async function handleFuturesWebhook(input: {
         accountId,
         userId,
         mode,
+        signalSide: parsed.parsed.side,
       });
       fired = entries.fired;
     }

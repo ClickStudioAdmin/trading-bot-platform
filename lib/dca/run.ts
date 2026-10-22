@@ -109,6 +109,7 @@ import {
   type DcaStatus,
 } from "./playbook";
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
+import { webhookActionMatches, webhookTouchedSides } from "@/lib/strategy/expr";
 import {
   dcaEntryExpressionMet,
   dcaEntryStackForSide,
@@ -1905,7 +1906,13 @@ async function applyDcaVerbUnlocked(input: {
   if (!supabase) {
     return { ok: false, error: "Auth is not configured." };
   }
-  const sides = sidesForVerb(input.playbook, input.side);
+  const webhookArm = input.source === "webhook" && input.verb === "arm";
+  const sides = webhookArm
+    ? webhookTouchedSides(
+        dcaEnabledSides(input.playbook.direction),
+        input.side ?? null,
+      )
+    : sidesForVerb(input.playbook, input.side);
   if (sides.length === 0) {
     return { ok: false, error: "That side is not on this bot." };
   }
@@ -2083,40 +2090,44 @@ async function applyDcaVerbUnlocked(input: {
   const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
   const firedWebhookId = input.firedWebhookId ?? null;
+  const playbook = input.playbook;
+  const signalSide = fromSignal ? (input.side ?? null) : undefined;
+  const armSides =
+    signalSide === undefined
+      ? sides
+      : webhookTouchedSides(dcaEnabledSides(playbook.direction), signalSide);
   const startBars = await loadPlaybookStartBars(input.playbook);
   const seriesBarsLoaded = [...startBars.values()].some(
     (rows) => rows.length > 0,
   );
-  const seriesSide = sides.find((side) =>
-    dcaSeriesStart(dcaStartKindForSide(input.playbook, side)),
+  const seriesSide = armSides.find(
+    (side) =>
+      (signalSide === undefined ||
+        webhookActionMatches({ role: "entry", side, signalSide })) &&
+      dcaSeriesStart(dcaStartKindForSide(playbook, side)),
   );
-  if (
+  const candlesBlocked =
     !input.forcePlace &&
-    seriesSide &&
-    dcaIndicatorTimeframes(input.playbook).length > 0 &&
-    !seriesBarsLoaded
-  ) {
-    return {
-      ok: false,
-      error:
-        dcaStartKindForSide(input.playbook, seriesSide) === "trend"
-          ? "Could not read Supertrend candles. The first order was not placed."
-          : "Could not read indicator candles. The first order was not placed.",
-    };
-  }
+    Boolean(seriesSide) &&
+    dcaIndicatorTimeframes(playbook).length > 0 &&
+    !seriesBarsLoaded;
+  const candleError = seriesSide
+    ? dcaStartKindForSide(playbook, seriesSide) === "trend"
+      ? "Could not read Supertrend candles. The first order was not placed."
+      : "Could not read indicator candles. The first order was not placed."
+    : null;
   let placed = 0;
   let resumed = 0;
   let waiting = 0;
   let already = 0;
   let skippedIdle = 0;
   let flattened = 0;
-  const playbook = input.playbook;
   const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
     accountId: playbook.accountId,
     userId: playbook.userId,
   });
 
-  for (const side of sides) {
+  for (const side of armSides) {
     let leg = dcaLegFor(playbook, side);
     const sideKind = dcaStartKindForSide(playbook, side);
     const sideWebhook = dcaWebhookIdForSide(playbook, side);
@@ -2145,6 +2156,7 @@ async function applyDcaVerbUnlocked(input: {
             bars: exitBars,
             prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
             firedWebhookId,
+            signalSide,
           }),
           stack: exitStack,
           side,
@@ -2152,6 +2164,7 @@ async function applyDcaVerbUnlocked(input: {
           prices: { last: lastPrice, mark: lastPrice, index: lastPrice },
           barsByTimeframe: startBars,
           firedWebhookId,
+          signalSide,
         });
       if (open && open.qty > 0 && expressionMet) {
         const closed = await flattenSide({
@@ -2181,6 +2194,17 @@ async function applyDcaVerbUnlocked(input: {
         skippedIdle += 1;
         continue;
       }
+    }
+    if (
+      signalSide !== undefined &&
+      !webhookActionMatches({ role: "entry", side, signalSide })
+    ) {
+      skippedIdle += 1;
+      continue;
+    }
+    if (candlesBlocked && dcaSeriesStart(sideKind)) {
+      skippedIdle += 1;
+      continue;
     }
     const sideSignal =
       fromSignal &&
@@ -2283,6 +2307,7 @@ async function applyDcaVerbUnlocked(input: {
         },
         barsByTimeframe: startBars,
         firedWebhookId,
+        signalSide,
       })
     ) {
       const patched = await patchDcaLeg({
@@ -2355,11 +2380,20 @@ async function applyDcaVerbUnlocked(input: {
       playbook,
       event: "dca.closed",
       message: `Closed ${playbook.name}. Signal webhook.`,
-      data: { sides, reason: "exit_if", why: "Signal webhook" },
+      data: { sides: armSides, reason: "exit_if", why: "Signal webhook" },
     });
     return { ok: true, message: "Hard Exit closed the position." };
   }
-  if (skippedIdle === sides.length) {
+  if (
+    candlesBlocked &&
+    candleError &&
+    placed === 0 &&
+    resumed === 0 &&
+    waiting === 0
+  ) {
+    return { ok: false, error: candleError };
+  }
+  if (skippedIdle === armSides.length) {
     if (input.unlessIdle) {
       return { ok: true, message: "Bot is off." };
     }
@@ -2380,7 +2414,7 @@ async function applyDcaVerbUnlocked(input: {
         : resumed > 0
           ? `Resumed adding on ${playbook.name}.`
           : `Armed ${playbook.name}. Waiting for the start trigger.`,
-    data: { sides, placed, resumed, waiting, ...(why ? { why } : {}) },
+    data: { sides: armSides, placed, resumed, waiting, ...(why ? { why } : {}) },
   });
   if (placed > 0) {
     return { ok: true, message: "Bot armed. First order placed." };

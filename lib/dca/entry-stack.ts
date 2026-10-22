@@ -249,6 +249,7 @@ export function dcaEntryExpressionMet(input: {
   } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): boolean {
   const stack = dcaEntryStackForSide(input.playbook, input.side);
   if (entryStackIsLegacy(stack)) {
@@ -285,6 +286,7 @@ export function dcaEntryExpressionMet(input: {
         prices: input.prices,
         barsByTimeframe: input.barsByTimeframe,
         firedWebhookId: input.firedWebhookId,
+        signalSide: input.signalSide,
       }),
     ),
   });

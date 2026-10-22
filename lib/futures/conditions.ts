@@ -83,6 +83,7 @@ import {
   entryStackToJson,
   legacyEntryStack,
   resolveEntryStack,
+  webhookActionMatches,
   type EntryConflictSlot,
   type EntryStack,
   type StrategyLeaf,
@@ -1062,13 +1063,21 @@ export function futuresStartMet(input: {
   webhookId?: string | null;
   /** Undefined keeps a webhook trigger true. Null means this tick is not that webhook. */
   firedWebhookId?: string | null;
+  /** Buy is long, sell is short. Undefined keeps an id match. Null arms every side. */
+  signalSide?: FuturesSide | null;
 }): boolean {
   if (input.entrySource === "webhook") {
     if (input.firedWebhookId === undefined) {
       return true;
     }
     return (
-      input.firedWebhookId != null && input.firedWebhookId === input.webhookId
+      input.firedWebhookId != null &&
+      input.firedWebhookId === input.webhookId &&
+      webhookActionMatches({
+        role: "entry",
+        side: input.side,
+        signalSide: input.signalSide,
+      })
     );
   }
   if (input.entrySource === "price") {
@@ -1147,6 +1156,8 @@ export function entryLeafMet(input: {
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  /** Buy is long, sell is short. Undefined keeps an id match. */
+  signalSide?: FuturesSide | null;
   /** Open size and protective coverage. Flat stays unmet. */
   protection?: ProtectionReading | null;
   /**
@@ -1171,7 +1182,15 @@ export function entryLeafMet(input: {
     return leaf.compare === "gte" ? level >= leaf.price : level <= leaf.price;
   }
   if (leaf.kind === "webhook") {
-    return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
+    return (
+      input.firedWebhookId != null &&
+      input.firedWebhookId === leaf.webhookId &&
+      webhookActionMatches({
+        role: "entry",
+        side: input.side,
+        signalSide: input.signalSide,
+      })
+    );
   }
   if (leaf.kind === "retrace") {
     const price = quotedPrice(leaf.source, input.price, input.prices);
@@ -1237,6 +1256,7 @@ export function futuresEntryConditionMet(input: {
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): boolean {
   const start = futuresStartMet({
     entrySource: input.rule.entrySource,
@@ -1250,6 +1270,7 @@ export function futuresEntryConditionMet(input: {
     barsByTimeframe: input.barsByTimeframe,
     webhookId: input.rule.webhookId,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
   });
   const stack = resolveEntryStack(input.rule.entryStack, input.rule.confirm);
   return entryStackMet({
@@ -1263,6 +1284,7 @@ export function futuresEntryConditionMet(input: {
         prices: input.prices,
         barsByTimeframe: input.barsByTimeframe,
         firedWebhookId: input.firedWebhookId,
+        signalSide: input.signalSide,
       }),
     ),
   });

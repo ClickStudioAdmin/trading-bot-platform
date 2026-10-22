@@ -75,6 +75,7 @@ export async function decideOpenExit(input: {
   index?: number | null;
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
   nowMs?: number;
   stepQty?: number;
   breakevenDone?: boolean;
@@ -103,6 +104,7 @@ export async function decideOpenExit(input: {
     nowMs: input.nowMs ?? Date.now(),
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
     stepQty: input.stepQty,
     breakevenDone: input.breakevenDone,
     prices: {
