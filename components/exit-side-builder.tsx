@@ -35,6 +35,7 @@ import {
   clauseScope,
   customExitClause,
   emptyExitClause,
+  exitBuilderActionValue,
   isClassicExitKind,
   normalizeExitClause,
   seedRepeatLevels,
@@ -57,12 +58,16 @@ import {
   STRATEGY_CONDITION_CAP,
 } from "@/lib/strategy/expr";
 
-const ACTION_OPTIONS: { value: ClassicExitKind | "breakeven" | "close"; label: string }[] = [
+const ACTION_OPTIONS: {
+  value: ClassicExitKind | "breakeven" | "close" | "webhook";
+  label: string;
+}[] = [
   { value: "take_profit", label: "Take Profit" },
   { value: "stop_loss", label: "Stop Loss" },
   { value: "breakeven", label: "Breakeven Stop" },
   { value: "trailing_stop", label: "Trailing Stop" },
   { value: "close", label: "Close" },
+  { value: "webhook", label: "Signal Webhook" },
 ];
 
 const CONDITION_OPTIONS: { value: HardExitTrigger; label: string }[] = [
@@ -120,13 +125,7 @@ function withoutPriceRules(groups: ExitOrGroup[]): ExitOrGroup[] {
 }
 
 function actionValue(clause: ExitBuilderClause): string {
-  if (isClassicExitKind(clause.kind) || clause.kind === "breakeven") {
-    return clause.kind;
-  }
-  if (clause.kind === "custom") {
-    return "close";
-  }
-  return "";
+  return exitBuilderActionValue(clause);
 }
 
 function rowKey(): string {
@@ -285,14 +284,43 @@ export function ExitSideBuilder({
       });
       return;
     }
+    if (value === "webhook") {
+      patch(clause.key, (current) => {
+        const keptRows = current.rows.filter((row) => !isExitPriceRule(row.draft.trigger));
+        const keepAnchor =
+          current.anchor.trigger !== "unset" &&
+          current.anchor.trigger !== "webhook" &&
+          !isExitPriceRule(current.anchor.trigger);
+        const anchor =
+          current.anchor.trigger === "webhook"
+            ? current.anchor
+            : hardExitForTrigger("webhook", side, null);
+        return {
+          ...customExitClause(
+            anchor,
+            keepAnchor
+              ? [{ key: rowKey(), join: "and", draft: current.anchor }, ...keptRows]
+              : keptRows,
+            current.key,
+          ),
+          scope: current.scope,
+          orGroups: withoutPriceRules(clauseOrGroups(current)),
+        };
+      });
+      return;
+    }
     if (value === "close") {
       patch(clause.key, (current) => {
-        if (current.kind === "custom") {
+        const droppingWebhook =
+          current.kind === "custom" && current.anchor.trigger === "webhook";
+        if (current.kind === "custom" && !droppingWebhook) {
           return current;
         }
         const keptRows = current.rows.filter((row) => !isExitPriceRule(row.draft.trigger));
         let anchor =
-          current.anchor.trigger === "unset" || isExitPriceRule(current.anchor.trigger)
+          droppingWebhook ||
+          current.anchor.trigger === "unset" ||
+          isExitPriceRule(current.anchor.trigger)
             ? ({ trigger: "unset" } as const)
             : current.anchor;
         let rows = keptRows;
@@ -642,6 +670,7 @@ function ConditionStack({
   const anchorPlaced = placed.find((row) => row.role === "anchor") ?? null;
   const seriesIndex = 0;
   const fixedRule = priceRuleForKind(clause.kind);
+  const webhookAction = actionValue(clause) === "webhook";
   const disabled = (["price", "indicator", "trend", "webhook", "retrace"] as const).filter(
     (kind) =>
       kind !== clause.anchor.trigger &&
@@ -650,7 +679,7 @@ function ConditionStack({
   return (
     <div className="space-y-3">
       <div className={exitCardGrid}>
-        {fixedRule ? null : (
+        {fixedRule || webhookAction ? null : (
           <label className={`${labelClass} whitespace-nowrap`}>
             <HintLabel text="Condition Type" />
             <AppSelect
@@ -676,7 +705,7 @@ function ConditionStack({
           </label>
         )}
         {fixedRule ? ruleFields : null}
-        {!fixedRule && clause.anchor.trigger !== "unset" ? (
+        {!fixedRule && (webhookAction || clause.anchor.trigger !== "unset") ? (
           <HardExitFields
             embed
             showTrigger={false}

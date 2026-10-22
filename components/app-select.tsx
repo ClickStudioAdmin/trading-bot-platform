@@ -428,7 +428,8 @@ export function AppMultiSelect({
   );
 }
 
-const SELECT_PANEL_CAP = 224;
+/** Seven exit actions fit. 224px clipped Signal Webhook under Close. */
+const SELECT_PANEL_CAP = 320;
 const SELECT_PANEL_GAP = 4;
 const SELECT_PANEL_MARGIN = 8;
 

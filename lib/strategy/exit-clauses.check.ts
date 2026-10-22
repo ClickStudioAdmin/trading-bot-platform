@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import type { ExitStackRow } from "@/components/exit-condition-stack";
 import {
+  classicExitClause,
   classicSignature,
+  customExitClause,
   customStackFromClauses,
+  emptyExitClause,
+  exitBuilderActionValue,
   exitClauseListMissing,
   exitClausesFromSaved,
   mergedClassicExitFlags,
@@ -117,6 +121,18 @@ assert.equal(
     },
   ]),
   true,
+);
+
+assert.equal(exitBuilderActionValue(emptyExitClause()), "");
+assert.equal(exitBuilderActionValue(classicExitClause("take_profit")), "take_profit");
+assert.equal(exitBuilderActionValue(customExitClause({ trigger: "unset" })), "close");
+assert.equal(
+  exitBuilderActionValue(customExitClause({ trigger: "indicator", spec: null })),
+  "close",
+);
+assert.equal(
+  exitBuilderActionValue(customExitClause({ trigger: "webhook", webhookId: "hook" })),
+  "webhook",
 );
 
 console.log("exit clause checks passed");

@@ -53,6 +53,6 @@ const flipped = selectPanelBox({
   viewportHeight: 800,
 });
 assert.equal(flipped.top, 436);
-assert.equal(flipped.maxHeight, 224);
+assert.equal(flipped.maxHeight, 320);
 
 console.log("app-select.check ok");
