@@ -18,8 +18,11 @@ import {
   hardExitDraftFromTemplate,
   hardExitSignalFromJson,
   hardExitWebhookId,
+  persistWebhookId,
+  TEMPLATE_PARSE_WEBHOOK_ID,
   templateHardExit,
   templateHardExitNeedsWebhook,
+  templateWebhookFill,
   writeTemplateHardExitFields,
   type TemplateHardExitSignal,
 } from "@/lib/dca/hard-exit";
@@ -117,6 +120,9 @@ export type DcaTemplateRecipe = {
   startKind: DcaPlaybookConfig["startKind"];
   /** Direction Both. Absent means the short leg still shares startKind. */
   shortStartKind?: DcaPlaybookConfig["shortStartKind"];
+  /** Signal start. Absent on older templates, which still ask for a webhook. */
+  webhookId?: string | null;
+  shortWebhookId?: string | null;
   dcaMode: DcaPlaybookConfig["dcaMode"];
   clipSize: number;
   sizeUnit: DcaPlaybookConfig["sizeUnit"];
@@ -193,6 +199,8 @@ export type PerpsTemplateRecipe = {
   limitPrice: string;
   /** Empty while Condition Type is still on Select Condition Type. */
   entrySource: FuturesAutomationFormValues["entrySource"] | "";
+  /** Signal entry. Absent on older templates, which still ask for a webhook. */
+  webhookId?: string | null;
   triggerBy: FuturesAutomationFormValues["triggerBy"];
   triggerCompare: FuturesAutomationFormValues["triggerCompare"];
   triggerPrice: string;
@@ -369,6 +377,14 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
           shortStartKind: config.shortStartKind ?? config.startKind,
         }
       : {}),
+    ...(config.startKind === "webhook" && persistWebhookId(config.webhookId)
+      ? { webhookId: persistWebhookId(config.webhookId) }
+      : {}),
+    ...(config.direction === "both" &&
+    (config.shortStartKind ?? config.startKind) === "webhook" &&
+    persistWebhookId(config.shortWebhookId)
+      ? { shortWebhookId: persistWebhookId(config.shortWebhookId) }
+      : {}),
     dcaMode: config.dcaMode,
     clipSize: config.clipSize,
     sizeUnit: config.sizeUnit,
@@ -464,6 +480,29 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
   };
 }
 
+function templateShortExitHard(
+  signal: PerpsEntryLeg["exitHard"],
+): PerpsEntryLeg["exitHard"] {
+  const stored = templateHardExit(signal);
+  if (!stored) {
+    return null;
+  }
+  if (stored.trigger !== "webhook") {
+    return stored;
+  }
+  const webhookId = persistWebhookId(stored.webhookId);
+  return webhookId ? { trigger: "webhook", webhookId } : null;
+}
+
+function templateShortEntry(leg: PerpsEntryLeg): NonNullable<PerpsTemplateRecipe["shortEntry"]> {
+  return {
+    ...leg,
+    webhookId: persistWebhookId(leg.webhookId),
+    exitHard: templateShortExitHard(leg.exitHard),
+    exitStack: templateExitStack(leg.exitStack),
+  };
+}
+
 export function snapshotPerpsRecipe(
   rule: Pick<
     FuturesAutomationRule,
@@ -499,6 +538,7 @@ export function snapshotPerpsRecipe(
         | "breakevenOffsetPct"
         | "direction"
         | "shortEntry"
+        | "webhookId"
       >
     >,
 ): PerpsTemplateRecipe {
@@ -523,6 +563,9 @@ export function snapshotPerpsRecipe(
     size: rule.size == null ? "" : String(rule.size),
     limitPrice: rule.limitPrice == null ? "" : String(rule.limitPrice),
     entrySource: rule.entrySource,
+    ...(rule.entrySource === "webhook" && persistWebhookId(rule.webhookId)
+      ? { webhookId: persistWebhookId(rule.webhookId) }
+      : {}),
     triggerBy: rule.triggerBy,
     triggerCompare: rule.triggerCompare,
     triggerPrice: String(rule.triggerPrice),
@@ -555,7 +598,7 @@ export function snapshotPerpsRecipe(
       rule.direction ??
       (formAction === "sell" || formAction === "close_short" ? "short" : "long"),
     ...(rule.direction === "both" && rule.shortEntry
-      ? { shortEntry: rule.shortEntry }
+      ? { shortEntry: templateShortEntry(rule.shortEntry) }
       : {}),
   };
 }
@@ -574,8 +617,8 @@ export function dcaRecipePlaybookSeed(recipe: DcaTemplateRecipe): DcaPlaybook {
       recipe.direction === "both"
         ? (recipe.shortStartKind ?? recipe.startKind)
         : null,
-    webhookId: null,
-    shortWebhookId: null,
+    webhookId: persistWebhookId(recipe.webhookId),
+    shortWebhookId: persistWebhookId(recipe.shortWebhookId),
     dcaMode: recipe.dcaMode,
     clipSize: recipe.clipSize,
     sizeUnit: recipe.sizeUnit,
@@ -680,6 +723,7 @@ export function perpsRecipeFormSeed(
     size: recipe.size,
     limitPrice: recipe.limitPrice,
     entrySource: recipe.entrySource === "" ? "price" : recipe.entrySource,
+    webhookId: persistWebhookId(recipe.webhookId) ?? "",
     triggerBy: recipe.triggerBy,
     triggerCompare: recipe.triggerCompare,
     triggerPrice: recipe.triggerPrice,
@@ -785,7 +829,7 @@ function parseDcaTemplateRecipe(
     templateHardExitNeedsWebhook(row.shortExitHard) ||
     exitStackNeedsWebhook(entryStackFromJson(row.exitStack)) ||
     exitStackNeedsWebhook(entryStackFromJson(row.shortExitStack))
-      ? "11111111-1111-4111-8111-111111111111"
+      ? TEMPLATE_PARSE_WEBHOOK_ID
       : undefined;
   const built = dcaRecipeToConfig(row as unknown as DcaTemplateRecipe, {
     webhookId: placeholderWebhook,
@@ -824,6 +868,9 @@ function parsePerpsTemplateRecipe(
       row.entrySource === "retrace"
         ? row.entrySource
         : "price",
+    webhookId: persistWebhookId(
+      typeof row.webhookId === "string" ? row.webhookId : null,
+    ),
     triggerBy:
       row.triggerBy === "mark" || row.triggerBy === "index"
         ? row.triggerBy
@@ -858,7 +905,7 @@ function parsePerpsTemplateRecipe(
     webhookId:
       templateHardExitNeedsWebhook(recipe.exitHard) ||
       exitStackNeedsWebhook(recipe.exitStack)
-        ? "11111111-1111-4111-8111-111111111111"
+        ? TEMPLATE_PARSE_WEBHOOK_ID
         : undefined,
     venue: venueForRecipeSymbol(recipe.symbol, venue),
   });
@@ -950,7 +997,10 @@ export function dcaRecipeToConfig(
   const form = new FormData();
   const venue = options.venue ?? "bybit";
   const startKind = String(recipe.startKind ?? "indicator");
-  const webhookId = options.webhookId?.trim() || "";
+  const webhookId = templateWebhookFill(
+    recipe.webhookId == null ? null : String(recipe.webhookId),
+    options.webhookId,
+  );
   let appliedStart = startKind;
   if (startKind === "webhook" && !webhookId) {
     appliedStart = "indicator";
@@ -978,7 +1028,10 @@ export function dcaRecipeToConfig(
   if (String(form.get("direction")) === "both") {
     const shortKind = String(recipe.shortStartKind ?? appliedStart);
     let appliedShort = shortKind;
-    const shortHook = webhookId;
+    const shortHook = templateWebhookFill(
+      recipe.shortWebhookId == null ? null : String(recipe.shortWebhookId),
+      options.webhookId,
+    );
     if (shortKind === "webhook" && !shortHook) {
       appliedShort = "indicator";
       notes.push(
@@ -1303,7 +1356,7 @@ export function dcaRecipeToConfig(
     "shortConfirm",
     filterSpecFromRecipe(recipe.shortConfirm),
   );
-  const exitWebhookId = options.webhookId?.trim() || "";
+  const exitWebhookId = templateWebhookFill(null, options.webhookId);
   writeTemplateHardExitFields(
     form,
     "exitIf",
@@ -1407,7 +1460,7 @@ export function perpsRecipeToRule(
   const notes: string[] = [];
   const form = new FormData();
   const venue = options.venue ?? "bybit";
-  const webhookId = options.webhookId?.trim() || "";
+  const webhookId = templateWebhookFill(recipe.webhookId, options.webhookId);
   let entrySource = recipe.entrySource;
   if (entrySource === "webhook" && !webhookId) {
     entrySource = "price";
@@ -1453,17 +1506,22 @@ export function perpsRecipeToRule(
   writeAutomationExitsToForm(form, "r0_", recipe.tpsl, recipe.trailing);
   const exitDraft = hardExitDraftFromTemplate(recipe.exitIf, recipe.exitHard);
   if (exitDraft?.trigger === "webhook") {
-    if (!webhookId) {
+    const exitHook = templateWebhookFill(exitDraft.webhookId, options.webhookId);
+    if (!exitHook) {
       notes.push(
         "Hard Exit signal needs a webhook on this desk. Hard Exit was left off.",
       );
     } else {
-      exitDraft.webhookId = webhookId;
+      exitDraft.webhookId = exitHook;
     }
   }
   const exitKept = !(exitDraft?.trigger === "webhook" && !exitDraft.webhookId);
   const exitStack = exitKept
-    ? appliedExitStack(recipe.exitStack, webhookId, notes)
+    ? appliedExitStack(
+        recipe.exitStack,
+        templateWebhookFill(null, options.webhookId),
+        notes,
+      )
     : null;
   if (recipe.exitActions && recipe.exitActions.length > 0) {
     form.set("r0_exitActions", JSON.stringify(recipe.exitActions));
@@ -1856,7 +1914,7 @@ export function recipeHasRuntimeKeys(value: unknown): boolean {
   }
   const keys = Object.keys(value as Record<string, unknown>);
   return keys.some((key) =>
-    /webhookId|conditionTrue|lastFired|clipsFilled|armCondition|userId|accountId|^id$|^mode$/i.test(
+    /conditionTrue|lastFired|clipsFilled|armCondition|userId|accountId|^id$|^mode$/i.test(
       key,
     ),
   );

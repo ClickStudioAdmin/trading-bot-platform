@@ -154,7 +154,7 @@ if (!blankPriceParsed.ok) {
 }
 assert.equal(missingPrice.ok, true);
 
-const webhookId = "11111111-1111-4111-8111-111111111111";
+const webhookId = "22222222-2222-4222-8222-222222222222";
 const webhook = baseForm();
 webhook.set("exitIfTrigger", "webhook");
 webhook.set("exitIfWebhookId", webhookId);
@@ -167,21 +167,33 @@ assert.equal(webhookParsed.config.exitHard?.trigger, "webhook");
 const webhookSnap = snapshotDcaRecipe(webhookParsed.config);
 assert.equal(webhookSnap.exitHard?.trigger, "webhook");
 assert.equal("webhookId" in webhookSnap, false);
-assert.equal(JSON.stringify(webhookSnap).includes(webhookId), false);
+if (webhookSnap.exitHard?.trigger === "webhook") {
+  assert.equal(webhookSnap.exitHard.webhookId, webhookId);
+}
 assert.equal(recipeHasRuntimeKeys(webhookSnap), false);
 const webhookOff = dcaRecipeToConfig(webhookSnap, { venue: "bybit" });
 assert.equal(webhookOff.ok, true);
-if (webhookOff.ok) {
-  assert.equal(webhookOff.config.exitHard ?? null, null);
-  assert.match(webhookOff.notes.join(" "), /Hard Exit signal needs a webhook/);
+if (webhookOff.ok && webhookOff.config.exitHard?.trigger === "webhook") {
+  assert.equal(webhookOff.config.exitHard.webhookId, webhookId);
+  assert.equal(
+    webhookOff.notes.some((note) => note.includes("Hard Exit")),
+    false,
+  );
 }
 const webhookOn = dcaRecipeToConfig(webhookSnap, {
   venue: "bybit",
-  webhookId,
+  webhookId: "44444444-4444-4444-8444-444444444444",
 });
 assert.equal(webhookOn.ok, true);
 if (webhookOn.ok && webhookOn.config.exitHard?.trigger === "webhook") {
   assert.equal(webhookOn.config.exitHard.webhookId, webhookId);
+}
+const unboundExit = { ...webhookSnap, exitHard: { trigger: "webhook" as const } };
+const unboundApplied = dcaRecipeToConfig(unboundExit, { venue: "bybit" });
+assert.equal(unboundApplied.ok, true);
+if (unboundApplied.ok) {
+  assert.equal(unboundApplied.config.exitHard ?? null, null);
+  assert.match(unboundApplied.notes.join(" "), /Hard Exit signal needs a webhook/);
 }
 
 const missingHook = baseForm();

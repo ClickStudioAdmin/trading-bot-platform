@@ -1341,6 +1341,7 @@ function RuleCard({
       size: Number(size.replace(/,/g, "")) || null,
       limitPrice: Number(limitPrice.replace(/,/g, "")) || null,
       entrySource: primaryLeg.entrySource,
+      webhookId: primaryLeg.webhookId,
       triggerBy: primaryLeg.triggerBy,
       triggerCompare: primaryLeg.triggerCompare,
       triggerPrice: primaryLeg.triggerPrice,

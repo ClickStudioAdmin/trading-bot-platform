@@ -22,6 +22,8 @@ import {
   hardExitDraftFromStored,
   isPriceRuleDraft,
   parseHardExitForm,
+  persistWebhookId,
+  TEMPLATE_EXIT_WEBHOOK_ID,
   writeHardExitFormFields,
   type HardExitDraft,
   type HardExitSignal,
@@ -296,8 +298,7 @@ export function writeExitStackFormFields(
   });
 }
 
-/** Stored on a template so a webhook row survives without a desk id. */
-export const TEMPLATE_EXIT_WEBHOOK_ID = "template-webhook";
+export { TEMPLATE_EXIT_WEBHOOK_ID, persistWebhookId };
 
 function templateWebhookId(webhookId: string): boolean {
   const id = webhookId.trim();
@@ -312,11 +313,16 @@ export function templateExitStack(
   }
   return {
     joins: [...stack.joins],
-    leaves: stack.leaves.map((leaf) =>
-      leaf.kind === "webhook"
-        ? { kind: "webhook", webhookId: TEMPLATE_EXIT_WEBHOOK_ID }
-        : leaf,
-    ),
+    leaves: stack.leaves.map((leaf) => {
+      if (leaf.kind !== "webhook") {
+        return leaf;
+      }
+      const webhookId = persistWebhookId(leaf.webhookId);
+      return {
+        kind: "webhook" as const,
+        webhookId: webhookId ?? TEMPLATE_EXIT_WEBHOOK_ID,
+      };
+    }),
   };
 }
 
