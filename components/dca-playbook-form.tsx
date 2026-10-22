@@ -56,6 +56,7 @@ import {
   exitPriceLive,
   exitClauseListMissing,
   exitClausesFromSaved,
+  exitClausesNeedWebhook,
   type ExitBuilderClause,
   type ExitFieldSlot,
 } from "@/lib/strategy/exit-clauses";
@@ -1348,15 +1349,21 @@ export function DcaPlaybookForm({
       "short",
     ),
   );
-  const [webhookId, setWebhookId] = useState(
-    source?.webhookId ?? signalWebhooks[0]?.id ?? "",
+  const [webhookId, setWebhookId] = useState(() =>
+    source?.startKind === "webhook"
+      ? (source.webhookId ?? "")
+      : (source?.webhookId ?? signalWebhooks[0]?.id ?? ""),
   );
   const [shortStartKind, setShortStartKind] = useState<DcaStartKind | "">(
     source?.shortStartKind ?? "",
   );
-  const [shortWebhookId, setShortWebhookId] = useState(
-    () => source?.shortWebhookId ?? signalWebhooks[0]?.id ?? "",
-  );
+  const [shortWebhookId, setShortWebhookId] = useState(() => {
+    const kind = source?.shortStartKind ?? source?.startKind;
+    if (kind === "webhook") {
+      return source?.shortWebhookId ?? "";
+    }
+    return source?.shortWebhookId ?? signalWebhooks[0]?.id ?? "";
+  });
   const [armTriggerBy, setArmTriggerBy] = useState(
     source?.armTrigger?.triggerBy ?? "last",
   );
@@ -2512,7 +2519,7 @@ export function DcaPlaybookForm({
                       : setWebhookId(event.target.value)
                   }
                   className={
-                    dirty && hookId.trim() === ""
+                    (dirty || hookId.trim() === "") && hookId.trim() === ""
                       ? conditionFieldClass(botFieldInvalidClass, column)
                       : conditionFieldClass(fieldClass, column)
                   }
@@ -2667,7 +2674,14 @@ export function DcaPlaybookForm({
           gridClass={fieldRowClass5}
           fieldClass={fieldClass}
           labelClass={labelClass}
-          showErrors={dirty}
+          showErrors={
+            dirty ||
+            (kind === "webhook" && hookId.trim() === "") ||
+            rows.some(
+              (row) =>
+                row.draft.kind === "webhook" && row.draft.webhookId.trim() === "",
+            )
+          }
           optionalAddedKind
           groupFooter={(groupIndex) => {
             const key = entryGroupOrderKey(rows, groupIndex);
@@ -3701,7 +3715,7 @@ export function DcaPlaybookForm({
           webhooks={signalWebhooks}
           fieldClass={fieldClass}
           labelClass={labelClass}
-          showErrors={dirty}
+          showErrors={dirty || exitClausesNeedWebhook(exitClauses)}
           actionName="exitActions"
           prices={exitPricesFromLevels({
             takeProfit: takeProfitPct,
@@ -3735,7 +3749,10 @@ export function DcaPlaybookForm({
           webhooks={signalWebhooks}
           fieldClass={fieldClass}
           labelClass={labelClass}
-          showErrors={dirty}
+          showErrors={
+            dirty ||
+            exitClausesNeedWebhook(direction === "both" ? shortClauses : exitClauses)
+          }
           actionName={direction === "both" ? "shortExitActions" : "exitActions"}
           prices={exitPricesFromLevels(
             direction === "both"

@@ -362,6 +362,15 @@ export function perpsEntryDraftMissing(
   return entryRowsMissing(draft.entryRows);
 }
 
+export function perpsEntryWebhookUnbound(draft: PerpsEntryDraft): boolean {
+  if (draft.entrySource === "webhook" && draft.webhookId.trim() === "") {
+    return true;
+  }
+  return draft.entryRows.some(
+    (row) => row.draft.kind === "webhook" && row.draft.webhookId.trim() === "",
+  );
+}
+
 export function PerpsEntryPanel({
   prefix,
   side,

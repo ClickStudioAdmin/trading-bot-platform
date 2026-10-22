@@ -41,15 +41,15 @@ A named snapshot of **one** idle bot for **one** `desk_type`.
 
 Stored as versioned JSON (`recipe` + `recipe_version`) plus metadata. Live tables keep evolving with migrations; apply runs the same parsers the Save form uses (defaults for missing keys, reject unknown desk type). Do not create parallel copies of every `dca_playbooks` column.
 
-**Snapshot includes:** contract/symbol if present, sizing, start, averaging, exits, Flex action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, C&C bot filters, and the webhook id on each Signal condition — the fields a user would type on Automations, except the bot name.
+**Snapshot includes:** contract/symbol if present, sizing, start, averaging, exits, Flex action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, and C&C bot filters — the fields a user would type on Automations, except the bot name. A Signal condition keeps its kind (entry, exit, or stack leaf). It does not keep a webhook id.
 
-**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, up to 80 characters. Flex and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook secret tokens, runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps. A Signal condition stores its webhook id so the same signal imports. It does not store the secret token.
+**Snapshot never includes:** the bot name. The template row’s own name is the only name. Apply names the new bot from that template name, up to 80 characters. Flex and Cash and Carry add a suffix when that name is already on the desk. Also never stored: API keys, webhook ids, webhook secret tokens, runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
 
 After apply:
 
 - DCA: new bot **idle** (not armed).
 - Flex and Cash and Carry: new bot **`disabled`**. Never copy `mode` / `enabled` from the source.
-- Signal conditions keep the webhook id they were saved with. A template saved before that id was stored still applies that signal as a price rule or Indicator, and says the desk needs a webhook.
+- Signal conditions stay Signal webhooks. Each webhook field on the new bot is empty. The user picks one of that desk’s webhooks for each field before the bot can be saved. A webhook id on an older template is not copied onto the bot.
 - User must Save / Arm / Enable as today. Never place orders on apply.
 
 ### Folder (template set)
@@ -135,7 +135,7 @@ Save-as-template with a name the owner already uses for that desk type: dialog a
 1. Chosen desk `desk_type` must equal the template (or folder) `desk_type`. Wrong type is a hard error.
 2. DCA: insert a new bot. If `(account_id, symbol)` is taken, the wizard asks for another contract or skip. Do not overwrite a live bot.
 3. Flex / C&C: insert a new stacked rule, **`disabled`**. Name collision on the desk: suffix ` (from template)` or ask.
-4. Signal conditions apply with the webhook id stored on the template. An older template with no id leaves that signal unbound.
+4. Signal conditions apply as Signal webhooks with no webhook selected. The user picks one of their webhooks for each Signal field on the new bot. Webhook ids do not flow from the template.
 5. Never arm, never enable the C&C engine, never place orders.
 6. Paper vs Live: a template is a venue-agnostic snapshot. Apply to whichever mode the desk already has. Size vs ticket-size is the same Save guard as today.
 7. Folder apply: remap/skip in the wizard first. Then write item by item. Successes stay. Failures (parse error, unique symbol after remap, missing template) are listed. No rollback of siblings.
@@ -199,8 +199,8 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 
 Each type has a documented allow-list of keys matching today’s parse functions. Apply maps JSON → `FormData` or the existing `parseDcaPlaybookForm` / Flex / paper parsers, then the same insert as Save. Force Flex/C&C `mode` to disabled after parse.
 
-- **dca:** fields from `parseDcaPlaybookForm` (not leg runtime). `startKind`, symbol, direction, clip, averaging, TP/SL, indicator / Trend, and the webhook id on a Signal start or Signal exit. Not the webhook secret.
-- **perps:** fields from the automation form (symbol, action, trigger, size) including each Signal condition’s webhook id. Not the webhook secret, not `conditionTrue`, not source `mode`.
+- **dca:** fields from `parseDcaPlaybookForm` (not leg runtime). `startKind`, symbol, direction, clip, averaging, TP/SL, indicator / Trend, and Signal as a start or exit kind. Not the webhook id or secret.
+- **perps:** fields from the automation form (symbol, action, trigger, size) including Signal as a condition kind. Not the webhook id or secret, not `conditionTrue`, not source `mode`.
 - **cash_and_carry:** fields from a paper layer (name, pair filters, sizes, exits). Not `enabled` on `paper_engine_settings`, not source `mode`.
 
 Bump `recipe_version` when a breaking key is renamed. Old templates: parser fills defaults; if required fields missing, apply returns a readable error (“This template is from an older app version. Re-save it from a bot.”).

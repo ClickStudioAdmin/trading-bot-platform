@@ -48,6 +48,7 @@ import {
   exitClauseListMissing,
   exitPriceLive,
   exitClausesFromSaved,
+  exitClausesNeedWebhook,
 } from "@/lib/strategy/exit-clauses";
 import {
   clausesFromExitActions,
@@ -63,6 +64,7 @@ import {
   initialPerpsEntryDrafts,
   PerpsEntryPanel,
   perpsEntryDraftMissing,
+  perpsEntryWebhookUnbound,
   perpsEntryLegFromDraft,
   type PerpsEntryDraft,
 } from "@/components/perps-entry-panel";
@@ -109,6 +111,7 @@ import {
   perpsAddGroupsFromStack,
   perpsAddGroupsFieldIssue,
   perpsAddGroupsSizingMissing,
+  perpsAddGroupsWebhookUnbound,
   perpsAddGroupsToStack,
 } from "@/lib/futures/perps-add-condition";
 import {
@@ -2187,7 +2190,7 @@ function RuleCard({
           fieldRow5={fieldRow5}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
-          showErrors={dirty}
+          showErrors={dirty || perpsEntryWebhookUnbound(entryDrafts.long)}
           order={{ size, sizeUnit, orderType, limitPrice }}
           onOrderChange={(partial) => {
             if (partial.size != null) setSize(partial.size);
@@ -2224,7 +2227,7 @@ function RuleCard({
           fieldRow5={fieldRow5}
           fieldClass={botFieldClass}
           labelClass={botLabelClass}
-          showErrors={dirty}
+          showErrors={dirty || perpsEntryWebhookUnbound(entryDrafts.short)}
           order={
             direction === "both"
               ? {
@@ -2312,7 +2315,7 @@ function RuleCard({
             fieldsClass={fieldRow5}
             side="long"
             webhooks={triggerWebhooks}
-            showErrors={dirty}
+            showErrors={dirty || perpsAddGroupsWebhookUnbound(longAddGroups)}
             invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
@@ -2331,7 +2334,7 @@ function RuleCard({
             fieldsClass={fieldRow5}
             side="short"
             webhooks={triggerWebhooks}
-            showErrors={dirty}
+            showErrors={dirty || perpsAddGroupsWebhookUnbound(shortAddGroups)}
             invalidFieldClass={botFieldInvalidClass}
           />
         </BotFormStep>
@@ -2349,7 +2352,7 @@ function RuleCard({
             webhooks={triggerWebhooks}
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
-            showErrors={dirty}
+            showErrors={dirty || exitClausesNeedWebhook(exitClauses)}
             actionName={`${prefix}exitActions`}
             prices={primaryExitPrices}
             priceStyle="flex"
@@ -2375,7 +2378,12 @@ function RuleCard({
             webhooks={triggerWebhooks}
             fieldClass={botFieldClass}
             labelClass={botLabelClass}
-            showErrors={dirty}
+            showErrors={
+              dirty ||
+              exitClausesNeedWebhook(
+                direction === "both" ? shortClauses : exitClauses,
+              )
+            }
             actionName={
               direction === "both" ? `${prefix}short_exitActions` : `${prefix}exitActions`
             }
