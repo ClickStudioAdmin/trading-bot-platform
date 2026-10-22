@@ -11,6 +11,7 @@ import {
   entryStackTimeframes,
   entryStackToJson,
   strategyLeafTimeframe,
+  webhookActionMatches,
   type EntryConflictSlot,
   type EntryStack,
   type StrategyJoin,
@@ -413,6 +414,7 @@ export function exitExpressionMet(input: {
   } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): boolean {
   const stack = input.stack ?? emptyEntryStack();
   if (stack.leaves.length === 0) {
@@ -429,6 +431,7 @@ export function exitExpressionMet(input: {
         prices: input.prices,
         barsByTimeframe: input.barsByTimeframe,
         firedWebhookId: input.firedWebhookId,
+        signalSide: input.signalSide,
       }),
     ),
   });
@@ -458,6 +461,7 @@ function exitLeafMet(input: {
   } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): boolean {
   const leaf = input.leaf;
   if (leaf.kind === "filter") {
@@ -477,7 +481,15 @@ function exitLeafMet(input: {
     return leaf.compare === "gte" ? level >= leaf.price : level <= leaf.price;
   }
   if (leaf.kind === "webhook") {
-    return input.firedWebhookId != null && input.firedWebhookId === leaf.webhookId;
+    return (
+      input.firedWebhookId != null &&
+      input.firedWebhookId === leaf.webhookId &&
+      webhookActionMatches({
+        role: "exit",
+        side: input.side,
+        signalSide: input.signalSide,
+      })
+    );
   }
   if (leaf.kind === "retrace") {
     const spec = windowRetraceSpec(leaf);

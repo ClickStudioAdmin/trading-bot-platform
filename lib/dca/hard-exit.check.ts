@@ -225,6 +225,42 @@ assert.equal(
 );
 assert.equal(
   hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "long",
+    firedWebhookId: webhookId,
+    signalSide: "short",
+  }),
+  true,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "long",
+    firedWebhookId: webhookId,
+    signalSide: "long",
+  }),
+  false,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "short",
+    firedWebhookId: webhookId,
+    signalSide: "long",
+  }),
+  true,
+);
+assert.equal(
+  hardExitMet({
+    signal: { trigger: "webhook", webhookId },
+    side: "short",
+    firedWebhookId: webhookId,
+    signalSide: null,
+  }),
+  false,
+);
+assert.equal(
+  hardExitMet({
     filter: legacyParsed.config.exitIf,
     side: "long",
     closes: [],

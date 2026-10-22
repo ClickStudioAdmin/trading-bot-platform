@@ -54,8 +54,8 @@ export function FuturesWebhookTest({
         signal ? null : "Symbol and size go in the dummy payload.",
         signal
           ? signalFiresRecipes
-            ? "A Signal test arms and fires any automation that uses that webhook."
-            : "A Signal test sends arm, disarm, or close-playbook through this door."
+            ? "A Signal test sends buy or sell through any automation that uses that webhook."
+            : "A Signal test sends buy or sell through this door."
           : null,
         signal ? null : "A fill opens Positions.",
       ]
@@ -66,8 +66,8 @@ export function FuturesWebhookTest({
         "A TradingView strategy test uses the symbol and size above.",
         allowSignal
           ? signalFiresRecipes
-            ? "A Signal test arms and fires any automation that uses that webhook."
-            : "A Signal test sends arm, disarm, or close-playbook through this door."
+            ? "A Signal test sends buy or sell through any automation that uses that webhook."
+            : "A Signal test sends buy or sell through this door."
           : null,
       ]
         .filter(Boolean)
@@ -123,14 +123,13 @@ export function FuturesWebhookTest({
               key={selected?.kind ?? "order"}
               name="testAction"
               form={standalone ? undefined : MANUAL_ORDER_FORM_ID}
-              defaultValue={signal ? "arm" : "buy"}
+              defaultValue="buy"
               className="mt-1 w-full"
             >
               {signal ? (
                 <>
-                  <option value="arm">Arm</option>
-                  <option value="disarm">Disarm</option>
-                  <option value="close-playbook">Close bot</option>
+                  <option value="buy">Buy</option>
+                  <option value="sell">Sell</option>
                 </>
               ) : (
                 <>

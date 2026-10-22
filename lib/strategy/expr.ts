@@ -11,7 +11,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
-import type { FuturesTrigger } from "@/lib/futures/model";
+import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import {
   claimsConflict,
   indicatorClaim,
@@ -598,6 +598,40 @@ export function entryStackMatchesWebhook(
   return stack.leaves.some(
     (leaf) => leaf.kind === "webhook" && leaf.webhookId === firedId,
   );
+}
+
+/**
+ * Buy is signalSide long. Sell is signalSide short.
+ * Undefined keeps an id match. Null is a bare arm: entries only.
+ * An exit listens for the opposite action.
+ */
+export function webhookActionMatches(input: {
+  role: "entry" | "exit";
+  side: FuturesSide;
+  signalSide?: FuturesSide | null;
+}): boolean {
+  if (input.signalSide === undefined) {
+    return true;
+  }
+  if (input.signalSide === null) {
+    return input.role === "entry";
+  }
+  if (input.role === "entry") {
+    return input.signalSide === input.side;
+  }
+  return input.signalSide !== input.side;
+}
+
+/** Exit side first, then the entry side. A bare arm touches every enabled side. */
+export function webhookTouchedSides(
+  enabled: readonly FuturesSide[],
+  signalSide: FuturesSide | null,
+): FuturesSide[] {
+  if (signalSide == null) {
+    return [...enabled];
+  }
+  const exitSide: FuturesSide = signalSide === "long" ? "short" : "long";
+  return [exitSide, signalSide].filter((side) => enabled.includes(side));
 }
 
 /** True when this webhook can complete an additional-order group. */

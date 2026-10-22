@@ -8,6 +8,7 @@ import {
   type DcaFilterSpec,
 } from "./filters";
 import type { FuturesSide, FuturesTrigger } from "@/lib/futures/model";
+import { webhookActionMatches } from "@/lib/strategy/expr";
 import type { SupertrendBar } from "./indicators";
 
 export const HARD_EXIT_TRIGGERS = [
@@ -497,6 +498,8 @@ export function hardExitMet(input: {
     index: number | null;
   } | null;
   firedWebhookId?: string | null;
+  /** Buy is long, sell is short. Undefined keeps an id match. Null does not close. */
+  signalSide?: FuturesSide | null;
 }): boolean {
   const signal = input.signal;
   if (signal?.trigger === "price") {
@@ -508,7 +511,13 @@ export function hardExitMet(input: {
   }
   if (signal?.trigger === "webhook") {
     return (
-      Boolean(input.firedWebhookId) && input.firedWebhookId === signal.webhookId
+      Boolean(input.firedWebhookId) &&
+      input.firedWebhookId === signal.webhookId &&
+      webhookActionMatches({
+        role: "exit",
+        side: input.side,
+        signalSide: input.signalSide,
+      })
     );
   }
   if (!input.filter) {

@@ -414,6 +414,88 @@ const gateOpen = exitActionGate({
 });
 assert.equal(gateOpen.confirm, false);
 assert.equal(gateOpen.needsPrice, true);
+const closeWebhook = {
+  id: "close-hook",
+  kind: "close" as const,
+  scope: { kind: "all" as const },
+  groups: [{ anchor: { trigger: "webhook" as const, webhookId: "hook" }, rows: [] }],
+  takeProfitPct: null,
+  takeProfitPrice: null,
+  stopLossPct: null,
+  stopLossPrice: null,
+  trailingDistance: null,
+  trailingActivation: null,
+};
+const closePrices = { last: 120, mark: 120, index: null };
+const closeOnSell = exitActionGate({
+  action: closeWebhook,
+  side: "long",
+  prices: closePrices,
+  barsByTimeframe: new Map(),
+  firedWebhookId: "hook",
+  signalSide: "short",
+});
+assert.equal(closeOnSell.confirm, true);
+assert.equal(closeOnSell.needsPrice, false);
+assert.equal(
+  exitActionGate({
+    action: closeWebhook,
+    side: "long",
+    prices: closePrices,
+    barsByTimeframe: new Map(),
+    firedWebhookId: "hook",
+    signalSide: "long",
+  }).confirm,
+  false,
+);
+assert.equal(
+  exitActionGate({
+    action: closeWebhook,
+    side: "short",
+    prices: closePrices,
+    barsByTimeframe: new Map(),
+    firedWebhookId: "hook",
+    signalSide: "long",
+  }).confirm,
+  true,
+);
+assert.equal(
+  exitActionGate({
+    action: closeWebhook,
+    side: "short",
+    prices: closePrices,
+    barsByTimeframe: new Map(),
+    firedWebhookId: "hook",
+    signalSide: "short",
+  }).confirm,
+  false,
+);
+assert.equal(
+  exitActionGate({
+    action: closeWebhook,
+    side: "long",
+    prices: closePrices,
+    barsByTimeframe: new Map(),
+    firedWebhookId: "hook",
+    signalSide: null,
+  }).confirm,
+  false,
+);
+assert.equal(
+  exitActionGate({
+    action: {
+      ...confirmedTp,
+      groups: [{ anchor: { trigger: "webhook" as const, webhookId: "arm" }, rows: [] }],
+      takeProfitPct: null,
+    },
+    side: "long",
+    prices: closePrices,
+    barsByTimeframe: new Map(),
+    firedWebhookId: "arm",
+    signalSide: "short",
+  }).confirm,
+  false,
+);
 const openedIndicator = clausesFromExitActions([
   {
     id: "tp-ind",

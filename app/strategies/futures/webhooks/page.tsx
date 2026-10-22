@@ -132,7 +132,8 @@ export default async function FuturesWebhooksPage({
             : deskAllowsPerpsRecipes(deskType)) ? (
           <>
             Signal webhooks are a When trigger. Bind the name on Automations.
-            Arm (or buy / sell) fires that bot. The bot owns size and side.
+            Buy fires long entries and short exits. Sell fires short entries
+            and long exits. The bot owns the size.
             {dummyLine}Fired orders open{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
@@ -141,9 +142,9 @@ export default async function FuturesWebhooksPage({
           </>
         ) : allowSignal ? (
           <>
-            Signal webhooks arm the bound bot. Arm / disarm /
-            close-playbook still work. Buy / sell arms that side only; the
-            bot owns size. {dummyLine}Armed orders open{" "}
+            Signal webhooks fire the bound bot. Buy fires long entries and
+            short exits. Sell fires short entries and long exits. The bot
+            owns the size. {dummyLine}Fired orders open{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>

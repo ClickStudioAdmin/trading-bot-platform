@@ -1276,6 +1276,7 @@ export function evaluateExitActions(input: {
   nowMs: number;
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
   stepQty?: number;
   breakevenDone?: boolean;
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
@@ -1300,6 +1301,7 @@ export function evaluateExitActions(input: {
       prices,
       barsByTimeframe: input.barsByTimeframe,
       firedWebhookId: input.firedWebhookId,
+      signalSide: input.signalSide,
     });
     conditionTrue[action.id] = gate.confirm;
     needsPrice[action.id] = gate.needsPrice;
@@ -1337,6 +1339,7 @@ export function evaluateExitActions(input: {
     breakeven: settled.breakeven,
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
     prices,
   });
   const runtime: ExitRuntime = { ...settled.runtime, book };
@@ -1350,6 +1353,7 @@ function leafMet(
     prices: { last: number | null; mark: number | null; index: number | null } | null;
     barsByTimeframe: Map<string, CandleBar[]>;
     firedWebhookId?: string | null;
+    signalSide?: FuturesSide | null;
   },
 ): boolean {
   if (isExitPriceRule(draft.trigger)) {
@@ -1390,6 +1394,7 @@ function leafMet(
     bars,
     prices: input.prices,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
   });
 }
 
@@ -1403,6 +1408,7 @@ export function exitActionGate(input: {
   prices: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): { confirm: boolean; needsPrice: boolean } {
   if (input.action.groups.length === 0) {
     return {
@@ -1435,6 +1441,7 @@ export function exitActionStackTrue(input: {
   prices: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): boolean {
   return exitActionGate(input).confirm;
 }
@@ -2069,6 +2076,7 @@ function leafSnapshot(
     prices: { last: number | null; mark: number | null; index: number | null } | null;
     barsByTimeframe: Map<string, CandleBar[]>;
     firedWebhookId?: string | null;
+    signalSide?: FuturesSide | null;
     priceMet: boolean | null;
   },
 ): ExitLeafSnapshot {
@@ -2162,6 +2170,7 @@ export function describeExitBook(input: {
   breakeven?: ExitBreakevenMove | null;
   barsByTimeframe?: Map<string, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
   prices?: { last: number | null; mark: number | null; index: number | null } | null;
 }): ExitBookSnapshot {
   const openQty = lotQty(input.lots);
@@ -2213,6 +2222,7 @@ export function describeExitBook(input: {
           prices,
           barsByTimeframe,
           firedWebhookId: input.firedWebhookId,
+          signalSide: input.signalSide,
           priceMet,
         }),
       );

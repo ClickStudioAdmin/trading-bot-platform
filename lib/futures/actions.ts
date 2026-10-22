@@ -1199,7 +1199,7 @@ export async function testFuturesWebhook(formData: FormData) {
     .toLowerCase();
   const rawBody =
     kind.ok && kind.kind === "signal"
-      ? { action: testAction.startsWith("close-playbook") ? "close-playbook" : testAction === "disarm" ? "disarm" : "arm" }
+      ? { action: testAction === "sell" ? "sell" : "buy" }
       : {
           action: testAction === "sell" || testAction === "close" ? testAction : "buy",
           symbol: formData.get("symbol"),

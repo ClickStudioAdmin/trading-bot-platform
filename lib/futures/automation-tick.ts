@@ -19,6 +19,7 @@ import {
   addStackMatchesWebhook,
   entryStackListensOnPriceTick,
   entryStackMatchesWebhook,
+  webhookActionMatches,
 } from "@/lib/strategy/expr";
 import {
   describeExitBook,
@@ -465,6 +466,8 @@ export async function fireWebhookAutomationEntries(input: {
   accountId: string;
   userId: string;
   mode: TradingAccountMode;
+  /** Buy is long, sell is short. Null is a bare arm and does not close. */
+  signalSide?: FuturesSide | null;
 }): Promise<{ fired: number }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -572,7 +575,6 @@ export async function fireWebhookAutomationEntries(input: {
       });
       const ticker = tickers.get(rule.symbol);
       const prices = ticker ? tickerTriggerPrices(ticker) : null;
-      let flattened = false;
       for (const open of owned) {
         const ownedExit = await commitOwnedExit({
           rule,
@@ -581,11 +583,9 @@ export async function fireWebhookAutomationEntries(input: {
           barsByTimeframe,
           prices,
           firedWebhookId: input.webhookId,
+          signalSide: input.signalSide,
         });
         if (ownedExit) {
-          if (ownedExit === "flat") {
-            flattened = true;
-          }
           continue;
         }
         const exit = perpsExitForSide(rule, open.side);
@@ -600,6 +600,7 @@ export async function fireWebhookAutomationEntries(input: {
           bars: exitBars,
           prices,
           firedWebhookId: input.webhookId,
+          signalSide: input.signalSide,
         });
         if (
           !exitExpressionMet({
@@ -610,6 +611,7 @@ export async function fireWebhookAutomationEntries(input: {
             prices,
             barsByTimeframe,
             firedWebhookId: input.webhookId,
+            signalSide: input.signalSide,
           })
         ) {
           continue;
@@ -640,7 +642,6 @@ export async function fireWebhookAutomationEntries(input: {
         });
         if (closed.ok) {
           fired += 1;
-          flattened = true;
           await writeEventLog({
             scope: "trade",
             event: "engine.exit_if",
@@ -664,9 +665,6 @@ export async function fireWebhookAutomationEntries(input: {
           });
         }
       }
-      if (flattened) {
-        continue;
-      }
     }
     const barsByTimeframe = await loadRuleBars({
       rule,
@@ -675,13 +673,19 @@ export async function fireWebhookAutomationEntries(input: {
     });
     const ticker = tickers.get(rule.symbol);
     const prices = ticker ? tickerTriggerPrices(ticker) : null;
-    const webhookLegs = perpsAutomationLegs(rule).filter((leg) =>
-      entryStackMatchesWebhook(
-        leg.rule.entrySource,
-        leg.rule.webhookId,
-        leg.rule.entryStack,
-        input.webhookId,
-      ),
+    const webhookLegs = perpsAutomationLegs(rule).filter(
+      (leg) =>
+        webhookActionMatches({
+          role: "entry",
+          side: leg.side,
+          signalSide: input.signalSide,
+        }) &&
+        entryStackMatchesWebhook(
+          leg.rule.entrySource,
+          leg.rule.webhookId,
+          leg.rule.entryStack,
+          input.webhookId,
+        ),
     );
     for (const leg of webhookLegs) {
       const legRule = leg.rule;
@@ -698,6 +702,7 @@ export async function fireWebhookAutomationEntries(input: {
           prices,
           barsByTimeframe,
           firedWebhookId: input.webhookId,
+          signalSide: input.signalSide,
         }),
         wasTrue: false,
         action: legRule.action,
@@ -722,6 +727,7 @@ export async function fireWebhookAutomationEntries(input: {
             prices,
             barsByTimeframe,
             firedWebhookId: input.webhookId,
+            signalSide: input.signalSide,
             savedBook: openOnSide ? (savedBooks.get(openOnSide.id) ?? null) : null,
           });
           fired += added;
@@ -792,6 +798,7 @@ export async function fireWebhookAutomationEntries(input: {
           wasTrue: false,
           open: true,
           firedWebhookId: input.webhookId,
+          signalSide: input.signalSide,
           protection: openOnSide
             ? {
                 openQty: openOnSide.qty,
@@ -879,6 +886,7 @@ async function commitOwnedExit(input: {
   barsByTimeframe: Map<string, CandleBar[]>;
   prices: { last: number | null; mark: number | null; index: number | null } | null;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
 }): Promise<false | "held" | "flat"> {
   const actions = sideExitActions(
     input.rule.exitActions,
@@ -905,6 +913,7 @@ async function commitOwnedExit(input: {
     index: input.prices?.index ?? null,
     barsByTimeframe: input.barsByTimeframe,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
     breakevenDone: input.open.breakevenDone,
   });
   if (!settled) {
@@ -1536,6 +1545,7 @@ async function placeFlexAdd(input: {
   prices: { last: number | null; mark: number | null; index: number | null } | null;
   barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>;
   firedWebhookId?: string | null;
+  signalSide?: FuturesSide | null;
   savedBook: ExitBookSnapshot | null;
 }): Promise<number> {
   const stack = input.legRule.addStack;
@@ -1575,6 +1585,7 @@ async function placeFlexAdd(input: {
     wasTrue,
     open: true,
     firedWebhookId: input.firedWebhookId,
+    signalSide: input.signalSide,
     protection: {
       openQty: input.open.qty,
       ...flexAddCoverage({

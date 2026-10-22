@@ -17,6 +17,8 @@ import {
   formatEntryWithStack,
   legacyEntryStack,
   resolveEntryStack,
+  webhookActionMatches,
+  webhookTouchedSides,
   STRATEGY_CONDITION_CAP,
   type EntryConflictSlot,
   type StrategyLeaf,
@@ -426,5 +428,57 @@ assert.equal(
   }),
   "These conditions cannot be true at the same time.",
 );
+
+assert.equal(
+  webhookActionMatches({ role: "entry", side: "long", signalSide: "long" }),
+  true,
+);
+assert.equal(
+  webhookActionMatches({ role: "exit", side: "short", signalSide: "long" }),
+  true,
+);
+assert.equal(
+  webhookActionMatches({ role: "entry", side: "short", signalSide: "long" }),
+  false,
+);
+assert.equal(
+  webhookActionMatches({ role: "exit", side: "long", signalSide: "long" }),
+  false,
+);
+assert.equal(
+  webhookActionMatches({ role: "entry", side: "short", signalSide: "short" }),
+  true,
+);
+assert.equal(
+  webhookActionMatches({ role: "exit", side: "long", signalSide: "short" }),
+  true,
+);
+assert.equal(
+  webhookActionMatches({ role: "entry", side: "long", signalSide: "short" }),
+  false,
+);
+assert.equal(
+  webhookActionMatches({ role: "exit", side: "short", signalSide: "short" }),
+  false,
+);
+assert.equal(
+  webhookActionMatches({ role: "entry", side: "long", signalSide: null }),
+  true,
+);
+assert.equal(
+  webhookActionMatches({ role: "exit", side: "long", signalSide: null }),
+  false,
+);
+assert.equal(webhookActionMatches({ role: "exit", side: "short" }), true);
+assert.deepEqual(webhookTouchedSides(["long", "short"], "long"), [
+  "short",
+  "long",
+]);
+assert.deepEqual(webhookTouchedSides(["long", "short"], "short"), [
+  "long",
+  "short",
+]);
+assert.deepEqual(webhookTouchedSides(["long", "short"], null), ["long", "short"]);
+assert.deepEqual(webhookTouchedSides(["long"], "short"), ["long"]);
 
 console.log("strategy expr checks passed");
